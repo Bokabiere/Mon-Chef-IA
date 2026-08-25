@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Chef IA 👨‍🍳</title>
+    
+    <!-- PWA Manifest intégré -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Mon Chef IA","short_name":"ChefIA","start_url":".","display":"standalone","background_color":"#f4f7f6","theme_color":"#FF6B6B","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2921/2921822.png","sizes":"512x512","type":"image/png"}]}'>
+    <meta name="theme-color" content="#FF6B6B">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+        :root {
+            --primary: #FF6B6B;
+            --primary-hover: #fa5252;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --border: #dfe6e9;
+        }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; }
+
+        .split-layout { display: flex; height: 100vh; width: 100%; }
+        .left-panel { width: 40%; min-width: 350px; background: var(--card-bg); padding: 30px; overflow-y: auto; box-shadow: 2px 0 20px rgba(0,0,0,0.06); z-index: 10; display: flex; flex-direction: column;}
+        .right-panel { width: 60%; background: var(--bg-color); padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; }
+        .right-content { max-width: 800px; margin: 0 auto; }
+
+        @media (max-width: 850px) {
+            body { overflow: auto; height: auto; }
+            .split-layout { flex-direction: column; height: auto; }
+            .left-panel, .right-panel { width: 100%; padding: 20px; box-sizing: border-box; }
+            .left-panel { border-bottom: 2px solid var(--border); box-shadow: none; }
+        }
+
+        h2 { color: var(--primary); margin-top: 0; font-size: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        .nav-buttons { display: flex; gap: 5px; }
+        .btn-top { font-size: 12px; background: #f1f2f6; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; color: var(--text-main); font-weight: 600; }
+        .btn-top:hover { background: #dfe6e9; }
+
+        label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase; }
+        .row { display: flex; gap: 15px; margin-bottom: 20px; } .row > div { flex: 1; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; transition: 0.3s; }
+        input:focus, select:focus { border-color: var(--primary); outline: none; }
+
+        .btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 16px; padding: 16px; width: 100%; border-radius: 12px; transition: 0.3s; margin-top: auto;}
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .btn-secondary:hover { background: #f1f2f6; }
+
+        .categories { margin-bottom: 20px; }
+        details.cat-details { background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+        details.cat-details summary { font-weight: 600; cursor: pointer; padding: 15px; background: #f8f9fa; }
+        .ingredient-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; }
+        .ingredient-item input[type="checkbox"] { display: none; }
+        .ingredient-item span { display: inline-block; padding: 8px 16px; background: #f1f2f6; color: var(--text-muted); border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .ingredient-item input[type="checkbox"]:checked + span { background: var(--primary); color: white; }
+
+        .loader { display: none; text-align: center; margin-top: 20vh; }
+        .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Cartes Recettes */
+        details.recipe-card { background: #fff; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.04); overflow: hidden; position: relative; transition: all 0.4s ease; }
+        details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); }
+        details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 40px; background: #fff; min-height: 100vh;}
+        
+        details.recipe-card summary { font-size: 18px; font-weight: 700; padding: 20px; cursor: pointer; list-style: none; border-bottom: 1px solid transparent; display: flex; align-items: center;}
+        details.recipe-card[open] summary { border-bottom-color: var(--border); color: var(--primary); }
+        .recipe-content { padding: 25px; font-size: 15px; line-height: 1.8; }
+        
+        .recipe-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; padding-top: 15px; border-top: 1px dashed var(--border);}
+        .btn-action { color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;}
+        .btn-save { background: #10ac84; } .btn-save:hover { background: #0e9673;}
+        .btn-expand { background: #0984e3; margin-left: auto;} .btn-expand:hover { background: #074e8c;}
+        .btn-course { background: #0984e3; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 10px; }
+
+        .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
+        .timer-tag:hover { background: #fdcb6e; transform: scale(1.05); }
+        .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 4000; align-items: center; gap: 15px; }
+        .floating-timer button { background: #ff7675; border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+
+        .courses-box { background: #e3f2fd; border: 1px solid #74b9ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+
+        /* Mode Pas-à-pas */
+        .pas-a-pas-container { display: none; background: #fdfdfd; border: 2px solid var(--primary); padding: 30px; border-radius: 15px; text-align: center; margin-top: 15px;}
+        .step-text { font-size: 22px; font-weight: 600; margin: 20px 0; min-height: 100px; display: flex; align-items: center; justify-content: center;}
+        .step-controls { display: flex; justify-content: center; gap: 15px; }
+        .btn-step { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;}
+        .btn-step:disabled { background: #ccc; cursor: not-allowed; }
+        .toggle-view { background: #6c5ce7; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
+
+        /* Vocal button */
+        .btn-vocal { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; margin-bottom: 15px;}
+        .btn-vocal.listening { background: #d63031; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="split-layout">
+        <!-- PANNEAU GAUCHE -->
+        <div class="left-panel">
+            <h2>
+                Chef IA 👨‍🍳
+                <div class="nav-buttons">
+                    <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
+                    <button class="btn-top" onclick="lancerMealPlanner()">📅 Planning</button>
+                </div>
+            </h2>
+
+            <button class="btn-vocal" id="btnMic" onclick="toggleVocal()">🎙️ Dicter mes ingrédients</button>
+            
+            <div class="row" style="margin-bottom: 15px;">
+                <div>
+                    <label>Humeur / Style</label>
+                    <select id="humeur">
+                        <option value="classique">👨‍🍳 Classique</option>
+                        <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
+                        <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
+                        <option value="anti-gaspi, utilise en priorité les produits périssables">♻️ Mode Anti-Gaspi</option>
+                        <option value="gastronomique, original, digne d'un chef">🌟 Mode Gastronomique</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label>Temps disponible</label>
+                    <select id="temps">
+                        <option value="15 minutes max">⚡ Moins de 15 min</option>
+                        <option value="30 minutes environ" selected>⏱️ Environ 30 min</option>
+                        <option value="1 heure max">⏳ Jusqu'à 1 heure</option>
+                        <option value="plat mijoté">🍲 Plus d'une heure</option>
+                    </select>
+                </div>
+                <div><label>Personnes</label><input type="number" id="personnes" value="2" min="1" onchange="recalculerProportions()"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <label style="margin: 0;">Vos ingrédients</label>
+                <button class="btn-secondary" onclick="decocherTout()">🔄 Tout décocher</button>
+            </div>
+            
+            <div class="categories" id="categoriesContainer"><i>Chargement... ⏳</i></div>
+            
+            <button class="btn-primary" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
+        </div>
+
+        <!-- PANNEAU DROIT -->
+        <div class="right-panel" id="rightPanel">
+            <div class="right-content">
+                <div id="loader" class="loader"><div class="loader-spinner"></div><p>Le Chef élabore vos menus...</p></div>
+                <div id="resultatDiv"><h3 style="color:#a4b0be; text-align:center; margin-top:20vh;">Vos recettes apparaîtront ici</h3></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIDGET MINUTEUR -->
+    <div id="floatingTimer" class="floating-timer">
+        <span id="timeDisplay">00:00</span>
+        <button onclick="stopTimer()">X</button>
+    </div>
+
+    <script>
+        const API_KEY = "AQ.Ab8RN6LP5r4xmsRpr4DykktGvTV6E2cwTFj2F9epCciSZT5EBw"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbyj9Un4ybwoQKOEJDz_fXQRiQFC70uQpF945_Dhq50NjAbzQC12l8SQ2VIQBjF4rT8h-Q/exec"; 
+
+        window.onload = async function() {
+            try {
+                const rep = await fetch(API_URL);
+                const liste = await rep.json();
+                const container = document.getElementById('categoriesContainer');
+                container.innerHTML = "";
+                const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
+
+                for (const [cat, items] of Object.entries(liste)) {
+                    let html = `<details class="cat-details"><summary>${cat}</summary><div class="ingredient-list">`;
+                    items.forEach(item => {
+                        const isChecked = memoire.includes(item) ? "checked" : "";
+                        html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${item}</span></label>`;
+                    });
+                    html += `</div></details>`;
+                    container.innerHTML += html;
+                }
+                document.querySelectorAll('.chk-ingredient').forEach(cb => cb.addEventListener('change', () => {
+                    const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+                    localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+                }));
+            } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Google Sheets.</span>"; }
+        };
+
+        function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); }
+
+        // --- 1. DICTÉE VOCALE ---
+        let recognition;
+        function toggleVocal() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                return alert("Votre navigateur ne supporte pas la reconnaissance vocale.");
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'fr-FR';
+            
+            const btn = document.getElementById('btnMic');
+            btn.classList.add('listening');
+            btn.innerText = "🎙️ Écoute en cours...";
+
+            recognition.onresult = function(event) {
+                const texte = event.results[0][0].transcript.toLowerCase();
+                btn.classList.remove('listening');
+                btn.innerText = "🎙️ Dicter mes ingrédients";
+                
+                // Coche automatiquement les cases si l'ingrédient est trouvé
+                document.querySelectorAll('.chk-ingredient').forEach(cb => {
+                    if (texte.includes(cb.value.toLowerCase())) {
+                        cb.checked = true;
+                    }
+                });
+                sauvegarderChoix();
+                alert(`J'ai écouté : "${texte}". Ingrédients cochés !`);
+            };
+
+            recognition.onerror = function() {
+                btn.classList.remove('listening');
+                btn.innerText = "🎙️ Dicter mes ingrédients";
+            };
+            recognition.start();
+        }
+
+        function sauvegarderChoix() {
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+        }
+
+        // --- 2. PLANIFICATEUR DE REPAS (MEAL PLANNER) ---
+        async function lancerMealPlanner() {
+            const resDiv = document.getElementById('resultatDiv');
+            const loader = document.getElementById('loader');
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            
+            if (checked.length === 0) return alert("Sélectionnez au moins quelques ingrédients de base pour planifier la semaine !");
+            resDiv.innerHTML = ""; loader.style.display = "block";
+            
+            const prompt = `Génère un planning de repas pour toute la semaine (de Lundi à Dimanche) en utilisant principalement ces ingrédients : ${checked.join(", ")}. 
+            Pour chaque jour (Lundi, Mardi, Mercredi, Jeudi, Vendredi, Samedi, Dimanche), donne le nom d'un plat simple.
+            Règle STRICTE : Réponds uniquement sous ce format précis (un par ligne) :
+            Lundi: [Nom du plat]
+            Mardi: [Nom du plat]
+            Mercredi: [Nom du plat]
+            Jeudi: [Nom du plat]
+            Vendredi: [Nom du plat]
+            Samedi: [Nom du plat]
+            Dimanche: [Nom du plat]`;
+
+            try {
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await rep.json();
+                loader.style.display = "none";
+                
+                let texte = data.candidates[0].content.parts[0].text;
+                let lignes = texte.split('\n').filter(l => l.includes(':'));
+                let planningObj = {};
+                
+                let html = `<h3>📅 Votre Planning de la Semaine</h3><div style="background:white; padding:20px; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);"><ul>`;
+                lignes.forEach(l => {
+                    let parts = l.split(':');
+                    let jour = parts[0].trim();
+                    let plat = parts[1].trim();
+                    planningObj[jour] = plat;
+                    html += `<li style="margin-bottom:12px; font-size:16px;"><b>${jour} :</b> ${plat}</li>`;
+                });
+                html += `</ul><button class="btn-primary" style="margin-top:20px;" onclick='sauvegarderPlanning(${JSON.stringify(planningObj)})'>💾 Enregistrer ce planning dans mon Drive</button></div>`;
+                resDiv.innerHTML = html;
+            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur de génération du planning."; }
+        }
+
+        async function sauvegarderPlanning(obj) {
+            try {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "sauvegarder_planning", planning: obj }) });
+                alert("Planning enregistré avec succès dans Google Sheets !");
+            } catch (e) { alert("Erreur lors de la sauvegarde."); }
+        }
+
+        // --- 3. CARNET DE RECETTES ---
+        async function chargerCarnet() {
+            const resDiv = document.getElementById('resultatDiv');
+            const loader = document.getElementById('loader');
+            resDiv.innerHTML = ""; loader.style.display = "block";
+            
+            try {
+                const rep = await fetch(API_URL + "?action=get_carnet");
+                const carnet = await rep.json();
+                loader.style.display = "none";
+                
+                if (carnet.length === 0) return resDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
+
+                let html = `<h3>📖 Mon Carnet de Recettes</h3>`;
+                carnet.forEach((item, index) => {
+                    let titre = item.recette.split('\n')[0];
+                    let contenu = item.recette.substring(titre.length).trim().replace(/\n/g, '<br>');
+                    
+                    html += `
+                    <details class="recipe-card" id="card-${index}">
+                        <summary>${titre} <span style="font-size:12px; color:#aaa; margin-left:10px;">(${new Date(item.date).toLocaleDateString()})</span></summary>
+                        <div class="recipe-content">
+                            ${contenu}
+                            <div class="recipe-actions">
+                                <button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button>
+                            </div>
+                        </div>
+                    </details>`;
+                });
+                resDiv.innerHTML = html;
+            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur chargement carnet."; }
+        }
+
+        // --- 4. MOTEUR DE RECETTES PRINCIPAL ---
+        async function chercherRecettesIA() {
+            const resDiv = document.getElementById('resultatDiv');
+            const loader = document.getElementById('loader');
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            
+            if (checked.length === 0) return alert("Sélectionnez au moins un ingrédient !");
+            resDiv.innerHTML = ""; loader.style.display = "block";
+            
+            const humeur = document.getElementById('humeur').value;
+            const personnes = document.getElementById('personnes').value;
+            const prompt = `Je veux cuisiner pour ${personnes} personnes. Temps cible: ${document.getElementById('temps').value}. 
+            Ingrédients dispo: ${checked.join(", ")}. 
+            Style attendu : ${humeur}.
+            Propose 3 recettes différentes.
+            
+            Règles STRICTES:
+            1. Sépare chaque recette avec exactement '---RECETTE---'.
+            2. La 1ère ligne commence par un émoji et le TITRE.
+            3. Ingrédients manquants vitaux ? Écris à la fin : "COURSES: ingrédient1, ingrédient2".
+            4. Écris les durées en chiffres (ex: 15 min). Pas d'astérisques Markdown.`;
+
+            try {
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await rep.json();
+                loader.style.display = "none";
+
+                let blocs = data.candidates[0].content.parts[0].text.split('---RECETTE---').filter(b => b.trim().length > 50);
+                let html = `<h3>J'ai trouvé ${blocs.length} idées pour vous !</h3>`;
+                
+                blocs.forEach((bloc, index) => {
+                    bloc = bloc.trim();
+                    let iSaut = bloc.indexOf('\n');
+                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, '');
+                    let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
+                    
+                    let coursesMatch = contenu.match(/COURSES:\s*(.*)/i);
+                    if (coursesMatch) {
+                        let items = coursesMatch[1].split(',').map(i => i.trim());
+                        let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul>`;
+                        items.forEach(item => {
+                            coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕</button></li>`;
+                        });
+                        coursesUI += `</ul></div>`;
+                        contenu = contenu.replace(coursesMatch[0], coursesUI);
+                    }
+
+                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+                    
+                    let safeTitre = titre.replace(/'/g, "\\'");
+                    let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+                    let stepsArrayString = `['${rawSteps.join("','")}']`;
+
+                    html += `
+                    <details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}>
+                        <summary>${titre}</summary>
+                        <div class="recipe-content">
+                            <button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Lancer le mode Pas-à-pas</button>
+                            
+                            <div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div>
+
+                            <div id="step-view-${index}" class="pas-a-pas-container">
+                                <div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div>
+                                <div class="step-text">Contenu</div>
+                                <div class="step-controls">
+                                    <button class="btn-step" onclick="changeStep('${index}', -1)">⬅️ Précédent</button>
+                                    <button class="btn-step" onclick="changeStep('${index}', 1)">Suivant ➡️</button>
+                                </div>
+                            </div>
+
+                            <div class="recipe-actions">
+                                <button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button>
+                                <button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button>
+                            </div>
+                        </div>
+                    </details>`;
+                });
+                resDiv.innerHTML = html;
+            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur de connexion."; }
+        }
+        
+        function toggleExpand(cardId, btn) {
+            const card = document.getElementById(cardId);
+            card.classList.toggle('is-fullscreen');
+            btn.innerHTML = card.classList.contains('is-fullscreen') ? ">< Réduire" : "⛶ Agrandir";
+        }
+
+        let recipeSteps = {};
+        function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
+            const textView = document.getElementById(textId);
+            const stepView = document.getElementById(stepId);
+            if (textView.style.display === "none") {
+                textView.style.display = "block"; stepView.style.display = "none";
+                btnToggle.innerText = "👀 Lancer le mode Pas-à-pas";
+            } else {
+                textView.style.display = "none"; stepView.style.display = "block";
+                btnToggle.innerText = "📄 Revenir au texte complet";
+                let index = stepId.split('-')[2];
+                recipeSteps[index] = { current: 0, steps: stepsArray };
+                updateStepDisplay(index);
+            }
+        }
+
+        function changeStep(recipeIndex, direction) {
+            let data = recipeSteps[recipeIndex];
+            data.current += direction;
+            if (data.current < 0) data.current = 0;
+            if (data.current >= data.steps.length) data.current = data.steps.length - 1;
+            updateStepDisplay(recipeIndex);
+        }
+
+        function updateStepDisplay(recipeIndex) {
+            let data = recipeSteps[recipeIndex];
+            const container = document.getElementById(`step-view-${recipeIndex}`);
+            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} sur ${data.steps.length}`;
+            container.querySelector('.step-text').innerHTML = data.steps[data.current];
+            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0);
+            container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
+        }
+
+        async function ajouterCourse(btn, ingredient) {
+            btn.innerText = "⏳..."; btn.disabled = true;
+            try {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "ajouter_course", ingredient: ingredient }) });
+                btn.innerText = "✅ Ajouté"; btn.style.background = "#27ae60";
+            } catch (e) { btn.innerText = "Erreur"; }
+        }
+
+        async function sauvegarder(btn, titre, contentId) {
+            btn.innerText = "⏳..."; btn.disabled = true;
+            let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
+            try {
+                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "sauvegarder_recette", recette: texte }) });
+                btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60";
+            } catch (e) { btn.innerText = "Erreur"; }
+        }
+
+        let timerInterval;
+        function startTimer(minutes) {
+            clearInterval(timerInterval);
+            let timeInSeconds = parseInt(minutes) * 60;
+            const timerUI = document.getElementById('floatingTimer');
+            const timeDisplay = document.getElementById('timeDisplay');
+            timerUI.style.display = 'flex';
+            timerInterval = setInterval(() => {
+                let m = Math.floor(timeInSeconds / 60);
+                let s = timeInSeconds % 60;
+                timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "Terminé ! 🔔"; }
+                timeInSeconds--;
+            }, 1000);
+        }
+        function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
+
+        function recalculerProportions() {
+            // Placeholder pour un futur ajustement automatique des grammes si besoin
+        }
+    </script>
+</body>
+</html>
