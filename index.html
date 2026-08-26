@@ -14,12 +14,13 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-        /* --- VARIABLES DE THÈMES --- */
+		
+/* --- VARIABLES DE THÈMES --- */
         :root {
             /* Thème par défaut (Classique) */
             --primary: #FF6B6B;
             --primary-hover: #fa5252;
+            --accent: #ff9f43; /* Nouvelle couleur pour les dégradés */
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
             --text-main: #2d3436;
@@ -30,6 +31,7 @@
         [data-theme="bistrot"] {
             --primary: #c0392b; 
             --primary-hover: #e74c3c;
+            --accent: #d35400;
             --bg-color: #fdf6e3; 
             --card-bg: #ffffff;
             --text-main: #4e342e; 
@@ -40,6 +42,7 @@
         [data-theme="dark"] {
             --primary: #0984e3; 
             --primary-hover: #74b9ff;
+            --accent: #00cec9;
             --bg-color: #121212;
             --card-bg: #1e1e1e;
             --text-main: #e0e0e0;
@@ -48,14 +51,16 @@
         }
 
         [data-theme="zelda"] {
-            --primary: #0a7e8c; /* Bleu Prodige */
-            --primary-hover: #f1c40f; /* Or Triforce */
-            --bg-color: #f4ecd8; /* Parchemin */
+            --primary: #0a7e8c; 
+            --primary-hover: #f1c40f;
+            --accent: #f39c12;
+            --bg-color: #f4ecd8; 
             --card-bg: #fffbf0;
             --text-main: #3e2723;
             --text-muted: #5d4037;
             --border: #d7ccc8;
         }
+        
 
         body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
 
@@ -178,6 +183,64 @@
         #barcode-scanner-container { width: 100%; max-width: 400px; margin: 0 auto; overflow: hidden; border-radius: 12px; }
         .scan-result-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
         .action-buttons-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+		
+		/* --- STYLES MASCOTTE ET LOGO --- */
+        .mascot-bubble {
+            font-size: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            margin: 0 auto 15px auto;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .mascot-small {
+            font-size: 26px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .app-header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+		
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -185,7 +248,10 @@
 
     <!-- ÉCRAN DE CONNEXION -->
     <div id="loginScreen">
-        <h1>Mon Chef IA 👨‍🍳</h1>
+       <div class="logo-container-login">
+            <div class="mascot-bubble">👨‍🍳</div>
+            <h1 class="gradient-text" style="font-size: 36px; margin-bottom: 5px;">Mon Chef IA</h1>
+        </div>
         <p style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
         
         <div id="g_id_onload"
@@ -204,15 +270,19 @@
             
             <!-- PANNEAU GAUCHE -->
             <div class="left-panel">
-                <h2>
-                    Chef IA 👨‍🍳
+               <div class="app-header">
+                    <div class="app-header-title">
+                        <div class="mascot-small">👨‍🍳</div>
+                        <h2 class="gradient-text" style="font-size: 26px;">Chef IA</h2>
+                    </div>
+                    
                     <div class="nav-buttons">
                         <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
                         <button class="btn-top" onclick="chargerPlanning()">📅 Planning</button>
                         <button class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
                         <button class="btn-top" onclick="ouvrirParametres()">⚙️ Config</button>
                     </div>
-                </h2>
+                </div>
 
                 <div class="action-buttons-group">
                     <button class="btn-vocal" id="btnMic" onclick="toggleVocal()" style="flex:1;">🎙️ Dicter</button>
