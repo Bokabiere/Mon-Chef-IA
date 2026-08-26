@@ -489,6 +489,11 @@
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
                         🚪 Se déconnecter
                     </button>
+                    <!-- AJOUTEZ LE BOUTON ICI -->
+                    <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="viderCacheApp()">
+                        🧹 Vider le cache des recettes
+                    </button>
+                </div>
                 </div>
 
                 <!-- Onglet Allergènes -->
@@ -736,6 +741,14 @@
             }
             return key;
         }
+		function viderCacheApp() {
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith(CACHE_PREFIX)) {
+                    localStorage.removeItem(key);
+                }
+            });
+            showToast("Cache nettoyé avec succès !", "success");
+        }
 
         // --- ALLERGÈNES ---
         function sauvegarderAllergenes() {
@@ -796,28 +809,49 @@
             "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
         };
 
-        function afficherIngredientsGauche() {
-            const container = document.getElementById('categoriesContainer');
-            container.innerHTML = "";
-            const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
-            const sortedCats = Object.keys(globalIngredientsList).sort();
+function afficherIngredientsGauche() {
+    const container = document.getElementById('categoriesContainer');
+    container.innerHTML = "";
+    const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
+    const sortedCats = Object.keys(globalIngredientsList).sort();
 
-            for (const cat of sortedCats) {
-                let items = globalIngredientsList[cat];
-                if (!items || items.length === 0) continue;
-                items.sort();
-                
-                let html = `<details class="cat-details"><summary>${cat}</summary><div class="ingredient-list">`;
-                items.forEach(item => {
-                    const isChecked = memoire.includes(item) ? "checked" : "";
-                    const icone = iconesIngredients[item] || "🍴";
-                    html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${icone} ${item}</span></label>`;
-                });
-                html += `</div></details>`;
-                container.innerHTML += html;
-            }
-            updateButtonLabel();
-        }
+    let html = `<div style="display: flex; flex-direction: column; gap: 14px;">`;
+
+    for (const cat of sortedCats) {
+        let items = globalIngredientsList[cat];
+        if (!items || items.length === 0) continue;
+        items.sort();
+        
+        // Calcul du nombre d'ingrédients cochés dans la catégorie
+        const nbCochesCat = items.filter(i => memoire.includes(i)).length;
+        const badgeCompteur = nbCochesCat > 0 ? `<span style="background:var(--primary); color:white; font-size:10px; padding:2px 6px; border-radius:10px; margin-left:6px;">${nbCochesCat}</span>` : '';
+
+        html += `
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+            <div style="font-weight: 600; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span>${cat} ${badgeCompteur}</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">`;
+            
+        items.forEach(item => {
+            const isChecked = memoire.includes(item) ? "checked" : "";
+            const icone = iconesIngredients[item] || "🍴";
+            
+            html += `
+            <label class="ingredient-item" style="margin: 0;">
+                <input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}>
+                <span style="display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg-color); transition: 0.2s;">
+                    ${icone} ${item}
+                </span>
+            </label>`;
+        });
+        
+        html += `</div></div>`;
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+    updateButtonLabel();
+}
 
         function updateButtonLabel() {
             const btn = document.getElementById('btnGenererRecettes');
@@ -1117,22 +1151,91 @@
             executerRequeteIA(prompt, `Voici la recette pour : ${nomDuPlat} 🍽️`);
         }
 
-        async function chercherRecettesIA() {
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
+async function chercherRecettesIA() {
+    const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value).sort();
+    if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
+    
+    const humeur = document.getElementById('humeur').value;
+    const temps = document.getElementById('temps').value;
+    const personnes = document.getElementById('personnes').value;
+
+    // Création d'une clé de cache unique basée sur les paramètres de la requête
+    const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${checked.join('_')}`.toLowerCase();
+    
+    const resDiv = document.getElementById('resultatDiv'); 
+    const loader = document.getElementById('loader');
+    
+    if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
+    else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+
+    // 1. VÉRIFICATION DU CACHE
+    const cachedData = getCache(cacheKey);
+    if (cachedData) {
+        resDiv.innerHTML = cachedData;
+        showToast("⚡ Recettes chargées depuis le cache intelligent !", "success", 2000);
+        return;
+    }
+
+    // 2. APPEL API CLASSIQUE SI PAS DE CACHE
+    resDiv.innerHTML = ""; 
+    loader.style.display = "block";
+    
+    const historique = await getHistoriquePrompt();
+    const prompt = `Cuisine pour ${personnes} pers. Temps: ${temps}. 
+    Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} ${historique} Propose 3 recettes.
+    1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
+    
+    // On délenche la requête et on stocke le résultat HTML généré dans le cache
+    await executerRequeteIAAvecCache(prompt, "J'ai trouvé {N} idées pour vous ! (Fraîches)", cacheKey);
+}
+
+// Version adaptée d'executerRequeteIA pour enregistrer le rendu HTML final dans le cache
+async function executerRequeteIAAvecCache(prompt, titleTemplate, cacheKey) {
+    const resDiv = document.getElementById('resultatDiv'); 
+    const loader = document.getElementById('loader');
+    try {
+        const apiKey = await getApiKey();
+        if (!apiKey) { loader.style.display = "none"; showToast("Clé API requise pour continuer.", "error"); return; }
+        
+        const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await rep.json(); 
+        loader.style.display = "none";
+
+        let blocs = data.candidates[0].content.parts[0].text.split('---RECETTE---').filter(b => b.trim().length > 50);
+        let mainTitle = titleTemplate.replace('{N}', blocs.length);
+        let html = `<h3>${mainTitle}</h3>`;
+        
+        blocs.forEach((bloc, index) => {
+            bloc = bloc.trim(); let iSaut = bloc.indexOf('\n');
+            let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
             
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            resDiv.innerHTML = ""; loader.style.display = "block";
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
-            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
-            
-            const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value;
-            const historique = await getHistoriquePrompt();
-            const prompt = `Cuisine pour ${personnes} pers. Temps: ${document.getElementById('temps').value}. 
-            Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} ${historique} Propose 3 recettes.
-            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
-            executerRequeteIA(prompt, "J'ai trouvé {N} idées pour vous !");
-        }
+            let coursesMatch = contenu.match(/COURSES:\s*(.*)/i);
+            if (coursesMatch) {
+                let items = coursesMatch[1].split(',').map(i => i.trim());
+                let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
+                items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
+                coursesUI += `</ul></div>`; contenu = contenu.replace(coursesMatch[0], coursesUI);
+            }
+            contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+            let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+            let stepsArrayString = `['${rawSteps.join("','")}']`;
+
+            html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary>${titre}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
+        });
+
+        resDiv.innerHTML = html;
+        
+        // 3. SAUVEGARDE DANS LE CACHE LOCAL
+        setCache(cacheKey, html);
+
+    } catch (e) { 
+        loader.style.display = "none"; 
+        resDiv.innerHTML = "Erreur IA."; 
+    }
+}
 
         async function executerRequeteIA(prompt, titleTemplate) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
@@ -1451,6 +1554,40 @@
                 window.speechSynthesis.speak(utterance);
             }
         }
+		// --- GESTION DU CACHE INTELLIGENT ---
+const CACHE_PREFIX = "chef_ia_cache_";
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 heures
+
+function setCache(key, data) {
+    const cacheItem = {
+        timestamp: new Date().getTime(),
+        data: data
+    };
+    try {
+        localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(cacheItem));
+    } catch (e) {
+        console.warn("Cache localStorage plein ou inaccessible", e);
+    }
+}
+
+function getCache(key) {
+    const cachedStr = localStorage.getItem(CACHE_PREFIX + key);
+    if (!cachedStr) return null;
+
+    try {
+        const cacheItem = JSON.parse(cachedStr);
+        const now = new Date().getTime();
+        
+        // Vérification de l'expiration
+        if (now - cacheItem.timestamp > CACHE_DURATION_MS) {
+            localStorage.removeItem(CACHE_PREFIX + key);
+            return null;
+        }
+        return cacheItem.data;
+    } catch (e) {
+        return null;
+    }
+}
     </script>
 </body>
 </html>
