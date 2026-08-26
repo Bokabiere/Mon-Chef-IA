@@ -17,7 +17,6 @@
 
         /* --- VARIABLES DE THÈMES --- */
         :root {
-            /* Thème par défaut (Classique) */
             --primary: #FF6B6B;
             --primary-hover: #fa5252;
             --accent: #ff9f43;
@@ -51,10 +50,10 @@
         }
 
         [data-theme="zelda"] {
-            --primary: #0a7e8c; /* Bleu Prodige */
-            --primary-hover: #f1c40f; /* Or Triforce */
+            --primary: #0a7e8c; 
+            --primary-hover: #f1c40f;
             --accent: #f39c12;
-            --bg-color: #f4ecd8; /* Parchemin */
+            --bg-color: #f4ecd8; 
             --card-bg: #fffbf0;
             --text-main: #3e2723;
             --text-muted: #5d4037;
@@ -74,7 +73,6 @@
         .right-panel { width: 60%; background: var(--bg-color); padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; transition: background-color 0.3s;}
         .right-content { max-width: 800px; margin: 0 auto; }
 
-        /* RESPONSIVE MOBILE */
         @media (max-width: 850px) {
             body { overflow: auto; height: auto; }
             .split-layout { flex-direction: column; height: auto; display: block; }
@@ -85,7 +83,6 @@
             .btn-top { text-align: center; width: 100%; padding: 10px;}
         }
 
-        /* En-tête avec Mascotte Animée */
         .app-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
         .app-header-title { display: flex; align-items: center; gap: 12px; }
         
@@ -116,7 +113,6 @@
             100% { transform: translateY(0px); }
         }
 
-        /* UI Elements */
         .nav-buttons { display: flex; gap: 5px; }
         .btn-top { font-size: 12px; background: var(--card-bg); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--text-main); font-weight: 600; transition: 0.2s;}
         .btn-top:hover { border-color: var(--primary); color: var(--primary); }
@@ -133,7 +129,14 @@
         .btn-danger { background: #ff7675; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .btn-danger:hover { background: #d63031; }
 
-        /* Catégories Ingrédients */
+        /* Autocomplétion de recherche */
+        .search-container { position: relative; margin-bottom: 15px; }
+        #ingredientSearch { padding-left: 35px; }
+        .search-icon { position: absolute; left: 12px; top: 14px; color: var(--text-muted); font-size: 14px; }
+        .autocomplete-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; max-height: 150px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .autocomplete-item { padding: 10px 15px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+        .autocomplete-item:hover { background: var(--bg-color); color: var(--primary); }
+
         .categories { margin-bottom: 20px; }
         details.cat-details { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
         details.cat-details summary { font-weight: 600; cursor: pointer; padding: 15px; background: var(--bg-color); color: var(--text-main); }
@@ -146,7 +149,6 @@
         .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Cartes Recettes */
         details.recipe-card { background: var(--card-bg); border-radius: 16px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.04); overflow: hidden; position: relative; transition: all 0.4s ease; border: 1px solid var(--border);}
         details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); border:none;}
         details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 20px; background: var(--card-bg); min-height: 100vh;}
@@ -166,7 +168,6 @@
         .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 4000; align-items: center; gap: 15px; }
         .floating-timer button { background: #ff7675; border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
 
-        /* Mode Pas-à-pas */
         .pas-a-pas-container { display: none; background: var(--bg-color); border: 2px solid var(--primary); padding: 20px; border-radius: 15px; text-align: center; margin-top: 15px;}
         .step-text { font-size: 18px; font-weight: 600; margin: 20px 0; min-height: 100px; display: flex; align-items: center; justify-content: center;}
         .step-controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
@@ -174,13 +175,11 @@
         .btn-step:disabled { background: var(--border); cursor: not-allowed; }
         .toggle-view { background: #6c5ce7; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
 
-        /* Groupe boutons d'actions */
         .action-buttons-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
         .btn-vocal { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;}
         .btn-vocal.listening { background: #d63031; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* --- FENÊTRES MODALES --- */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;}
         .modal-content { background: var(--card-bg); width: 100%; max-width: 600px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid var(--border);}
         .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); }
@@ -195,7 +194,6 @@
         .tab-btn { background: none; border: none; font-size: 14px; font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 5px 10px; }
         .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); margin-bottom: -12px;}
 
-        /* Style Courses (Checklist) */
         .course-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s;}
         .course-item:hover { background: var(--bg-color); }
         .course-item.checked { text-decoration: line-through; color: var(--text-muted); background: var(--bg-color); opacity: 0.6;}
@@ -203,70 +201,21 @@
         .course-item.checked .circle-check { background: var(--primary); }
         .course-item.checked .circle-check::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
 
-        /* Style Sélecteur de Thème */
         .theme-option { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
         .theme-option:hover { border-color: var(--primary); }
         .theme-option.active { border-color: var(--primary); border-width: 2px; background: var(--bg-color); }
         .color-preview { display: flex; gap: 5px; }
         .color-dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
 
-        /* --- STYLE PLANNING (Grille Dashboard) --- */
-        .planning-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 15px;
-            padding: 10px 0;
-        }
-        .day-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .day-title {
-            font-weight: 700;
-            font-size: 16px;
-            color: var(--text-main);
-            margin-bottom: 5px;
-        }
-        .meal-block {
-            border-radius: 8px;
-            padding: 12px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .meal-block.empty {
-            border: 1px dashed var(--border);
-            background: transparent;
-        }
-        .meal-block.filled {
-            background: var(--bg-color);
-            border: 1px solid var(--border);
-        }
-        .meal-label {
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-        }
-        .meal-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-main);
-            line-height: 1.3;
-        }
-        .meal-actions {
-            display: flex;
-            gap: 5px;
-            margin-top: 8px;
-        }
+        .planning-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; padding: 10px 0; }
+        .day-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px; }
+        .day-title { font-weight: 700; font-size: 16px; color: var(--text-main); margin-bottom: 5px; }
+        .meal-block { border-radius: 8px; padding: 12px; position: relative; display: flex; flex-direction: column; gap: 6px; }
+        .meal-block.empty { border: 1px dashed var(--border); background: transparent; }
+        .meal-block.filled { background: var(--bg-color); border: 1px solid var(--border); }
+        .meal-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        .meal-name { font-size: 14px; font-weight: 600; color: var(--text-main); line-height: 1.3; }
+        .meal-actions { display: flex; gap: 5px; margin-top: 8px; }
 
         #barcode-scanner-container { width: 100%; max-width: 400px; margin: 0 auto; overflow: hidden; border-radius: 12px; }
         .scan-result-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
@@ -321,6 +270,13 @@
                     <button class="btn-vocal" style="flex:1; background-color:#ff9f43;" onclick="ouvrirBarcodeScanner()">🛒 Code-barres</button>
                     <input type="file" id="iaScannerInput" accept="image/*" capture="environment" style="display:none;" onchange="analyserImageIA(event)">
                 </div>
+
+                <!-- BARRE DE RECHERCHE AVEC AUTOCOMPLÉTION -->
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="ingredientSearch" placeholder="Rechercher un ingrédient..." oninput="filtrerIngredients(this.value)" autocomplete="off">
+                    <div id="autocompleteResults" class="autocomplete-results"></div>
+                </div>
                 
                 <div class="row" style="margin-bottom: 15px;">
                     <div>
@@ -372,7 +328,7 @@
         </div> 
     </div> 
 
-    <!-- WIDGET MINUTEUR -->
+    <!-- WIDGET MINUTEUR VOCAL & SONORE -->
     <div id="floatingTimer" class="floating-timer">
         <span id="timeDisplay">00:00</span>
         <button onclick="stopTimer()">X</button>
@@ -697,6 +653,13 @@
             } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
         }
 
+        // Dictionnaire d'icônes par défaut pour les ingrédients courants
+        const iconesIngredients = {
+            "Tomate": "🍅", "Carotte": "🥕", "Courgette": "🥒", "Aubergine": "🍆", "Oignon": "🧅", "Ail": "🧄",
+            "Oeufs": "🥚", "Poulet": "🍗", "Boeuf haché": "🥩", "Pâtes": "🍝", "Riz blanc": "🍚", "Pomme de terre": "🥔",
+            "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
+        };
+
         function afficherIngredientsGauche() {
             const container = document.getElementById('categoriesContainer');
             container.innerHTML = "";
@@ -711,7 +674,8 @@
                 let html = `<details class="cat-details"><summary>${cat}</summary><div class="ingredient-list">`;
                 items.forEach(item => {
                     const isChecked = memoire.includes(item) ? "checked" : "";
-                    html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${item}</span></label>`;
+                    const icone = iconesIngredients[item] || "🍴";
+                    html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${icone} ${item}</span></label>`;
                 });
                 html += `</div></details>`;
                 container.innerHTML += html;
@@ -723,6 +687,50 @@
         }
 
         function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); }
+
+        // --- AUTOCOMPLÉTION RECHERCHE INGRÉDIENTS ---
+        function filtrerIngredients(terme) {
+            const resDiv = document.getElementById('autocompleteResults');
+            terme = terme.trim().toLowerCase();
+            if(!terme) { resDiv.style.display = 'none'; return; }
+
+            let matches = [];
+            for(const cat in globalIngredientsList) {
+                globalIngredientsList[cat].forEach(ing => {
+                    if(ing.toLowerCase().includes(terme)) {
+                        matches.push({ nom: ing, cat: cat });
+                    }
+                });
+            }
+
+            if(matches.length === 0) { resDiv.style.display = 'none'; return; }
+
+            let html = "";
+            matches.forEach(m => {
+                const icone = iconesIngredients[m.nom] || "🍴";
+                html += `<div class="autocomplete-item" onclick="selectionnerIngredientAutocomplete('${m.nom}')">${icone} <b>${m.nom}</b> <span style="font-size:10px; color:var(--text-muted);">(${m.cat})</span></div>`;
+            });
+            resDiv.innerHTML = html;
+            resDiv.style.display = 'block';
+        }
+
+        function selectionnerIngredientAutocomplete(nom) {
+            document.getElementById('ingredientSearch').value = "";
+            document.getElementById('autocompleteResults').style.display = 'none';
+            
+            const checkboxes = document.querySelectorAll('.chk-ingredient');
+            checkboxes.forEach(cb => {
+                if(cb.value === nom) {
+                    cb.checked = true;
+                    let details = cb.closest('details');
+                    if(details) details.open = true;
+                    cb.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+        }
 
         // --- PARAMÈTRES ---
         function ouvrirParametres() { document.getElementById('modalParametres').style.display = 'flex'; chargerListeManageIng(); }
@@ -838,7 +846,7 @@
             }, 600);
         }
 
-        // --- PLANNING DASHBOARD ---
+        // --- PLANNING DASHBOARD (AVEC INGRÉDIENTS POSSÉDÉS STRICTS) ---
         async function chargerPlanning() {
             document.getElementById('modalPlanning').style.display = 'flex';
             const contentDiv = document.getElementById('planningContent');
@@ -896,7 +904,7 @@
             if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
 
-            const prompt = `Génère un menu simple pour 7 jours en utilisant principalement ces ingrédients : ${checked.join(", ")}. ${getAllergenesPrompt()}
+            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()}
             Format STRICT requis (un par ligne) :
             Lundi: [Plat]
             Mardi: [Plat]
@@ -926,7 +934,7 @@
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
 
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat avec : ${checked.join(", ")}. ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
                 const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
@@ -968,7 +976,7 @@
             
             const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value;
             const prompt = `Cuisine pour ${personnes} pers. Temps: ${document.getElementById('temps').value}. 
-            Dispo: ${checked.join(", ")}. Style: ${humeur}. ${getAllergenesPrompt()} Propose 3 recettes.
+            Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} Propose 3 recettes.
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
             executerRequeteIA(prompt, "J'ai trouvé {N} idées pour vous !");
         }
@@ -1007,7 +1015,7 @@
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
         }
 
-        // --- CARNET (AVEC ZOOM ET MINUTEURS) ---
+        // --- CARNET ---
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex';
             const contentDiv = document.getElementById('carnetContent'); 
@@ -1113,7 +1121,7 @@
                         container.appendChild(diversDetails);
                     }
                     const list = diversDetails.querySelector('.ingredient-list');
-                    list.insertAdjacentHTML('beforeend', `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" checked><span>${item}</span></label>`);
+                    list.insertAdjacentHTML('beforeend', `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" checked><span>🍴 ${item}</span></label>`);
                     checkedCount++;
                 }
             });
@@ -1192,16 +1200,56 @@
             try { await db.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
         }
 
+        // --- CHRONOMÈTRE INTELLIGENT (VOCAL ET SONORE) ---
         let timerInterval;
         function startTimer(minutes) {
-            clearInterval(timerInterval); let timeInSeconds = parseInt(minutes) * 60; const timerUI = document.getElementById('floatingTimer'); const timeDisplay = document.getElementById('timeDisplay');
+            clearInterval(timerInterval); 
+            let timeInSeconds = parseInt(minutes) * 60; 
+            const timerUI = document.getElementById('floatingTimer'); 
+            const timeDisplay = document.getElementById('timeDisplay');
             timerUI.style.display = 'flex';
+            
             timerInterval = setInterval(() => {
-                let m = Math.floor(timeInSeconds / 60); let s = timeInSeconds % 60; timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "🔔 Fin !"; } timeInSeconds--;
+                let m = Math.floor(timeInSeconds / 60); 
+                let s = timeInSeconds % 60; 
+                timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                
+                if (timeInSeconds <= 0) { 
+                    clearInterval(timerInterval); 
+                    timeDisplay.innerText = "🔔 Fin !"; 
+                    declencherAlerteFinMinuteur();
+                }
+                timeInSeconds--;
             }, 1000);
         }
-        function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
+
+        function stopTimer() { 
+            clearInterval(timerInterval); 
+            document.getElementById('floatingTimer').style.display = 'none'; 
+        }
+
+        function declencherAlerteFinMinuteur() {
+            // 1. Alerte Sonore (Bip via AudioContext du navigateur)
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 587.33; // Note Ré
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.8);
+            } catch(e) {}
+
+            // 2. Alerte Vocale (Synthèse vocale du navigateur)
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance("Attention chef, le minuteur est écoulé ! Votre cuisson est prête !");
+                utterance.lang = 'fr-FR';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
     </script>
 </body>
 </html>
