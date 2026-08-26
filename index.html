@@ -763,10 +763,29 @@
             localStorage.setItem('chef_ia_allergenes', JSON.stringify(coches));
         }
 
-        function chargerAllergenesUI() {
+function chargerAllergenesUI() {
             const coches = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
-            document.querySelectorAll('.chk-allergene').forEach(cb => {
-                cb.checked = coches.includes(cb.value);
+            const container = document.getElementById('customAllergene').parentElement.parentElement.previousElementSibling;
+            
+            // On récupère la liste des allergènes "de base" écrits dans le HTML
+            const existingValues = Array.from(document.querySelectorAll('.chk-allergene')).map(cb => cb.value);
+
+            // On réinitialise toutes les cases de base à "non coché" par sécurité
+            document.querySelectorAll('.chk-allergene').forEach(cb => cb.checked = false);
+
+            coches.forEach(val => {
+                if (existingValues.includes(val)) {
+                    // C'est un allergène standard : on le coche simplement
+                    const cb = document.querySelector(`.chk-allergene[value="${val}"]`);
+                    if (cb) cb.checked = true;
+                } else {
+                    // C'est un allergène custom : on recrée sa case HTML cochée
+                    const newLabel = document.createElement('label');
+                    newLabel.className = 'ingredient-item';
+                    newLabel.style.cssText = "display: flex; align-items: center; gap: 10px;";
+                    newLabel.innerHTML = `<input type="checkbox" class="chk-allergene" value="${val}" checked onchange="sauvegarderAllergenes()"><span style="display: block; width: 100%;">⚠️ ${val}</span>`;
+                    container.appendChild(newLabel);
+                }
             });
         }
 
