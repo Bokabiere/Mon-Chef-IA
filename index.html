@@ -11,6 +11,9 @@
 
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Script pour les Confettis -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
@@ -60,7 +63,22 @@
             --border: #d7ccc8;
         }
 
-        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: var(--bg-color); 
+            /* Motif texturé subtil de petits points */
+            background-image: radial-gradient(rgba(0,0,0,0.04) 2px, transparent 2px);
+            background-size: 25px 25px;
+            color: var(--text-main); 
+            margin: 0; 
+            height: 100vh; 
+            overflow: hidden; 
+            transition: background-color 0.3s, color 0.3s; 
+        }
+        
+        [data-theme="dark"] body {
+            background-image: radial-gradient(rgba(255,255,255,0.03) 2px, transparent 2px);
+        }
 
         /* Écran de connexion */
         #loginScreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 20px; box-sizing: border-box; text-align: center; }
@@ -122,11 +140,35 @@
         input[type="text"], input[type="number"], select { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; transition: 0.3s; box-sizing: border-box; background: var(--card-bg); color: var(--text-main);}
         input:focus, select:focus { border-color: var(--primary); outline: none; }
 
-        .btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 16px; padding: 16px; width: 100%; border-radius: 12px; transition: 0.3s; margin-top: 20px;}
-        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        /* Bouton Animé */
+        .btn-primary { 
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            background-size: 200% 200%;
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 700; 
+            font-size: 16px; 
+            padding: 16px; 
+            width: 100%; 
+            border-radius: 12px; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            margin-top: 20px; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
+            animation: gradientMove 5s ease infinite;
+        }
+        .btn-primary:hover { 
+            transform: translateY(-4px) scale(1.02); 
+            box-shadow: 0 15px 25px rgba(0,0,0,0.25); 
+        }
+        @keyframes gradientMove { 
+            0% { background-position: 0% 50%; } 
+            50% { background-position: 100% 50%; } 
+            100% { background-position: 0% 50%; } 
+        }
 
         /* Bouton toujours visible (Desktop & Mobile) */
-        #btnGenererRecettes { position: sticky; bottom: 20px; z-index: 50; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        #btnGenererRecettes { position: sticky; bottom: 20px; z-index: 50; }
 
         .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .btn-secondary:hover { background: var(--bg-color); }
@@ -146,8 +188,18 @@
         details.cat-details summary { font-weight: 600; cursor: pointer; padding: 15px; background: var(--bg-color); color: var(--text-main); display: flex; align-items: center;}
         .ingredient-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; }
         .ingredient-item input[type="checkbox"] { display: none; }
-        .ingredient-item span { display: inline-block; padding: 8px 16px; background: var(--bg-color); color: var(--text-muted); border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: 0.2s;}
-        .ingredient-item input[type="checkbox"]:checked + span { background: var(--primary); color: white; }
+        
+        /* Animation élastique pour les badges (puces) d'ingrédients */
+        .ingredient-item span { 
+            display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--bg-color); color: var(--text-muted); border-radius: 20px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .ingredient-item span:active { transform: scale(0.9); }
+        .ingredient-item input[type="checkbox"]:checked + span { 
+            background: var(--primary); color: white; 
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
 
         .loader { display: none; text-align: center; margin-top: 10vh; }
         .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
@@ -379,7 +431,7 @@
             <div class="modal-body">
                 <p>Voici ce que l'IA a détecté. Décochez ce que vous ne voulez pas ajouter :</p>
                 <div id="iaScanResults" style="margin: 15px 0; background: var(--bg-color); padding: 10px; border-radius: 8px;"></div>
-                <button class="btn-primary" style="width: 100%;" onclick="validerScanIA()">✅ Confirmer & Cocher</button>
+                <button class="btn-primary" style="width: 100%; margin-top: 5px;" onclick="validerScanIA()">✅ Confirmer & Cocher</button>
             </div>
         </div>
     </div>
@@ -574,7 +626,6 @@
         </div>
     </div>
 
-
     <!-- Firebase Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -757,29 +808,27 @@
             showToast("Cache nettoyé avec succès !", "success");
         }
 
-        // --- ALLERGÈNES ---
+        // --- ALLERGÈNES (AVEC FIX RECHARGEMENT) ---
         function sauvegarderAllergenes() {
             const coches = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
             localStorage.setItem('chef_ia_allergenes', JSON.stringify(coches));
         }
 
-function chargerAllergenesUI() {
+        function chargerAllergenesUI() {
             const coches = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
             const container = document.getElementById('customAllergene').parentElement.parentElement.previousElementSibling;
             
-            // On récupère la liste des allergènes "de base" écrits dans le HTML
+            // On récupère la liste des allergènes de base 
             const existingValues = Array.from(document.querySelectorAll('.chk-allergene')).map(cb => cb.value);
 
-            // On réinitialise toutes les cases de base à "non coché" par sécurité
+            // On réinitialise toutes les cases de base à "non coché" 
             document.querySelectorAll('.chk-allergene').forEach(cb => cb.checked = false);
 
             coches.forEach(val => {
                 if (existingValues.includes(val)) {
-                    // C'est un allergène standard : on le coche simplement
                     const cb = document.querySelector(`.chk-allergene[value="${val}"]`);
                     if (cb) cb.checked = true;
                 } else {
-                    // C'est un allergène custom : on recrée sa case HTML cochée
                     const newLabel = document.createElement('label');
                     newLabel.className = 'ingredient-item';
                     newLabel.style.cssText = "display: flex; align-items: center; gap: 10px;";
@@ -913,7 +962,7 @@ function chargerAllergenesUI() {
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
             updateButtonLabel();
-            afficherIngredientsGauche(); // Pour mettre à jour les compteurs
+            afficherIngredientsGauche(); 
         }
 
         // --- PARAMÈTRES ---
@@ -1004,7 +1053,7 @@ function chargerAllergenesUI() {
                 document.querySelectorAll('.chk-ingredient').forEach(cb => { if (texte.includes(cb.value.toLowerCase())) cb.checked = true; });
                 localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
                 updateButtonLabel();
-                afficherIngredientsGauche(); // Met à jour les compteurs
+                afficherIngredientsGauche(); 
             };
             recognition.onerror = function() { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter"; };
             recognition.start();
@@ -1151,7 +1200,6 @@ function chargerAllergenesUI() {
             const personnes = document.getElementById('personnes').value;
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             
-            // Création d'une clé de cache pour ce plat spécifique
             const cacheKey = `plat_${nomDuPlat}_${personnes}`.replace(/\s+/g, '_').toLowerCase();
 
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
@@ -1180,7 +1228,6 @@ function chargerAllergenesUI() {
             const personnes = document.getElementById('personnes').value;
             const temps = document.getElementById('temps').value;
             
-            // Clé de cache unique pour cette recherche
             const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${checked.sort().join('_')}`.toLowerCase();
             
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
@@ -1236,9 +1283,15 @@ function chargerAllergenesUI() {
 
                     html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary>${titre}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
                 });
+                
                 resDiv.innerHTML = html;
                 
-                if (cacheKey) setCache(cacheKey, html); // Sauvegarde automatique si clé fournie
+                // Explosion de confettis 🎉
+                if (typeof confetti === "function") {
+                    confetti({ particleCount: 60, spread: 60, origin: { y: 0.9 }, zIndex: 100 });
+                }
+
+                if (cacheKey) setCache(cacheKey, html); 
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
         }
 
@@ -1502,6 +1555,11 @@ function chargerAllergenesUI() {
         }
 
         function declencherAlerteFinMinuteur() {
+            // Lancer les confettis 🎉
+            if (typeof confetti === "function") {
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 });
+            }
+            
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator();
