@@ -219,6 +219,14 @@
 
         #barcode-scanner-container { width: 100%; max-width: 400px; margin: 0 auto; overflow: hidden; border-radius: 12px; }
         .scan-result-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
+
+        /* --- NOTATION DES RECETTES --- */
+        .rating-stars { display: flex; align-items: center; gap: 3px; margin: 4px 0 15px 0; }
+        .rating-stars .star { font-size: 20px; line-height: 1; cursor: pointer; color: var(--border); transition: transform 0.15s, color 0.15s; user-select: none; }
+        .rating-stars .star:hover, .rating-stars .star.hovered { transform: scale(1.15); }
+        .rating-stars .star.filled { color: #f1c40f; }
+        .rating-label { font-size: 11px; color: var(--text-muted); margin-left: 8px; }
+        .badge-cat.badge-note { background: #fff9e6; border-color: #f1c40f; color: #b8860b; }
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -451,6 +459,9 @@
                     <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="localStorage.removeItem('gemini_api_key'); alert('Clé API effacée !');">
                         🔑 Changer ma clé API secrète
                     </button>
+                    <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
+                        🚪 Se déconnecter
+                    </button>
                 </div>
 
                 <!-- Onglet Allergènes -->
@@ -536,6 +547,7 @@
 
     <!-- Firebase Compat SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script>
         // --- GESTION DES THÈMES ---
@@ -557,34 +569,55 @@
             const savedTheme = localStorage.getItem('chef_ia_theme') || 'default';
             setTheme(savedTheme);
             chargerAllergenesUI();
-
-            if (localStorage.getItem('chef_ia_auth') === 'true') {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('appContent').style.display = 'block';
-                chargerInterfaceBase();
-            }
         };
 
-        // --- AUTHENTIFICATION GOOGLE ---
-        function decodeJwtResponse(token) {
-            let base64Url = token.split('.')[1];
-            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        }
+        // --- AUTHENTIFICATION GOOGLE (via Firebase Auth) ---
+        // ⚠️ Le contrôle d'accès réel se joue dans les Règles de Sécurité Firestore
+        // (voir la note fournie à part). Le check d'email ci-dessous n'est qu'un
+        // confort d'affichage : un visiteur non autorisé ne pourra de toute façon
+        // plus lire/écrire aucune donnée grâce aux règles basées sur request.auth.uid.
+        const EMAIL_AUTORISE = "bokabiere@gmail.com";
 
-        function handleCredentialResponse(response) {
-            const responsePayload = decodeJwtResponse(response.credential);
-            if (responsePayload.email === "bokabiere@gmail.com") {
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('appContent').style.display = 'block';
-                localStorage.setItem('chef_ia_auth', 'true');
-                chargerInterfaceBase();
-            } else {
+        async function handleCredentialResponse(response) {
+            document.getElementById('loginError').style.display = 'none';
+            try {
+                // Le jeton Google (ID token) sert à ouvrir une VRAIE session Firebase,
+                // avec un UID stable et vérifiable côté serveur par les règles Firestore.
+                const credential = firebase.auth.GoogleAuthProvider.credential(response.credential);
+                await firebase.auth().signInWithCredential(credential);
+                // La suite (affichage de l'app ou refus) est gérée par onAuthStateChanged ci-dessous.
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loginError').innerText = "Erreur de connexion. Réessayez.";
                 document.getElementById('loginError').style.display = 'block';
             }
+        }
+
+        // Se déclenche automatiquement à chaque chargement de page ET juste après
+        // un signInWithCredential réussi : c'est la SEULE source de vérité pour
+        // savoir si on affiche l'app ou l'écran de connexion.
+        firebase.auth().onAuthStateChanged(function(user) {
+            if (user) {
+                if (user.email === EMAIL_AUTORISE) {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('appContent').style.display = 'block';
+                    document.getElementById('loginError').style.display = 'none';
+                    chargerInterfaceBase();
+                } else {
+                    // Compte Google valide mais pas le bon : on ferme la session
+                    // immédiatement et on affiche le refus.
+                    document.getElementById('loginError').innerText = "Accès refusé. Vous n'êtes pas autorisé.";
+                    document.getElementById('loginError').style.display = 'block';
+                    firebase.auth().signOut();
+                }
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('appContent').style.display = 'none';
+            }
+        });
+
+        function seDeconnecter() {
+            firebase.auth().signOut();
         }
 
         function getApiKey() {
@@ -904,7 +937,8 @@
             if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
 
-            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()}
+            const historique = await getHistoriquePrompt();
+            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${historique}
             Format STRICT requis (un par ligne) :
             Lundi: [Plat]
             Mardi: [Plat]
@@ -960,7 +994,8 @@
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
             else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
 
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()}
+            const historique = await getHistoriquePrompt();
+            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${historique}
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
             executerRequeteIA(prompt, `Voici la recette pour : ${nomDuPlat} 🍽️`);
         }
@@ -975,8 +1010,9 @@
             else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
             
             const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value;
+            const historique = await getHistoriquePrompt();
             const prompt = `Cuisine pour ${personnes} pers. Temps: ${document.getElementById('temps').value}. 
-            Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} Propose 3 recettes.
+            Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} ${historique} Propose 3 recettes.
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
             executerRequeteIA(prompt, "J'ai trouvé {N} idées pour vous !");
         }
@@ -1031,16 +1067,24 @@
                     let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); 
                     let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
                     let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
+                    let note = item.note || 0;
                     
                     contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
                     
                     let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
                     let stepsArrayString = `['${rawSteps.join("','")}']`;
 
+                    let starsHtml = `<div class="rating-stars" data-doc="${doc.id}">`;
+                    for (let n = 1; n <= 5; n++) {
+                        starsHtml += `<span class="star ${n <= note ? 'filled' : ''}" onclick="noterRecette('${doc.id}', ${n})">★</span>`;
+                    }
+                    starsHtml += `<span class="rating-label">${note > 0 ? 'Votre note' : 'Notez cette recette'}</span></div>`;
+
                     html += `
                     <details class="recipe-card" id="carnet-card-${index}">
                         <summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary>
                         <div class="recipe-content">
+                            ${starsHtml}
                             <button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button>
                             <div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div>
                             <div id="carnet-step-${index}" class="pas-a-pas-container">
@@ -1060,6 +1104,41 @@
                 });
                 contentDiv.innerHTML = html;
             } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
+        }
+
+        async function noterRecette(docId, note) {
+            const container = document.querySelector(`.rating-stars[data-doc="${docId}"]`);
+            try {
+                await db.collection("carnet").doc(docId).update({ note: note });
+                if (container) {
+                    container.querySelectorAll('.star').forEach((star, i) => {
+                        star.classList.toggle('filled', i < note);
+                    });
+                    container.querySelector('.rating-label').innerText = "Votre note";
+                }
+            } catch (e) {
+                if (container) container.querySelector('.rating-label').innerText = "Erreur, réessayez";
+            }
+        }
+
+        // Récupère les recettes aimées / pas aimées pour orienter l'IA vers vos goûts
+        async function getHistoriquePrompt() {
+            try {
+                const snapshot = await db.collection("carnet").where("note", ">", 0).get();
+                if (snapshot.empty) return "";
+                let aimes = [], evites = [];
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    let titre = item.recette.split('\n')[0].replace(/[*#⭐0-9.]/g, '').trim();
+                    if (!titre) return;
+                    if (item.note >= 4) aimes.push(titre);
+                    else if (item.note <= 2) evites.push(titre);
+                });
+                let txt = "";
+                if (aimes.length) txt += `\nL'utilisateur a AIMÉ ces plats par le passé (note ≥4/5) : ${aimes.slice(0, 8).join(", ")}. Inspire-toi de styles similaires si pertinent.`;
+                if (evites.length) txt += `\nL'utilisateur N'A PAS aimé ces plats (note ≤2/5) : ${evites.slice(0, 8).join(", ")}. Évite de reproposer des plats trop proches.`;
+                return txt;
+            } catch (e) { return ""; }
         }
 
         // --- SCANNER IA ---
