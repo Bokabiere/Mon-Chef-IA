@@ -174,7 +174,7 @@
         .btn-step:disabled { background: var(--border); cursor: not-allowed; }
         .toggle-view { background: #6c5ce7; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
 
-        /* Groupe boutons d'actions (Dicter / Caméra / Code-barres) */
+        /* Groupe boutons d'actions */
         .action-buttons-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
         .btn-vocal { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;}
         .btn-vocal.listening { background: #d63031; animation: pulse 1.5s infinite; }
@@ -419,6 +419,7 @@
                     <button class="tab-btn active" id="tabIngBtn" onclick="switchTab('ing')">🍅 Ingrédients</button>
                     <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
+                    <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
                 </div>
 
                 <!-- Onglet Ingrédients -->
@@ -495,6 +496,47 @@
                         🔑 Changer ma clé API secrète
                     </button>
                 </div>
+
+                <!-- Onglet Allergènes -->
+                <div id="tabAllergene" style="display: none;">
+                    <label>⚠️ Mes restrictions & allergènes à éviter</label>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Gluten" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🌾 Gluten / Blé</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Lactose" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🥛 Lactose / Produits laitiers</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Arachides" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🥜 Arachides / Cacahuètes</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Oeufs" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🥚 Œufs</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Fruits à coque" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🌰 Fruits à coque (noisettes, amandes...)</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-allergene" value="Crustacés" onchange="sauvegarderAllergenes()">
+                            <span style="display: block; width: 100%;">🦐 Crustacés & Mollusques</span>
+                        </label>
+                    </div>
+
+                    <div style="background: var(--bg-color); padding: 12px; border-radius: 8px; border: 1px dashed var(--border);">
+                        <label>➕ Autre allergène ou intolérance</label>
+                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                            <input type="text" id="customAllergene" placeholder="Ex: Céleri, Moutarde...">
+                            <button class="btn-primary" style="margin-top:0; padding: 8px 15px;" onclick="ajouterAllergenCustom()">Ajouter</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -558,6 +600,7 @@
         window.onload = function() {
             const savedTheme = localStorage.getItem('chef_ia_theme') || 'default';
             setTheme(savedTheme);
+            chargerAllergenesUI();
 
             if (localStorage.getItem('chef_ia_auth') === 'true') {
                 document.getElementById('loginScreen').style.display = 'none';
@@ -595,6 +638,41 @@
                 if (key) localStorage.setItem('gemini_api_key', key);
             }
             return key;
+        }
+
+        // --- ALLERGÈNES ---
+        function sauvegarderAllergenes() {
+            const coches = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
+            localStorage.setItem('chef_ia_allergenes', JSON.stringify(coches));
+        }
+
+        function chargerAllergenesUI() {
+            const coches = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
+            document.querySelectorAll('.chk-allergene').forEach(cb => {
+                cb.checked = coches.includes(cb.value);
+            });
+        }
+
+        function ajouterAllergenCustom() {
+            const input = document.getElementById('customAllergene');
+            const val = input.value.trim();
+            if(!val) return;
+            
+            const container = input.parentElement.parentElement.previousElementSibling;
+            const newLabel = document.createElement('label');
+            newLabel.className = 'ingredient-item';
+            newLabel.style.cssText = "display: flex; align-items: center; gap: 10px;";
+            newLabel.innerHTML = `<input type="checkbox" class="chk-allergene" value="${val}" checked onchange="sauvegarderAllergenes()"><span style="display: block; width: 100%;">⚠️ ${val}</span>`;
+            container.appendChild(newLabel);
+            
+            input.value = "";
+            sauvegarderAllergenes();
+        }
+
+        function getAllergenesPrompt() {
+            const allergenes = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
+            if (allergenes.length === 0) return "";
+            return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${allergenes.join(", ")}.`;
         }
 
         // --- FIREBASE CONFIG ---
@@ -650,14 +728,20 @@
         function ouvrirParametres() { document.getElementById('modalParametres').style.display = 'flex'; chargerListeManageIng(); }
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
         function switchTab(tab) {
-            ['tabIng', 'tabCarnet', 'tabTheme'].forEach(t => {
-                document.getElementById(t + 'Btn').classList.remove('active');
-                document.getElementById(t).style.display = 'none';
+            ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene'].forEach(t => {
+                const btn = document.getElementById(t + 'Btn');
+                const content = document.getElementById(t);
+                if(btn) btn.classList.remove('active');
+                if(content) content.style.display = 'none';
             });
-            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').classList.add('active');
-            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+            const activeBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn');
+            const activeContent = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if(activeBtn) activeBtn.classList.add('active');
+            if(activeContent) activeContent.style.display = 'block';
+
             if(tab === 'ing') chargerListeManageIng();
             if(tab === 'carnet') chargerListeManageCarnet();
+            if(tab === 'allergene') chargerAllergenesUI();
         }
 
         async function ajouterIngredientDB() {
@@ -773,14 +857,12 @@
             jours.forEach(jour => {
                 html += `<div class="day-card"><div class="day-title">${jour}</div>`;
                 
-                // Déjeuner (statique/vide pour l'instant)
                 html += `
                 <div class="meal-block empty">
                     <span class="meal-label">Déjeuner</span>
                     <div style="font-size:12px; color:var(--text-muted);">+ Choisir une recette</div>
                 </div>`;
                 
-                // Dîner (Géré par l'IA)
                 if(planningObj[jour]) {
                     let plat = planningObj[jour]; 
                     let safePlat = plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -814,8 +896,15 @@
             if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
 
-            const prompt = `Génère un menu simple pour 7 jours en utilisant principalement ces ingrédients : ${checked.join(", ")}. Format STRICT requis (un par ligne) :
-            Lundi: [Plat]\nMardi: [Plat]\nMercredi: [Plat]\nJeudi: [Plat]\nVendredi: [Plat]\nSamedi: [Plat]\nDimanche: [Plat]`;
+            const prompt = `Génère un menu simple pour 7 jours en utilisant principalement ces ingrédients : ${checked.join(", ")}. ${getAllergenesPrompt()}
+            Format STRICT requis (un par ligne) :
+            Lundi: [Plat]
+            Mardi: [Plat]
+            Mercredi: [Plat]
+            Jeudi: [Plat]
+            Vendredi: [Plat]
+            Samedi: [Plat]
+            Dimanche: [Plat]`;
 
             try {
                 const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
@@ -837,7 +926,7 @@
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
 
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat avec : ${checked.join(", ")}. Réponds UNIQUEMENT avec le nom du plat.`;
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat avec : ${checked.join(", ")}. ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
                 const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
@@ -863,7 +952,7 @@
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
             else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
 
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers.
+            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()}
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
             executerRequeteIA(prompt, `Voici la recette pour : ${nomDuPlat} 🍽️`);
         }
@@ -879,7 +968,7 @@
             
             const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value;
             const prompt = `Cuisine pour ${personnes} pers. Temps: ${document.getElementById('temps').value}. 
-            Dispo: ${checked.join(", ")}. Style: ${humeur}. Propose 3 recettes.
+            Dispo: ${checked.join(", ")}. Style: ${humeur}. ${getAllergenesPrompt()} Propose 3 recettes.
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
             executerRequeteIA(prompt, "J'ai trouvé {N} idées pour vous !");
         }
@@ -918,27 +1007,23 @@
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
         }
 
-// --- CARNET VUE MODALE (AVEC TOUTES LES FONCTIONNALITÉS) ---
+        // --- CARNET (AVEC ZOOM ET MINUTEURS) ---
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex';
             const contentDiv = document.getElementById('carnetContent'); 
             contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
-            
             try {
                 const snapshot = await db.collection("carnet").orderBy("date", "desc").get();
                 if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
                 
-                let html = "";
-                let index = 0;
+                let html = ""; let index = 0;
                 snapshot.forEach(doc => {
                     const item = doc.data(); 
-                    let bloc = item.recette;
-                    let iSaut = bloc.indexOf('\n');
+                    let bloc = item.recette; let iSaut = bloc.indexOf('\n');
                     let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); 
                     let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
                     let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
                     
-                    // Rendre les minutes cliquables pour les minuteurs dans le carnet
                     contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
                     
                     let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
@@ -949,9 +1034,7 @@
                         <summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary>
                         <div class="recipe-content">
                             <button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button>
-                            
                             <div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div>
-
                             <div id="carnet-step-${index}" class="pas-a-pas-container">
                                 <div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div>
                                 <div class="step-text">Contenu</div>
@@ -960,7 +1043,6 @@
                                     <button class="btn-step" onclick="changeStep('carnet-${index}', 1)">➡️</button>
                                 </div>
                             </div>
-
                             <div class="recipe-actions">
                                 <button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button>
                             </div>
@@ -969,9 +1051,7 @@
                     index++;
                 });
                 contentDiv.innerHTML = html;
-            } catch (e) { 
-                contentDiv.innerHTML = "<p style='color:red;'>Erreur de chargement du carnet.</p>"; 
-            }
+            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
         }
 
         // --- SCANNER IA ---
@@ -1086,18 +1166,14 @@
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
             const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
             if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
-            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-')[2]; recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplay(index); }
+            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-').slice(2).join('-'); recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[index]); }
         }
-function changeStep(recipeIndex, direction) {
-            let data = recipeSteps[recipeIndex]; 
-            data.current += direction;
-            if (data.current < 0) data.current = 0; 
-            if (data.current >= data.steps.length) data.current = data.steps.length - 1; 
-            
+        function changeStep(recipeIndex, direction) {
+            let data = recipeSteps[recipeIndex]; data.current += direction;
+            if (data.current < 0) data.current = 0; if (data.current >= data.steps.length) data.current = data.steps.length - 1; 
             let containerId = recipeIndex.toString().includes('carnet') ? `carnet-step-${recipeIndex.split('-')[2]}` : `step-view-${recipeIndex}`;
             updateStepDisplayCustom(containerId, data);
         }
-
         function updateStepDisplayCustom(containerId, data) {
             const container = document.getElementById(containerId);
             if(!container) return;
@@ -1105,11 +1181,6 @@ function changeStep(recipeIndex, direction) {
             container.querySelector('.step-text').innerHTML = data.steps[data.current];
             container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0); 
             container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
-        }
-        function updateStepDisplay(recipeIndex) {
-            let data = recipeSteps[recipeIndex]; const container = document.getElementById(`step-view-${recipeIndex}`);
-            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} / ${data.steps.length}`; container.querySelector('.step-text').innerHTML = data.steps[data.current];
-            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0); container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
         }
 
         async function ajouterCourse(btn, ingredient) {
