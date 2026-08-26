@@ -2,17 +2,22 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mon Chef IA 👨‍🍳</title>
     
-    <!-- PWA Manifest intégré -->
-    <link rel="manifest" href='data:application/manifest+json,{"name":"Mon Chef IA","short_name":"ChefIA","start_url":".","display":"standalone","background_color":"#f4f7f6","theme_color":"#FF6B6B","icons":[{"src":"https://cdn-icons-png.flaticon.com/512/2921/2921822.png","sizes":"512x512","type":"image/png"}]}'>
-    <meta name="theme-color" content="#FF6B6B">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FF6B6B" id="metaThemeColor">
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
+        /* --- VARIABLES DE THÈMES --- */
         :root {
+            /* Thème par défaut (Classique) */
             --primary: #FF6B6B;
             --primary-hover: #fa5252;
             --bg-color: #f4f7f6;
@@ -22,142 +27,239 @@
             --border: #dfe6e9;
         }
 
-        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; }
-
-        .split-layout { display: flex; height: 100vh; width: 100%; }
-        .left-panel { width: 40%; min-width: 350px; background: var(--card-bg); padding: 30px; overflow-y: auto; box-shadow: 2px 0 20px rgba(0,0,0,0.06); z-index: 10; display: flex; flex-direction: column;}
-        .right-panel { width: 60%; background: var(--bg-color); padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; }
-        .right-content { max-width: 800px; margin: 0 auto; }
-
-        @media (max-width: 850px) {
-            body { overflow: auto; height: auto; }
-            .split-layout { flex-direction: column; height: auto; }
-            .left-panel, .right-panel { width: 100%; padding: 20px; box-sizing: border-box; }
-            .left-panel { border-bottom: 2px solid var(--border); box-shadow: none; }
+        [data-theme="bistrot"] {
+            --primary: #c0392b; 
+            --primary-hover: #e74c3c;
+            --bg-color: #fdf6e3; 
+            --card-bg: #ffffff;
+            --text-main: #4e342e; 
+            --text-muted: #795548;
+            --border: #d7ccc8;
         }
 
-        h2 { color: var(--primary); margin-top: 0; font-size: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+        [data-theme="dark"] {
+            --primary: #0984e3; 
+            --primary-hover: #74b9ff;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        [data-theme="zelda"] {
+            --primary: #0a7e8c; /* Bleu Prodige */
+            --primary-hover: #f1c40f; /* Or Triforce */
+            --bg-color: #f4ecd8; /* Parchemin */
+            --card-bg: #fffbf0;
+            --text-main: #3e2723;
+            --text-muted: #5d4037;
+            --border: #d7ccc8;
+        }
+
+        body { font-family: 'Poppins', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+
+        /* Écran de connexion */
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 20px; box-sizing: border-box; text-align: center; }
+        #loginScreen h1 { color: var(--primary); margin-bottom: 20px; font-size: 32px; }
+        #appContent { display: none; height: 100%; width: 100%; }
+
+        /* Layout */
+        .split-layout { display: flex; height: 100vh; width: 100%; }
+        .left-panel { width: 40%; min-width: 350px; background: var(--card-bg); padding: 30px; overflow-y: auto; box-shadow: 2px 0 20px rgba(0,0,0,0.06); z-index: 10; display: flex; flex-direction: column; transition: background-color 0.3s;}
+        .right-panel { width: 60%; background: var(--bg-color); padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; transition: background-color 0.3s;}
+        .right-content { max-width: 800px; margin: 0 auto; }
+
+        /* RESPONSIVE MOBILE */
+        @media (max-width: 850px) {
+            body { overflow: auto; height: auto; }
+            .split-layout { flex-direction: column; height: auto; display: block; }
+            .left-panel { width: 100%; min-width: auto; padding: 20px; box-sizing: border-box; border-bottom: 2px solid var(--border); box-shadow: none; display: block; }
+            .right-panel { width: 100%; padding: 20px; box-sizing: border-box; min-height: 100vh; }
+            h2 { flex-direction: column; align-items: flex-start !important; gap: 15px !important;}
+            .nav-buttons { flex-wrap: wrap; width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px;}
+            .btn-top { text-align: center; width: 100%; padding: 10px;}
+        }
+
+        /* UI Elements */
+        h2 { color: var(--primary); margin-top: 0; font-size: 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px;}
         .nav-buttons { display: flex; gap: 5px; }
-        .btn-top { font-size: 12px; background: #f1f2f6; border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; color: var(--text-main); font-weight: 600; }
-        .btn-top:hover { background: #dfe6e9; }
+        .btn-top { font-size: 12px; background: var(--card-bg); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; color: var(--text-main); font-weight: 600; transition: 0.2s;}
+        .btn-top:hover { border-color: var(--primary); color: var(--primary); }
 
         label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase; }
         .row { display: flex; gap: 15px; margin-bottom: 20px; } .row > div { flex: 1; }
-        input[type="text"], input[type="number"], select { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; transition: 0.3s; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; transition: 0.3s; box-sizing: border-box; background: var(--card-bg); color: var(--text-main);}
         input:focus, select:focus { border-color: var(--primary); outline: none; }
 
-        .btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 16px; padding: 16px; width: 100%; border-radius: 12px; transition: 0.3s; margin-top: auto;}
+        .btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 16px; padding: 16px; width: 100%; border-radius: 12px; transition: 0.3s; margin-top: 20px;}
         .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
         .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-        .btn-secondary:hover { background: #f1f2f6; }
+        .btn-secondary:hover { background: var(--bg-color); }
+        .btn-danger { background: #ff7675; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .btn-danger:hover { background: #d63031; }
 
+        /* Catégories Ingrédients */
         .categories { margin-bottom: 20px; }
-        details.cat-details { background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
-        details.cat-details summary { font-weight: 600; cursor: pointer; padding: 15px; background: #f8f9fa; }
+        details.cat-details { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+        details.cat-details summary { font-weight: 600; cursor: pointer; padding: 15px; background: var(--bg-color); color: var(--text-main); }
         .ingredient-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; }
         .ingredient-item input[type="checkbox"] { display: none; }
-        .ingredient-item span { display: inline-block; padding: 8px 16px; background: #f1f2f6; color: var(--text-muted); border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .ingredient-item span { display: inline-block; padding: 8px 16px; background: var(--bg-color); color: var(--text-muted); border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: 0.2s;}
         .ingredient-item input[type="checkbox"]:checked + span { background: var(--primary); color: white; }
 
-        .loader { display: none; text-align: center; margin-top: 20vh; }
+        .loader { display: none; text-align: center; margin-top: 10vh; }
         .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* Cartes Recettes */
-        details.recipe-card { background: #fff; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.04); overflow: hidden; position: relative; transition: all 0.4s ease; }
-        details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); }
-        details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 40px; background: #fff; min-height: 100vh;}
+        details.recipe-card { background: var(--card-bg); border-radius: 16px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.04); overflow: hidden; position: relative; transition: all 0.4s ease; border: 1px solid var(--border);}
+        details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); border:none;}
+        details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 20px; background: var(--card-bg); min-height: 100vh;}
         
-        details.recipe-card summary { font-size: 18px; font-weight: 700; padding: 20px; cursor: pointer; list-style: none; border-bottom: 1px solid transparent; display: flex; align-items: center;}
+        details.recipe-card summary { font-size: 16px; font-weight: 700; padding: 20px; cursor: pointer; list-style: none; border-bottom: 1px solid transparent; display: flex; align-items: center; justify-content: space-between;}
         details.recipe-card[open] summary { border-bottom-color: var(--border); color: var(--primary); }
-        .recipe-content { padding: 25px; font-size: 15px; line-height: 1.8; }
+        .recipe-content { padding: 20px; font-size: 14px; line-height: 1.8; color: var(--text-main); }
         
         .recipe-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; padding-top: 15px; border-top: 1px dashed var(--border);}
-        .btn-action { color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s;}
+        .btn-action { color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 14px;}
         .btn-save { background: #10ac84; } .btn-save:hover { background: #0e9673;}
-        .btn-expand { background: #0984e3; margin-left: auto;} .btn-expand:hover { background: #074e8c;}
-        .btn-course { background: #0984e3; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-left: 10px; }
+        .btn-expand { background: var(--primary); margin-left: auto;} .btn-expand:hover { background: var(--primary-hover);}
+        .btn-course { background: #0984e3; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 5px; }
+        .courses-box { background: var(--bg-color); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
 
         .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
-        .timer-tag:hover { background: #fdcb6e; transform: scale(1.05); }
         .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 4000; align-items: center; gap: 15px; }
         .floating-timer button { background: #ff7675; border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
 
-        .courses-box { background: #e3f2fd; border: 1px solid #74b9ff; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-
         /* Mode Pas-à-pas */
-        .pas-a-pas-container { display: none; background: #fdfdfd; border: 2px solid var(--primary); padding: 30px; border-radius: 15px; text-align: center; margin-top: 15px;}
-        .step-text { font-size: 22px; font-weight: 600; margin: 20px 0; min-height: 100px; display: flex; align-items: center; justify-content: center;}
-        .step-controls { display: flex; justify-content: center; gap: 15px; }
-        .btn-step { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer;}
-        .btn-step:disabled { background: #ccc; cursor: not-allowed; }
+        .pas-a-pas-container { display: none; background: var(--bg-color); border: 2px solid var(--primary); padding: 20px; border-radius: 15px; text-align: center; margin-top: 15px;}
+        .step-text { font-size: 18px; font-weight: 600; margin: 20px 0; min-height: 100px; display: flex; align-items: center; justify-content: center;}
+        .step-controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .btn-step { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer;}
+        .btn-step:disabled { background: var(--border); cursor: not-allowed; }
         .toggle-view { background: #6c5ce7; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 15px;}
 
         /* Vocal button */
-        .btn-vocal { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; margin-bottom: 15px;}
+        .btn-vocal { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px; margin-bottom: 15px; width: 100%; justify-content: center;}
         .btn-vocal.listening { background: #d63031; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* --- FENÊTRES MODALES --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 5000; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;}
+        .modal-content { background: var(--card-bg); width: 100%; max-width: 600px; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid var(--border);}
+        .modal-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); }
+        .modal-header h3 { margin: 0; color: var(--primary); font-size: 18px;}
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; color: var(--text-main);}
+        
+        .list-item-manage { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
+        .list-item-manage:last-child { border-bottom: none; }
+        .badge-cat { font-size: 10px; background: var(--bg-color); padding: 3px 6px; border-radius: 4px; margin-right: 10px; border: 1px solid var(--border);}
+        
+        .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x: auto; white-space: nowrap;}
+        .tab-btn { background: none; border: none; font-size: 14px; font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 5px 10px; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); margin-bottom: -12px;}
+
+        /* Style Courses (Checklist) */
+        .course-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s;}
+        .course-item:hover { background: var(--bg-color); }
+        .course-item.checked { text-decoration: line-through; color: var(--text-muted); background: var(--bg-color); opacity: 0.6;}
+        .circle-check { width: 20px; height: 20px; border: 2px solid var(--primary); border-radius: 50%; margin-right: 15px; display: flex; align-items: center; justify-content: center; }
+        .course-item.checked .circle-check { background: var(--primary); }
+        .course-item.checked .circle-check::after { content: '✓'; color: white; font-size: 12px; font-weight: bold; }
+
+        /* Style Sélecteur de Thème */
+        .theme-option { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; cursor: pointer; }
+        .theme-option:hover { border-color: var(--primary); }
+        .theme-option.active { border-color: var(--primary); border-width: 2px; background: var(--bg-color); }
+        .color-preview { display: flex; gap: 5px; }
+        .color-dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
 
-    <div class="split-layout">
-        <!-- PANNEAU GAUCHE -->
-        <div class="left-panel">
-            <h2>
-                Chef IA 👨‍🍳
-                <div class="nav-buttons">
-                    <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
-                    <button class="btn-top" onclick="lancerMealPlanner()">📅 Planning</button>
-                </div>
-            </h2>
-
-            <button class="btn-vocal" id="btnMic" onclick="toggleVocal()">🎙️ Dicter mes ingrédients</button>
-            
-            <div class="row" style="margin-bottom: 15px;">
-                <div>
-                    <label>Humeur / Style</label>
-                    <select id="humeur">
-                        <option value="classique">👨‍🍳 Classique</option>
-                        <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
-                        <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
-                        <option value="anti-gaspi, utilise en priorité les produits périssables">♻️ Mode Anti-Gaspi</option>
-                        <option value="gastronomique, original, digne d'un chef">🌟 Mode Gastronomique</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row">
-                <div>
-                    <label>Temps disponible</label>
-                    <select id="temps">
-                        <option value="15 minutes max">⚡ Moins de 15 min</option>
-                        <option value="30 minutes environ" selected>⏱️ Environ 30 min</option>
-                        <option value="1 heure max">⏳ Jusqu'à 1 heure</option>
-                        <option value="plat mijoté">🍲 Plus d'une heure</option>
-                    </select>
-                </div>
-                <div><label>Personnes</label><input type="number" id="personnes" value="2" min="1" onchange="recalculerProportions()"></div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <label style="margin: 0;">Vos ingrédients</label>
-                <button class="btn-secondary" onclick="decocherTout()">🔄 Tout décocher</button>
-            </div>
-            
-            <div class="categories" id="categoriesContainer"><i>Chargement... ⏳</i></div>
-            
-            <button class="btn-primary" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
+    <!-- ÉCRAN DE CONNEXION -->
+    <div id="loginScreen">
+        <h1>Mon Chef IA 👨‍🍳</h1>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
+        
+        <div id="g_id_onload"
+             data-client_id="536331491333-v2kurmu6l3ilsken65j9p3qg6gplnmdd.apps.googleusercontent.com"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
         </div>
+        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
 
-        <!-- PANNEAU DROIT -->
-        <div class="right-panel" id="rightPanel">
-            <div class="right-content">
-                <div id="loader" class="loader"><div class="loader-spinner"></div><p>Le Chef élabore vos menus...</p></div>
-                <div id="resultatDiv"><h3 style="color:#a4b0be; text-align:center; margin-top:20vh;">Vos recettes apparaîtront ici</h3></div>
-            </div>
-        </div>
+        <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Vous n'êtes pas autorisé.</div>
     </div>
+
+    <!-- CONTENU DE L'APPLICATION -->
+    <div id="appContent">
+        <div class="split-layout">
+            
+            <!-- PANNEAU GAUCHE -->
+            <div class="left-panel">
+                <h2>
+                    Chef IA 👨‍🍳
+                    <div class="nav-buttons">
+                        <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
+                        <button class="btn-top" onclick="chargerPlanning()">📅 Planning</button>
+                        <button class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
+                        <button class="btn-top" onclick="ouvrirParametres()">⚙️ Config</button>
+                    </div>
+                </h2>
+
+                <button class="btn-vocal" id="btnMic" onclick="toggleVocal()">🎙️ Dicter mes ingrédients</button>
+                
+                <div class="row" style="margin-bottom: 15px;">
+                    <div>
+                        <label>Humeur / Style</label>
+                        <select id="humeur">
+                            <option value="classique">👨‍🍳 Classique</option>
+                            <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
+                            <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
+                            <option value="anti-gaspi, utilise en priorité les produits périssables">♻️ Mode Anti-Gaspi</option>
+                            <option value="gastronomique, original, digne d'un chef">🌟 Mode Gastronomique</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div>
+                        <label>Temps dispo.</label>
+                        <select id="temps">
+                            <option value="15 minutes max">⚡ - 15 min</option>
+                            <option value="30 minutes environ" selected>⏱️ ~ 30 min</option>
+                            <option value="1 heure max">⏳ Jusqu'à 1h</option>
+                            <option value="plat mijoté">🍲 + d'une heure</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Personnes</label>
+                        <input type="number" id="personnes" value="2" min="1">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <label style="margin: 0;">Vos ingrédients</label>
+                    <button class="btn-secondary" onclick="decocherTout()">🔄 Tout décocher</button>
+                </div>
+                
+                <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
+                
+                <button class="btn-primary" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
+            </div>
+
+            <!-- PANNEAU DROIT -->
+            <div class="right-panel" id="rightPanel">
+                <div class="right-content">
+                    <div id="loader" class="loader"><div class="loader-spinner"></div><p style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p></div>
+                    <div id="resultatDiv"><h3 style="color:var(--text-muted); text-align:center; margin-top:20vh; font-weight:400; opacity:0.6;">Sélectionnez vos ingrédients et lancez la magie ! ✨</h3></div>
+                </div>
+            </div>
+
+        </div> 
+    </div> 
 
     <!-- WIDGET MINUTEUR -->
     <div id="floatingTimer" class="floating-timer">
@@ -165,322 +267,556 @@
         <button onclick="stopTimer()">X</button>
     </div>
 
+    <!-- MODAL PARAMÈTRES (BACK-OFFICE) -->
+    <div id="modalParametres" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Configuration</h3>
+                <button class="btn-secondary" onclick="fermerParametres()">✖ Fermer</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" id="tabIngBtn" onclick="switchTab('ing')">🍅 Ingrédients</button>
+                    <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
+                    <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
+                </div>
+
+                <!-- Onglet Ingrédients -->
+                <div id="tabIng">
+                    <div style="background: var(--bg-color); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--border);">
+                        <label>➕ Ajouter un ingrédient</label>
+                        <div class="row" style="margin-bottom: 10px;">
+                            <div>
+                                <select id="paramCat">
+                                    <option value="Légumes">Légumes</option><option value="Fruits">Fruits</option>
+                                    <option value="Protéines">Protéines</option><option value="Féculents">Féculents</option>
+                                    <option value="Produits laitiers">Produits laitiers</option><option value="Épices">Épices</option>
+                                    <option value="Sauces & Condiments">Sauces & Condiments</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="text" id="paramNewIng" placeholder="Ex: Patate douce...">
+                            </div>
+                        </div>
+                        <button class="btn-primary" style="margin-top: 0; padding: 10px;" onclick="ajouterIngredientDB()">Enregistrer</button>
+                    </div>
+                    
+                    <label>🗑️ Gérer les ingrédients actuels</label>
+                    <div id="listManageIng" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                        <p style="text-align:center; padding: 20px;">Chargement...</p>
+                    </div>
+                </div>
+
+                <!-- Onglet Carnet (Gestion) -->
+                <div id="tabCarnet" style="display: none;">
+                    <label>🗑️ Supprimer des recettes sauvegardées</label>
+                    <div id="listManageCarnet" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                        <p style="text-align:center; padding: 20px;">Chargement...</p>
+                    </div>
+                </div>
+
+                <!-- Onglet Thèmes -->
+                <div id="tabTheme" style="display: none;">
+                    <label>Choisissez votre ambiance de cuisine</label>
+                    
+                    <div class="theme-option" onclick="setTheme('default')" id="theme-default">
+                        <span style="font-weight: 600;">🍅 Classique (Le Chef)</span>
+                        <div class="color-preview">
+                            <div class="color-dot" style="background:#FF6B6B"></div>
+                            <div class="color-dot" style="background:#f4f7f6"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" onclick="setTheme('bistrot')" id="theme-bistrot">
+                        <span style="font-weight: 600;">☕ Bistrot Gourmand</span>
+                        <div class="color-preview">
+                            <div class="color-dot" style="background:#c0392b"></div>
+                            <div class="color-dot" style="background:#fdf6e3"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" onclick="setTheme('dark')" id="theme-dark">
+                        <span style="font-weight: 600;">🌙 Mode Sombre</span>
+                        <div class="color-preview">
+                            <div class="color-dot" style="background:#0984e3"></div>
+                            <div class="color-dot" style="background:#121212"></div>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" onclick="setTheme('zelda')" id="theme-zelda">
+                        <span style="font-weight: 600;">🗡️ Royaume d'Hyrule</span>
+                        <div class="color-preview">
+                            <div class="color-dot" style="background:#0a7e8c"></div>
+                            <div class="color-dot" style="background:#f4ecd8"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CARNET (Vue d'ensemble) -->
+    <div id="modalCarnet" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📖 Mon Carnet de Recettes</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalCarnet').style.display='none'">✖ Fermer</button>
+            </div>
+            <div class="modal-body" id="carnetContent"></div>
+        </div>
+    </div>
+
+    <!-- MODAL PLANNING (Semaine) -->
+    <div id="modalPlanning" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📅 Planning de la Semaine</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalPlanning').style.display='none'">✖ Fermer</button>
+            </div>
+            <div class="modal-body" id="planningContent"></div>
+        </div>
+    </div>
+
+    <!-- MODAL COURSES -->
+    <div id="modalCourses" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header" style="background: var(--bg-color);">
+                <h3 style="color:var(--primary);">🛒 Ma Liste de Courses</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalCourses').style.display='none'">✖ Fermer</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:0;"><i>Au supermarché, tapotez un article pour le rayer et le supprimer.</i></p>
+                <div id="coursesContent">
+                    <p style="text-align:center;">Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script>
-        const API_KEY = "AQ.Ab8RN6LP5r4xmsRpr4DykktGvTV6E2cwTFj2F9epCciSZT5EBw"; 
-        const API_URL = "https://script.google.com/macros/s/AKfycbyj9Un4ybwoQKOEJDz_fXQRiQFC70uQpF945_Dhq50NjAbzQC12l8SQ2VIQBjF4rT8h-Q/exec"; 
+        // --- GESTION DES THÈMES ---
+        function setTheme(themeName) {
+            document.documentElement.setAttribute('data-theme', themeName);
+            localStorage.setItem('chef_ia_theme', themeName);
+            
+            // Mettre à jour l'UI des sélecteurs
+            document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
+            const activeOption = document.getElementById('theme-' + themeName);
+            if(activeOption) activeOption.classList.add('active');
 
-        window.onload = async function() {
-            try {
-                const rep = await fetch(API_URL);
-                const liste = await rep.json();
-                const container = document.getElementById('categoriesContainer');
-                container.innerHTML = "";
-                const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
+            // Mettre à jour la couleur du navigateur mobile (PWA)
+            let color = "#FF6B6B";
+            if(themeName === 'bistrot') color = "#c0392b";
+            if(themeName === 'dark') color = "#0984e3";
+            if(themeName === 'zelda') color = "#0a7e8c";
+            document.getElementById('metaThemeColor').setAttribute('content', color);
+        }
 
-                for (const [cat, items] of Object.entries(liste)) {
-                    let html = `<details class="cat-details"><summary>${cat}</summary><div class="ingredient-list">`;
-                    items.forEach(item => {
-                        const isChecked = memoire.includes(item) ? "checked" : "";
-                        html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${item}</span></label>`;
-                    });
-                    html += `</div></details>`;
-                    container.innerHTML += html;
-                }
-                document.querySelectorAll('.chk-ingredient').forEach(cb => cb.addEventListener('change', () => {
-                    const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-                    localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
-                }));
-            } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Google Sheets.</span>"; }
+        // --- INIT AU CHARGEMENT ---
+        window.onload = function() {
+            // Charger le thème sauvegardé
+            const savedTheme = localStorage.getItem('chef_ia_theme') || 'default';
+            setTheme(savedTheme);
+
+            // Vérifier l'authentification
+            if (localStorage.getItem('chef_ia_auth') === 'true') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+                chargerInterfaceBase();
+            }
         };
+
+        // --- AUTHENTIFICATION GOOGLE ---
+        function decodeJwtResponse(token) {
+            let base64Url = token.split('.')[1];
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            let jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        function handleCredentialResponse(response) {
+            const responsePayload = decodeJwtResponse(response.credential);
+            const userEmail = responsePayload.email;
+            
+            if (userEmail === "bokabiere@gmail.com") {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('appContent').style.display = 'block';
+                localStorage.setItem('chef_ia_auth', 'true');
+                chargerInterfaceBase();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function getApiKey() {
+            let key = localStorage.getItem('gemini_api_key');
+            if (!key) {
+                key = prompt("🔒 Sécurité : Veuillez coller votre clé API Gemini. (Sauvegardée sur cet appareil)");
+                if (key) localStorage.setItem('gemini_api_key', key);
+            }
+            return key;
+        }
+
+        // --- FIREBASE CONFIG ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBKgPJY1X6tYujXpsEG19fHs08nZpbXndM",
+          authDomain: "mon-chef-ia-80143.firebaseapp.com",
+          projectId: "mon-chef-ia-80143",
+          storageBucket: "mon-chef-ia-80143.firebasestorage.app",
+          messagingSenderId: "395042994130",
+          appId: "1:395042994130:web:c1cec40bcbaf61b0bfba0b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(); 
+        let globalIngredientsList = {}; 
+
+        async function chargerInterfaceBase() {
+            try {
+                let docRef = db.collection("config").doc("ingredients");
+                let docSnap = await docRef.get();
+                if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
+                afficherIngredientsGauche();
+            } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
+        }
+
+        function afficherIngredientsGauche() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = "";
+            const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
+            const sortedCats = Object.keys(globalIngredientsList).sort();
+
+            for (const cat of sortedCats) {
+                let items = globalIngredientsList[cat];
+                if (!items || items.length === 0) continue;
+                items.sort();
+                
+                let html = `<details class="cat-details"><summary>${cat}</summary><div class="ingredient-list">`;
+                items.forEach(item => {
+                    const isChecked = memoire.includes(item) ? "checked" : "";
+                    html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${item}</span></label>`;
+                });
+                html += `</div></details>`;
+                container.innerHTML += html;
+            }
+            document.querySelectorAll('.chk-ingredient').forEach(cb => cb.addEventListener('change', () => {
+                const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+                localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+            }));
+        }
 
         function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); }
 
-        // --- 1. DICTÉE VOCALE ---
+        // --- GESTION DES PARAMÈTRES (BACK-OFFICE) ---
+        function ouvrirParametres() { document.getElementById('modalParametres').style.display = 'flex'; chargerListeManageIng(); }
+        function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
+        function switchTab(tab) {
+            ['tabIng', 'tabCarnet', 'tabTheme'].forEach(t => {
+                document.getElementById(t + 'Btn').classList.remove('active');
+                document.getElementById(t).style.display = 'none';
+            });
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').classList.add('active');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+            if(tab === 'ing') chargerListeManageIng();
+            if(tab === 'carnet') chargerListeManageCarnet();
+        }
+
+        async function ajouterIngredientDB() {
+            const cat = document.getElementById('paramCat').value; const ing = document.getElementById('paramNewIng').value.trim();
+            if(!ing) return alert("Saisir un ingrédient.");
+            try {
+                await db.collection("config").doc("ingredients").update({ [cat]: firebase.firestore.FieldValue.arrayUnion(ing) });
+                if(!globalIngredientsList[cat]) globalIngredientsList[cat] = [];
+                if(!globalIngredientsList[cat].includes(ing)) globalIngredientsList[cat].push(ing);
+                document.getElementById('paramNewIng').value = ""; chargerListeManageIng(); afficherIngredientsGauche();
+            } catch(e) {}
+        }
+
+        async function supprimerIngredientDB(cat, ing) {
+            if(!confirm(`Supprimer "${ing}" ?`)) return;
+            try {
+                await db.collection("config").doc("ingredients").update({ [cat]: firebase.firestore.FieldValue.arrayRemove(ing) });
+                globalIngredientsList[cat] = globalIngredientsList[cat].filter(i => i !== ing);
+                chargerListeManageIng(); afficherIngredientsGauche();
+                const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
+                localStorage.setItem('ingredientsSauves', JSON.stringify(memoire.filter(i => i !== ing)));
+            } catch(e) {}
+        }
+
+        function chargerListeManageIng() {
+            const listDiv = document.getElementById('listManageIng'); let html = ""; const sortedCats = Object.keys(globalIngredientsList).sort();
+            for(const cat of sortedCats) {
+                let items = globalIngredientsList[cat] || []; items.sort();
+                items.forEach(ing => {
+                    let safeIng = ing.replace(/'/g, "\\'"); let safeCat = cat.replace(/'/g, "\\'");
+                    html += `<div class="list-item-manage"><div><span class="badge-cat">${cat}</span> ${ing}</div><button class="btn-danger" onclick="supprimerIngredientDB('${safeCat}', '${safeIng}')">🗑️</button></div>`;
+                });
+            }
+            listDiv.innerHTML = html || "<p style='text-align:center;'>Aucun ingrédient.</p>";
+        }
+
+        async function chargerListeManageCarnet() {
+            const listDiv = document.getElementById('listManageCarnet'); listDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("carnet").orderBy("date", "desc").get();
+                if (snapshot.empty) return listDiv.innerHTML = "<p style='text-align:center;'>Carnet vide.</p>";
+                let html = "";
+                snapshot.forEach(doc => {
+                    const item = doc.data(); let titre = item.recette.split('\n')[0].substring(0, 40) + "..."; let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
+                    html += `<div class="list-item-manage"><div style="font-size: 13px; font-weight: 500;"><div style="color:var(--primary); font-size:11px;">${dateStr}</div>${titre}</div><button class="btn-danger" onclick="supprimerRecetteCarnetDB('${doc.id}')">🗑️</button></div>`;
+                });
+                listDiv.innerHTML = html;
+            } catch(e) {}
+        }
+        async function supprimerRecetteCarnetDB(docId) {
+            if(!confirm("Supprimer cette recette ?")) return;
+            try { await db.collection("carnet").doc(docId).delete(); chargerListeManageCarnet(); } catch(e) {}
+        }
+
+        // --- DICTÉE VOCALE ---
         let recognition;
         function toggleVocal() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                return alert("Votre navigateur ne supporte pas la reconnaissance vocale.");
-            }
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'fr-FR';
-            
-            const btn = document.getElementById('btnMic');
-            btn.classList.add('listening');
-            btn.innerText = "🎙️ Écoute en cours...";
-
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return alert("Non supporté.");
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; recognition = new SpeechRecognition(); recognition.lang = 'fr-FR';
+            const btn = document.getElementById('btnMic'); btn.classList.add('listening'); btn.innerText = "🎙️ Écoute en cours...";
             recognition.onresult = function(event) {
                 const texte = event.results[0][0].transcript.toLowerCase();
-                btn.classList.remove('listening');
-                btn.innerText = "🎙️ Dicter mes ingrédients";
-                
-                // Coche automatiquement les cases si l'ingrédient est trouvé
-                document.querySelectorAll('.chk-ingredient').forEach(cb => {
-                    if (texte.includes(cb.value.toLowerCase())) {
-                        cb.checked = true;
-                    }
-                });
-                sauvegarderChoix();
-                alert(`J'ai écouté : "${texte}". Ingrédients cochés !`);
+                btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter mes ingrédients";
+                document.querySelectorAll('.chk-ingredient').forEach(cb => { if (texte.includes(cb.value.toLowerCase())) cb.checked = true; });
+                localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
             };
-
-            recognition.onerror = function() {
-                btn.classList.remove('listening');
-                btn.innerText = "🎙️ Dicter mes ingrédients";
-            };
+            recognition.onerror = function() { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter mes ingrédients"; };
             recognition.start();
         }
 
-        function sauvegarderChoix() {
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+        // --- LISTE DE COURSES ---
+        async function ouvrirCourses() {
+            document.getElementById('modalCourses').style.display = 'flex';
+            const contentDiv = document.getElementById('coursesContent');
+            contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("courses").orderBy("date", "desc").get();
+                if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
+                
+                let html = "";
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    html += `<div class="course-item" id="course-${doc.id}" onclick="checkerCourse('${doc.id}')"><div class="circle-check"></div><span style="font-size: 15px; font-weight:500;">${item.ingredient}</span></div>`;
+                });
+                contentDiv.innerHTML = html;
+            } catch(e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
         }
 
-        // --- 2. PLANIFICATEUR DE REPAS (MEAL PLANNER) ---
-        async function lancerMealPlanner() {
-            const resDiv = document.getElementById('resultatDiv');
-            const loader = document.getElementById('loader');
+        async function checkerCourse(docId) {
+            const itemDiv = document.getElementById('course-' + docId);
+            itemDiv.classList.add('checked');
+            setTimeout(async () => {
+                try { await db.collection("courses").doc(docId).delete(); itemDiv.style.display = 'none'; } catch(e) { itemDiv.classList.remove('checked'); }
+            }, 600);
+        }
+
+        // --- PLANNING INTELLIGENT ---
+        async function chargerPlanning() {
+            document.getElementById('modalPlanning').style.display = 'flex';
+            const contentDiv = document.getElementById('planningContent');
+            contentDiv.innerHTML = "<p style='text-align:center;'>Recherche du menu...</p>";
+            try {
+                const docSnap = await db.collection("userdata").doc("planning").get();
+                if (docSnap.exists) { afficherPlanningHtml(docSnap.data()); } else { genererNouveauPlanning(); }
+            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
+        }
+
+        function afficherPlanningHtml(planningObj) {
+            const contentDiv = document.getElementById('planningContent');
+            let html = `<div style="background:var(--card-bg); padding:15px; border-radius:10px; border: 1px solid var(--border);"><ul>`;
+            const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+            jours.forEach(jour => {
+                if(planningObj[jour]) {
+                    let plat = planningObj[jour]; let safePlat = plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `<li style="margin-bottom:12px; font-size:15px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                        <span style="flex:1;"><b>${jour} :</b> ${plat}</span>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn-action" style="background:#6c5ce7; padding: 4px 10px; font-size: 12px;" onclick="relancerJour('${jour}', '${safePlat}')">🎲</button>
+                            <button class="btn-action btn-expand" style="padding: 4px 10px; font-size: 12px;" onclick="cuisinerCePlat('${safePlat}')">🍳</button>
+                        </div>
+                    </li>`;
+                }
+            });
+            html += `</ul><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="genererNouveauPlanning()">🔄 Réinitialiser et générer une nouvelle semaine</button></div>`;
+            contentDiv.innerHTML = html;
+        }
+
+        async function genererNouveauPlanning() {
+            const contentDiv = document.getElementById('planningContent');
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            
-            if (checked.length === 0) return alert("Sélectionnez au moins quelques ingrédients de base pour planifier la semaine !");
-            resDiv.innerHTML = ""; loader.style.display = "block";
-            
-            const prompt = `Génère un planning de repas pour toute la semaine (de Lundi à Dimanche) en utilisant principalement ces ingrédients : ${checked.join(", ")}. 
-            Pour chaque jour (Lundi, Mardi, Mercredi, Jeudi, Vendredi, Samedi, Dimanche), donne le nom d'un plat simple.
-            Règle STRICTE : Réponds uniquement sous ce format précis (un par ligne) :
-            Lundi: [Nom du plat]
-            Mardi: [Nom du plat]
-            Mercredi: [Nom du plat]
-            Jeudi: [Nom du plat]
-            Vendredi: [Nom du plat]
-            Samedi: [Nom du plat]
-            Dimanche: [Nom du plat]`;
+            if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
+            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
+
+            const prompt = `Génère un menu simple pour 7 jours en utilisant principalement ces ingrédients : ${checked.join(", ")}. Format STRICT requis (un par ligne) :
+            Lundi: [Plat]\nMardi: [Plat]\nMercredi: [Plat]\nJeudi: [Plat]\nVendredi: [Plat]\nSamedi: [Plat]\nDimanche: [Plat]`;
 
             try {
-                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await rep.json();
-                loader.style.display = "none";
-                
                 let texte = data.candidates[0].content.parts[0].text;
                 let lignes = texte.split('\n').filter(l => l.includes(':'));
                 let planningObj = {};
-                
-                let html = `<h3>📅 Votre Planning de la Semaine</h3><div style="background:white; padding:20px; border-radius:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);"><ul>`;
-                lignes.forEach(l => {
-                    let parts = l.split(':');
-                    let jour = parts[0].trim();
-                    let plat = parts[1].trim();
-                    planningObj[jour] = plat;
-                    html += `<li style="margin-bottom:12px; font-size:16px;"><b>${jour} :</b> ${plat}</li>`;
-                });
-                html += `</ul><button class="btn-primary" style="margin-top:20px;" onclick='sauvegarderPlanning(${JSON.stringify(planningObj)})'>💾 Enregistrer ce planning dans mon Drive</button></div>`;
-                resDiv.innerHTML = html;
-            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur de génération du planning."; }
+                lignes.forEach(l => { let parts = l.split(':'); planningObj[parts[0].trim()] = parts[1].trim(); });
+                await db.collection("userdata").doc("planning").set(planningObj);
+                afficherPlanningHtml(planningObj);
+            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur IA.</p>"; }
         }
 
-        async function sauvegarderPlanning(obj) {
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "sauvegarder_planning", planning: obj }) });
-                alert("Planning enregistré avec succès dans Google Sheets !");
-            } catch (e) { alert("Erreur lors de la sauvegarde."); }
-        }
-
-        // --- 3. CARNET DE RECETTES ---
-        async function chargerCarnet() {
-            const resDiv = document.getElementById('resultatDiv');
-            const loader = document.getElementById('loader');
-            resDiv.innerHTML = ""; loader.style.display = "block";
-            
-            try {
-                const rep = await fetch(API_URL + "?action=get_carnet");
-                const carnet = await rep.json();
-                loader.style.display = "none";
-                
-                if (carnet.length === 0) return resDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
-
-                let html = `<h3>📖 Mon Carnet de Recettes</h3>`;
-                carnet.forEach((item, index) => {
-                    let titre = item.recette.split('\n')[0];
-                    let contenu = item.recette.substring(titre.length).trim().replace(/\n/g, '<br>');
-                    
-                    html += `
-                    <details class="recipe-card" id="card-${index}">
-                        <summary>${titre} <span style="font-size:12px; color:#aaa; margin-left:10px;">(${new Date(item.date).toLocaleDateString()})</span></summary>
-                        <div class="recipe-content">
-                            ${contenu}
-                            <div class="recipe-actions">
-                                <button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button>
-                            </div>
-                        </div>
-                    </details>`;
-                });
-                resDiv.innerHTML = html;
-            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur chargement carnet."; }
-        }
-
-        // --- 4. MOTEUR DE RECETTES PRINCIPAL ---
-        async function chercherRecettesIA() {
-            const resDiv = document.getElementById('resultatDiv');
-            const loader = document.getElementById('loader');
+        async function relancerJour(jour, platActuel) {
+            const contentDiv = document.getElementById('planningContent');
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            
-            if (checked.length === 0) return alert("Sélectionnez au moins un ingrédient !");
-            resDiv.innerHTML = ""; loader.style.display = "block";
-            
-            const humeur = document.getElementById('humeur').value;
-            const personnes = document.getElementById('personnes').value;
-            const prompt = `Je veux cuisiner pour ${personnes} personnes. Temps cible: ${document.getElementById('temps').value}. 
-            Ingrédients dispo: ${checked.join(", ")}. 
-            Style attendu : ${humeur}.
-            Propose 3 recettes différentes.
-            
-            Règles STRICTES:
-            1. Sépare chaque recette avec exactement '---RECETTE---'.
-            2. La 1ère ligne commence par un émoji et le TITRE.
-            3. Ingrédients manquants vitaux ? Écris à la fin : "COURSES: ingrédient1, ingrédient2".
-            4. Écris les durées en chiffres (ex: 15 min). Pas d'astérisques Markdown.`;
+            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
+
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat avec : ${checked.join(", ")}. Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
-                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${API_KEY}`, {
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
                 const data = await rep.json();
-                loader.style.display = "none";
+                let nouveauPlat = data.candidates[0].content.parts[0].text.trim().replace(/[*#]/g, '');
+                
+                await db.collection("userdata").doc("planning").update({ [jour]: nouveauPlat });
+                const docSnap = await db.collection("userdata").doc("planning").get();
+                afficherPlanningHtml(docSnap.data());
+            } catch(e) { alert("Erreur."); chargerPlanning(); }
+        }
+
+        // --- MOTEURS DE RECETTES ---
+        async function cuisinerCePlat(nomDuPlat) {
+            document.getElementById('modalPlanning').style.display = 'none';
+            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
+            const personnes = document.getElementById('personnes').value;
+            resDiv.innerHTML = ""; loader.style.display = "block";
+            
+            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
+            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+
+            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers.
+            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
+            executerRequeteIA(prompt, `Voici la recette pour : ${nomDuPlat} 🍽️`);
+        }
+
+        async function chercherRecettesIA() {
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            if (checked.length === 0) return alert("Sélectionnez au moins un ingrédient !");
+            
+            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
+            resDiv.innerHTML = ""; loader.style.display = "block";
+            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
+            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+            
+            const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value;
+            const prompt = `Cuisine pour ${personnes} pers. Temps: ${document.getElementById('temps').value}. 
+            Dispo: ${checked.join(", ")}. Style: ${humeur}. Propose 3 recettes.
+            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
+            executerRequeteIA(prompt, "J'ai trouvé {N} idées pour vous !");
+        }
+
+        async function executerRequeteIA(prompt, titleTemplate) {
+            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
+            try {
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await rep.json(); loader.style.display = "none";
 
                 let blocs = data.candidates[0].content.parts[0].text.split('---RECETTE---').filter(b => b.trim().length > 50);
-                let html = `<h3>J'ai trouvé ${blocs.length} idées pour vous !</h3>`;
+                let mainTitle = titleTemplate.replace('{N}', blocs.length);
+                let html = `<h3>${mainTitle}</h3>`;
                 
                 blocs.forEach((bloc, index) => {
-                    bloc = bloc.trim();
-                    let iSaut = bloc.indexOf('\n');
-                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, '');
-                    let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
+                    bloc = bloc.trim(); let iSaut = bloc.indexOf('\n');
+                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
                     
                     let coursesMatch = contenu.match(/COURSES:\s*(.*)/i);
                     if (coursesMatch) {
                         let items = coursesMatch[1].split(',').map(i => i.trim());
-                        let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul>`;
-                        items.forEach(item => {
-                            coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕</button></li>`;
-                        });
-                        coursesUI += `</ul></div>`;
-                        contenu = contenu.replace(coursesMatch[0], coursesUI);
+                        let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
+                        items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
+                        coursesUI += `</ul></div>`; contenu = contenu.replace(coursesMatch[0], coursesUI);
                     }
-
                     contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
-                    
-                    let safeTitre = titre.replace(/'/g, "\\'");
-                    let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+                    let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
                     let stepsArrayString = `['${rawSteps.join("','")}']`;
 
-                    html += `
-                    <details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}>
-                        <summary>${titre}</summary>
-                        <div class="recipe-content">
-                            <button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Lancer le mode Pas-à-pas</button>
-                            
-                            <div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div>
-
-                            <div id="step-view-${index}" class="pas-a-pas-container">
-                                <div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div>
-                                <div class="step-text">Contenu</div>
-                                <div class="step-controls">
-                                    <button class="btn-step" onclick="changeStep('${index}', -1)">⬅️ Précédent</button>
-                                    <button class="btn-step" onclick="changeStep('${index}', 1)">Suivant ➡️</button>
-                                </div>
-                            </div>
-
-                            <div class="recipe-actions">
-                                <button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button>
-                                <button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button>
-                            </div>
-                        </div>
-                    </details>`;
+                    html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary>${titre}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
                 });
                 resDiv.innerHTML = html;
-            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur de connexion."; }
+            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
         }
-        
+
+        // --- CARNET VUE MODALE ---
+        async function chargerCarnet() {
+            document.getElementById('modalCarnet').style.display = 'flex';
+            const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("carnet").orderBy("date", "desc").get();
+                if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
+                let html = "";
+                snapshot.forEach(doc => {
+                    const item = doc.data(); let titre = item.recette.split('\n')[0]; let contenu = item.recette.substring(titre.length).trim().replace(/\n/g, '<br>'); let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
+                    html += `<details class="recipe-card" style="box-shadow: none; border: 1px solid var(--border);"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${contenu}</div></details>`;
+                });
+                contentDiv.innerHTML = html;
+            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
+        }
+
+        // --- UTILITAIRES ---
         function toggleExpand(cardId, btn) {
-            const card = document.getElementById(cardId);
-            card.classList.toggle('is-fullscreen');
+            const card = document.getElementById(cardId); card.classList.toggle('is-fullscreen');
             btn.innerHTML = card.classList.contains('is-fullscreen') ? ">< Réduire" : "⛶ Agrandir";
         }
-
         let recipeSteps = {};
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
-            const textView = document.getElementById(textId);
-            const stepView = document.getElementById(stepId);
-            if (textView.style.display === "none") {
-                textView.style.display = "block"; stepView.style.display = "none";
-                btnToggle.innerText = "👀 Lancer le mode Pas-à-pas";
-            } else {
-                textView.style.display = "none"; stepView.style.display = "block";
-                btnToggle.innerText = "📄 Revenir au texte complet";
-                let index = stepId.split('-')[2];
-                recipeSteps[index] = { current: 0, steps: stepsArray };
-                updateStepDisplay(index);
-            }
+            const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
+            if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
+            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-')[2]; recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplay(index); }
         }
-
         function changeStep(recipeIndex, direction) {
-            let data = recipeSteps[recipeIndex];
-            data.current += direction;
-            if (data.current < 0) data.current = 0;
-            if (data.current >= data.steps.length) data.current = data.steps.length - 1;
-            updateStepDisplay(recipeIndex);
+            let data = recipeSteps[recipeIndex]; data.current += direction;
+            if (data.current < 0) data.current = 0; if (data.current >= data.steps.length) data.current = data.steps.length - 1; updateStepDisplay(recipeIndex);
         }
-
         function updateStepDisplay(recipeIndex) {
-            let data = recipeSteps[recipeIndex];
-            const container = document.getElementById(`step-view-${recipeIndex}`);
-            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} sur ${data.steps.length}`;
-            container.querySelector('.step-text').innerHTML = data.steps[data.current];
-            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0);
-            container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
+            let data = recipeSteps[recipeIndex]; const container = document.getElementById(`step-view-${recipeIndex}`);
+            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} / ${data.steps.length}`; container.querySelector('.step-text').innerHTML = data.steps[data.current];
+            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0); container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
         }
 
         async function ajouterCourse(btn, ingredient) {
-            btn.innerText = "⏳..."; btn.disabled = true;
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "ajouter_course", ingredient: ingredient }) });
-                btn.innerText = "✅ Ajouté"; btn.style.background = "#27ae60";
-            } catch (e) { btn.innerText = "Erreur"; }
+            btn.innerText = "⏳"; btn.disabled = true;
+            try { await db.collection("courses").add({ ingredient: ingredient, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "❌"; }
         }
-
         async function sauvegarder(btn, titre, contentId) {
-            btn.innerText = "⏳..."; btn.disabled = true;
-            let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
-            try {
-                await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "sauvegarder_recette", recette: texte }) });
-                btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60";
-            } catch (e) { btn.innerText = "Erreur"; }
+            btn.innerText = "⏳..."; btn.disabled = true; let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
+            try { await db.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
         }
 
         let timerInterval;
         function startTimer(minutes) {
-            clearInterval(timerInterval);
-            let timeInSeconds = parseInt(minutes) * 60;
-            const timerUI = document.getElementById('floatingTimer');
-            const timeDisplay = document.getElementById('timeDisplay');
+            clearInterval(timerInterval); let timeInSeconds = parseInt(minutes) * 60; const timerUI = document.getElementById('floatingTimer'); const timeDisplay = document.getElementById('timeDisplay');
             timerUI.style.display = 'flex';
             timerInterval = setInterval(() => {
-                let m = Math.floor(timeInSeconds / 60);
-                let s = timeInSeconds % 60;
-                timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "Terminé ! 🔔"; }
-                timeInSeconds--;
+                let m = Math.floor(timeInSeconds / 60); let s = timeInSeconds % 60; timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "🔔 Fin !"; } timeInSeconds--;
             }, 1000);
         }
         function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
-
-        function recalculerProportions() {
-            // Placeholder pour un futur ajustement automatique des grammes si besoin
-        }
     </script>
 </body>
 </html>
