@@ -918,20 +918,60 @@
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
         }
 
-        // --- CARNET ---
+// --- CARNET VUE MODALE (AVEC TOUTES LES FONCTIONNALITÉS) ---
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex';
-            const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            const contentDiv = document.getElementById('carnetContent'); 
+            contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            
             try {
                 const snapshot = await db.collection("carnet").orderBy("date", "desc").get();
                 if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
+                
                 let html = "";
+                let index = 0;
                 snapshot.forEach(doc => {
-                    const item = doc.data(); let titre = item.recette.split('\n')[0]; let contenu = item.recette.substring(titre.length).trim().replace(/\n/g, '<br>'); let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
-                    html += `<details class="recipe-card" style="box-shadow: none; border: 1px solid var(--border);"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${contenu}</div></details>`;
+                    const item = doc.data(); 
+                    let bloc = item.recette;
+                    let iSaut = bloc.indexOf('\n');
+                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); 
+                    let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
+                    let dateStr = item.date ? item.date.toDate().toLocaleDateString() : "";
+                    
+                    // Rendre les minutes cliquables pour les minuteurs dans le carnet
+                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+                    
+                    let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+                    let stepsArrayString = `['${rawSteps.join("','")}']`;
+
+                    html += `
+                    <details class="recipe-card" id="carnet-card-${index}">
+                        <summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary>
+                        <div class="recipe-content">
+                            <button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button>
+                            
+                            <div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div>
+
+                            <div id="carnet-step-${index}" class="pas-a-pas-container">
+                                <div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div>
+                                <div class="step-text">Contenu</div>
+                                <div class="step-controls">
+                                    <button class="btn-step" onclick="changeStep('carnet-${index}', -1)">⬅️</button>
+                                    <button class="btn-step" onclick="changeStep('carnet-${index}', 1)">➡️</button>
+                                </div>
+                            </div>
+
+                            <div class="recipe-actions">
+                                <button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button>
+                            </div>
+                        </div>
+                    </details>`;
+                    index++;
                 });
                 contentDiv.innerHTML = html;
-            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
+            } catch (e) { 
+                contentDiv.innerHTML = "<p style='color:red;'>Erreur de chargement du carnet.</p>"; 
+            }
         }
 
         // --- SCANNER IA ---
@@ -1048,9 +1088,23 @@
             if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
             else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-')[2]; recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplay(index); }
         }
-        function changeStep(recipeIndex, direction) {
-            let data = recipeSteps[recipeIndex]; data.current += direction;
-            if (data.current < 0) data.current = 0; if (data.current >= data.steps.length) data.current = data.steps.length - 1; updateStepDisplay(recipeIndex);
+function changeStep(recipeIndex, direction) {
+            let data = recipeSteps[recipeIndex]; 
+            data.current += direction;
+            if (data.current < 0) data.current = 0; 
+            if (data.current >= data.steps.length) data.current = data.steps.length - 1; 
+            
+            let containerId = recipeIndex.toString().includes('carnet') ? `carnet-step-${recipeIndex.split('-')[2]}` : `step-view-${recipeIndex}`;
+            updateStepDisplayCustom(containerId, data);
+        }
+
+        function updateStepDisplayCustom(containerId, data) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} / ${data.steps.length}`; 
+            container.querySelector('.step-text').innerHTML = data.steps[data.current];
+            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0); 
+            container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
         }
         function updateStepDisplay(recipeIndex) {
             let data = recipeSteps[recipeIndex]; const container = document.getElementById(`step-view-${recipeIndex}`);
