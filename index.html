@@ -303,6 +303,31 @@
         .confirm-actions .btn-cancel { background: var(--bg-color); color: var(--text-muted); border: 1px solid var(--border); }
         .confirm-actions .btn-ok { background: var(--primary); color: white; }
         .confirm-actions .btn-ok.danger { background: #d63031; }
+
+        /* --- AMÉLIORATIONS LISTE DE COURSES --- */
+        
+        /* 1. Animation d'ajout au panier */
+        @keyframes pop-cart {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); background-color: var(--primary); color: white; border-color: var(--primary); }
+            100% { transform: scale(1); }
+        }
+        .animate-cart { animation: pop-cart 0.4s ease; }
+        
+        /* 2. Ajout manuel rapide */
+        .manual-add-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .manual-add-container input { flex: 1; padding: 12px; border-radius: 10px; border: 2px solid var(--border); font-family: inherit; }
+        .manual-add-container input:focus { border-color: var(--primary); outline: none; }
+        
+        /* 3. Section Caddie (Annulation facile) */
+        .caddie-divider { margin: 25px 0 15px 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px dashed var(--border); padding-bottom: 8px; letter-spacing: 1px; }
+        
+        /* 4. Mode Achat (Plein écran) */
+        .modal-content.shopping-mode { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-width: none; max-height: none; border-radius: 0; border: none; margin: 0; z-index: 9999; }
+        .shopping-mode .modal-header h3 { font-size: 24px; }
+        .shopping-mode .course-item { padding: 18px 12px; font-size: 18px !important; }
+        .shopping-mode .circle-check { width: 26px; height: 26px; border-width: 3px; }
+
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -346,7 +371,7 @@
                     <div class="nav-buttons">
                         <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
                         <button class="btn-top" onclick="chargerPlanning()">📅 Planning</button>
-                        <button class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
+                        <button id="btnNavCourses" class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
                         <button class="btn-top" onclick="ouvrirParametres()">⚙️ Config</button>
                     </div>
                 </div>
@@ -612,15 +637,24 @@
         </div>
     </div>
 
-    <!-- MODAL COURSES -->
+    <!-- MODAL COURSES AMÉLIORÉE -->
     <div id="modalCourses" class="modal-overlay">
-        <div class="modal-content">
+        <div class="modal-content" id="modalCoursesContent">
             <div class="modal-header" style="background: var(--bg-color);">
-                <h3 style="color:var(--primary);">🛒 Ma Liste de Courses</h3>
-                <button class="btn-secondary" onclick="document.getElementById('modalCourses').style.display='none'">✖ Fermer</button>
+                <h3 style="color:var(--primary);">🛒 Ma Liste</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-secondary" id="btnShoppingMode" onclick="toggleShoppingMode()">🔍 Plein écran</button>
+                    <button class="btn-secondary" onclick="document.getElementById('modalCourses').style.display='none'">✖ Fermer</button>
+                </div>
             </div>
             <div class="modal-body">
-                <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:0;"><i>Au supermarché, tapotez un article pour le rayer et le supprimer.</i></p>
+                <!-- Champ d'ajout manuel rapide -->
+                <div class="manual-add-container">
+                    <input type="text" id="inputCourseManuelle" placeholder="Ajouter un article (ex: Beurre)..." onkeypress="if(event.key === 'Enter') ajouterCourseManuelle()">
+                    <button class="btn-primary" style="margin-top:0; padding: 10px 20px; width: auto;" onclick="ajouterCourseManuelle()">➕</button>
+                </div>
+                
+                <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:0;"><i>Tapotez un article pour le mettre dans le caddie.</i></p>
                 <div id="coursesContent"><p style="text-align:center;">Chargement...</p></div>
             </div>
         </div>
@@ -1059,7 +1093,47 @@
             recognition.start();
         }
 
-        // --- COURSES ---
+        // --- COURSES AMÉLIORÉES ---
+
+        // 1. Ajouter depuis une recette (avec animation du bouton)
+        async function ajouterCourse(btn, ingredient) {
+            btn.innerText = "⏳"; btn.disabled = true;
+            try { 
+                await db.collection("courses").add({ 
+                    ingredient: ingredient, 
+                    checked: false, // Nouveau statut
+                    date: firebase.firestore.FieldValue.serverTimestamp() 
+                }); 
+                btn.innerText = "✅"; 
+                btn.style.background = "#27ae60"; 
+                
+                // Déclencher l'animation sur le bouton du menu principal
+                const navBtn = document.getElementById('btnNavCourses');
+                navBtn.classList.remove('animate-cart');
+                void navBtn.offsetWidth; // Force le reflow pour relancer l'animation
+                navBtn.classList.add('animate-cart');
+                
+            } catch (e) { btn.innerText = "❌"; }
+        }
+
+        // 2. Ajouter manuellement
+        async function ajouterCourseManuelle() {
+            const input = document.getElementById('inputCourseManuelle');
+            const ingredient = input.value.trim();
+            if(!ingredient) return;
+            
+            try {
+                await db.collection("courses").add({ 
+                    ingredient: ingredient.charAt(0).toUpperCase() + ingredient.slice(1), 
+                    checked: false,
+                    date: firebase.firestore.FieldValue.serverTimestamp() 
+                });
+                input.value = ""; // Vider le champ
+                ouvrirCourses(); // Rafraîchir la liste
+            } catch(e) { showToast("Erreur lors de l'ajout", "error"); }
+        }
+
+        // 3. Ouvrir les courses avec séparation "À acheter" et "Caddie"
         async function ouvrirCourses() {
             document.getElementById('modalCourses').style.display = 'flex';
             const contentDiv = document.getElementById('coursesContent');
@@ -1068,21 +1142,83 @@
                 const snapshot = await db.collection("courses").orderBy("date", "desc").get();
                 if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
                 
-                let html = "";
+                let htmlAcheter = "";
+                let htmlCaddie = "";
+                let hasCaddie = false;
+
                 snapshot.forEach(doc => {
                     const item = doc.data();
-                    html += `<div class="course-item" id="course-${doc.id}" onclick="checkerCourse('${doc.id}')"><div class="circle-check"></div><span style="font-size: 15px; font-weight:500;">${item.ingredient}</span></div>`;
+                    const isChecked = item.checked === true;
+                    
+                    let safeIng = item.ingredient.replace(/'/g, "\\'");
+                    let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})">
+                                        <div class="circle-check"></div>
+                                        <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                                    </div>`;
+                    
+                    if (isChecked) {
+                        htmlCaddie += itemHtml;
+                        hasCaddie = true;
+                    } else {
+                        htmlAcheter += itemHtml;
+                    }
                 });
-                contentDiv.innerHTML = html;
+
+                let finalHtml = htmlAcheter;
+                if (hasCaddie) {
+                    finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie;
+                    finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`;
+                }
+                
+                if(!htmlAcheter && hasCaddie) {
+                    finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml;
+                }
+
+                contentDiv.innerHTML = finalHtml;
             } catch(e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
         }
 
-        async function checkerCourse(docId) {
-            const itemDiv = document.getElementById('course-' + docId);
-            itemDiv.classList.add('checked');
-            setTimeout(async () => {
-                try { await db.collection("courses").doc(docId).delete(); itemDiv.style.display = 'none'; } catch(e) { itemDiv.classList.remove('checked'); }
-            }, 600);
+        // 4. Mettre dans le caddie ou remettre dans la liste
+        async function checkerCourse(docId, currentState) {
+            try {
+                // Au lieu de supprimer, on inverse simplement l'état "checked"
+                await db.collection("courses").doc(docId).update({ checked: !currentState });
+                ouvrirCourses(); // On recharge pour déplacer visuellement l'article
+            } catch(e) { showToast("Erreur de mise à jour", "error"); }
+        }
+
+        // 5. Vider définitivement le caddie
+        async function viderCaddie() {
+            const ok = await showConfirm("Supprimer définitivement les articles barrés ?", { danger: true });
+            if (!ok) return;
+            
+            try {
+                // Récupérer et supprimer tous les articles cochés
+                const snapshot = await db.collection("courses").where("checked", "==", true).get();
+                const batch = db.batch();
+                snapshot.forEach(doc => { batch.delete(doc.ref); });
+                await batch.commit();
+                
+                showToast("Caddie vidé !", "success");
+                ouvrirCourses();
+            } catch(e) { showToast("Erreur lors de la suppression.", "error"); }
+        }
+
+        // 6. Basculer le mode Plein écran
+        function toggleShoppingMode() {
+            const modalContent = document.getElementById('modalCoursesContent');
+            const btn = document.getElementById('btnShoppingMode');
+            modalContent.classList.toggle('shopping-mode');
+            
+            if(modalContent.classList.contains('shopping-mode')) {
+                btn.innerText = "✖ Quitter mode";
+                btn.style.background = "var(--primary)";
+                btn.style.color = "white";
+            } else {
+                btn.innerText = "🔍 Plein écran";
+                btn.style.background = "var(--bg-color)";
+                btn.style.color = "var(--text-muted)";
+            }
         }
 
         // --- PLANNING DASHBOARD ---
@@ -1517,10 +1653,6 @@
             container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
         }
 
-        async function ajouterCourse(btn, ingredient) {
-            btn.innerText = "⏳"; btn.disabled = true;
-            try { await db.collection("courses").add({ ingredient: ingredient, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "❌"; }
-        }
         async function sauvegarder(btn, titre, contentId) {
             btn.innerText = "⏳..."; btn.disabled = true; let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
             try { await db.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
