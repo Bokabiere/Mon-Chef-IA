@@ -174,7 +174,12 @@
         .theme-option.active { border-color: var(--primary); border-width: 2px; background: var(--bg-color); }
         .color-preview { display: flex; gap: 5px; }
         .color-dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
+        /* Styles Scanner */
+        #barcode-scanner-container { width: 100%; max-width: 400px; margin: 0 auto; overflow: hidden; border-radius: 12px; }
+        .scan-result-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); }
+        .action-buttons-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
     </style>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
 
@@ -209,7 +214,12 @@
                     </div>
                 </h2>
 
-                <button class="btn-vocal" id="btnMic" onclick="toggleVocal()">🎙️ Dicter mes ingrédients</button>
+                <div class="action-buttons-group">
+                    <button class="btn-vocal" id="btnMic" onclick="toggleVocal()" style="flex:1;">🎙️ Dicter</button>
+                    <button class="btn-vocal" style="flex:1; background-color:#2e86de;" onclick="document.getElementById('iaScannerInput').click()">📸 Scanner IA</button>
+                    <button class="btn-vocal" style="flex:1; background-color:#ff9f43;" onclick="ouvrirBarcodeScanner()">🛒 Code-barres</button>
+                    <input type="file" id="iaScannerInput" accept="image/*" capture="environment" style="display:none;" onchange="analyserImageIA(event)">
+                </div>
                 
                 <div class="row" style="margin-bottom: 15px;">
                     <div>
@@ -265,6 +275,35 @@
     <div id="floatingTimer" class="floating-timer">
         <span id="timeDisplay">00:00</span>
         <button onclick="stopTimer()">X</button>
+    </div>
+
+    <!-- MODAL SCANNER IA RESULTATS -->
+    <div id="modalIAScanner" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>📸 Résultats du Scan IA</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalIAScanner').style.display='none'">✖ Annuler</button>
+            </div>
+            <div class="modal-body">
+                <p>Voici ce que l'IA a détecté. Décochez ce que vous ne voulez pas ajouter :</p>
+                <div id="iaScanResults" style="margin: 15px 0; background: var(--bg-color); padding: 10px; border-radius: 8px;"></div>
+                <button class="btn-primary" style="width: 100%;" onclick="validerScanIA()">✅ Confirmer & Cocher</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CODE-BARRES -->
+    <div id="modalBarcode" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>🛒 Scan Code-barres</h3>
+                <button class="btn-secondary" onclick="fermerBarcodeScanner()">✖ Fermer</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <div id="barcode-scanner-container"></div>
+                <p id="barcode-status" style="margin-top: 15px; font-weight: bold; color: var(--primary);">Placez le code-barres au centre...</p>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL PARAMÈTRES (BACK-OFFICE) -->
@@ -821,6 +860,171 @@
             }, 1000);
         }
         function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
+        // --- 10. SCANNERS (IA & CODE-BARRES) ---
+        async function analyserImageIA(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const resDiv = document.getElementById('resultatDiv');
+            const loader = document.getElementById('loader');
+            resDiv.innerHTML = ""; loader.style.display = "block"; loader.querySelector('p').innerText = "Le Chef analyse votre photo... 📸";
+            
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64String = reader.result.split(',')[1];
+                const promptText = "Tu es un expert culinaire. Liste TOUS les ingrédients alimentaires visibles sur cette image. Renvoie UNIQUEMENT les noms séparés par des virgules, sans aucun autre texte (ex: Tomate, Oignon, Poulet).";
+                
+                try {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`, {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: promptText },
+                                    { inlineData: { mimeType: file.type || "image/jpeg", data: base64String } }
+                                ]
+                            }]
+                        })
+                    });
+                    const data = await rep.json();
+                    loader.style.display = "none";
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    const text = data.candidates[0].content.parts[0].text;
+                    const itemsTrouves = text.split(',').map(i => i.trim()).filter(i => i.length > 1);
+                    
+                    if (itemsTrouves.length === 0) {
+                        resDiv.innerHTML = "<h3 style='text-align:center;'>Aucun ingrédient détecté sur la photo.</h3>";
+                        return;
+                    }
+
+                    // Cherche des correspondances avec nos cases actuelles
+                    const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient'));
+                    let htmlList = "";
+                    window.scanPendingItems = [];
+
+                    itemsTrouves.forEach(item => {
+                        // Recherche floue très simple
+                        const match = existingCheckboxes.find(cb => cb.value.toLowerCase().includes(item.toLowerCase()) || item.toLowerCase().includes(cb.value.toLowerCase()));
+                        const nomExact = match ? match.value : item.charAt(0).toUpperCase() + item.slice(1);
+                        window.scanPendingItems.push(nomExact);
+                        htmlList += `<div class="scan-result-item">
+                            <span>${nomExact} ${match ? '✅' : '🆕'}</span>
+                            <input type="checkbox" checked value="${nomExact}" class="pending-scan-chk">
+                        </div>`;
+                    });
+
+                    document.getElementById('iaScanResults').innerHTML = htmlList;
+                    document.getElementById('modalIAScanner').style.display = 'flex';
+                    event.target.value = ""; // reset input
+
+                } catch (e) {
+                    loader.style.display = "none";
+                    resDiv.innerHTML = `<p style="color:red; text-align:center;">Erreur d'analyse IA : ${e.message}</p>`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function validerScanIA() {
+            const confirmedItems = Array.from(document.querySelectorAll('.pending-scan-chk:checked')).map(cb => cb.value);
+            const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient'));
+            let checkedCount = 0;
+            
+            confirmedItems.forEach(item => {
+                const cb = existingCheckboxes.find(c => c.value === item);
+                if (cb) {
+                    cb.checked = true;
+                    checkedCount++;
+                } else {
+                    // Créer un ingrédient manquant à la volée dans l'UI (catégorie "Divers")
+                    const container = document.getElementById('categoriesContainer');
+                    let diversDetails = Array.from(container.querySelectorAll('details')).find(d => d.querySelector('summary').innerText === 'Divers');
+                    if (!diversDetails) {
+                        diversDetails = document.createElement('details');
+                        diversDetails.className = 'cat-details';
+                        diversDetails.innerHTML = `<summary>Divers</summary><div class="ingredient-list"></div>`;
+                        container.appendChild(diversDetails);
+                    }
+                    const list = diversDetails.querySelector('.ingredient-list');
+                    if (!Array.from(list.querySelectorAll('input')).find(c => c.value === item)) {
+                        list.insertAdjacentHTML('beforeend', `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" checked><span>${item}</span></label>`);
+                        checkedCount++;
+                    }
+                }
+            });
+            
+            // Sauvegarder l'état
+            const allChecked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            localStorage.setItem('ingredientsSauves', JSON.stringify(allChecked));
+            
+            document.getElementById('modalIAScanner').style.display = 'none';
+            document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) à votre liste ! ✨</h3>`;
+        }
+
+        // --- SCANNER CODE-BARRES ---
+        let html5QrcodeScanner;
+        function ouvrirBarcodeScanner() {
+            document.getElementById('modalBarcode').style.display = 'flex';
+            document.getElementById('barcode-status').innerText = "Initialisation de la caméra...";
+            html5QrcodeScanner = new Html5Qrcode("barcode-scanner-container");
+            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 200 } },
+                onScanSuccess, onScanFailure
+            ).then(() => {
+                document.getElementById('barcode-status').innerText = "Placez le code-barres au centre...";
+            }).catch(err => {
+                document.getElementById('barcode-status').innerText = "Erreur Caméra : " + err;
+            });
+        }
+
+        function fermerBarcodeScanner() {
+            document.getElementById('modalBarcode').style.display = 'none';
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().catch(err => console.error(err));
+            }
+        }
+
+        let isScanning = false;
+        async function onScanSuccess(decodedText, decodedResult) {
+            if (isScanning) return;
+            isScanning = true;
+            document.getElementById('barcode-status').innerText = "Code trouvé ! Interrogation de la base de données... ⏳";
+            
+            try {
+                const rep = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
+                const data = await rep.json();
+                
+                if (data.status === 1 && data.product) {
+                    let productName = data.product.product_name_fr || data.product.product_name || "Produit Inconnu";
+                    // Nettoyer le nom
+                    productName = productName.split(',')[0].trim();
+                    productName = productName.charAt(0).toUpperCase() + productName.slice(1);
+                    
+                    document.getElementById('barcode-status').innerHTML = `<span style="color:#27ae60;">✅ Trouvé : ${productName}</span>`;
+                    
+                    // Ajouter à la sélection comme le scan IA
+                    window.scanPendingItems = [productName];
+                    document.getElementById('iaScanResults').innerHTML = `
+                        <div class="scan-result-item">
+                            <span>${productName}</span>
+                            <input type="checkbox" checked value="${productName}" class="pending-scan-chk">
+                        </div>`;
+                    
+                    fermerBarcodeScanner();
+                    document.getElementById('modalIAScanner').style.display = 'flex';
+                    document.querySelector('#modalIAScanner h3').innerText = '🛒 Produit scanné';
+                } else {
+                    document.getElementById('barcode-status').innerText = "Produit introuvable dans la base Open Food Facts ❌";
+                    setTimeout(() => { isScanning = false; document.getElementById('barcode-status').innerText = "Placez le code-barres au centre..."; }, 2000);
+                }
+            } catch (e) {
+                document.getElementById('barcode-status').innerText = "Erreur de connexion. ❌";
+                setTimeout(() => { isScanning = false; }, 2000);
+            }
+        }
+
+        function onScanFailure(error) {
+            // Ignorer, scan en cours
+        }
     </script>
 </body>
 </html>
