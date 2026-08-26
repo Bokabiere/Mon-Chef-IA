@@ -241,6 +241,77 @@
             100% { transform: translateY(0px); }
         }
 		
+		/* --- STYLE PLANNING (Vue Grille Façon Dashboard) --- */
+        .planning-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            padding: 10px 0;
+        }
+        
+        .day-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .day-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text-main);
+            margin-bottom: 5px;
+        }
+        
+        .meal-block {
+            border-radius: 8px;
+            padding: 12px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .meal-block.empty {
+            border: 1px dashed var(--border);
+            background: transparent;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .meal-block.empty:hover {
+            background: var(--bg-color);
+        }
+        
+        .meal-block.filled {
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+        }
+        
+        .meal-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        .meal-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+        
+        .meal-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+        }
+		
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -744,23 +815,46 @@
             } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
         }
 
-        function afficherPlanningHtml(planningObj) {
+function afficherPlanningHtml(planningObj) {
             const contentDiv = document.getElementById('planningContent');
-            let html = `<div style="background:var(--card-bg); padding:15px; border-radius:10px; border: 1px solid var(--border);"><ul>`;
+            let html = `<div class="planning-grid">`;
             const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+            
             jours.forEach(jour => {
+                html += `<div class="day-card"><div class="day-title">${jour}</div>`;
+                
+                // --- BLOC DÉJEUNER (Vide par défaut pour l'instant) ---
+                html += `
+                <div class="meal-block empty" onclick="alert('Fonction d\'ajout manuel à venir !')">
+                    <span class="meal-label">Déjeuner</span>
+                    <div style="font-size:12px; color:var(--text-muted);">+ Choisir une recette</div>
+                </div>`;
+                
+                // --- BLOC DÎNER (Rempli par l'IA) ---
                 if(planningObj[jour]) {
-                    let plat = planningObj[jour]; let safePlat = plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    html += `<li style="margin-bottom:12px; font-size:15px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-                        <span style="flex:1;"><b>${jour} :</b> ${plat}</span>
-                        <div style="display:flex; gap:5px;">
-                            <button class="btn-action" style="background:#6c5ce7; padding: 4px 10px; font-size: 12px;" onclick="relancerJour('${jour}', '${safePlat}')">🎲</button>
-                            <button class="btn-action btn-expand" style="padding: 4px 10px; font-size: 12px;" onclick="cuisinerCePlat('${safePlat}')">🍳</button>
+                    let plat = planningObj[jour]; 
+                    let safePlat = plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                    <div class="meal-block filled">
+                        <span class="meal-label">Dîner</span>
+                        <div class="meal-name">${plat}</div>
+                        <div class="meal-actions">
+                            <button class="btn-action" style="background:#6c5ce7; padding: 4px 8px; font-size: 11px; flex:1;" onclick="relancerJour('${jour}', '${safePlat}')">🎲 Autre</button>
+                            <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}')">🍳 Cuisiner</button>
                         </div>
-                    </li>`;
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="meal-block empty">
+                        <span class="meal-label">Dîner</span>
+                        <div style="font-size:12px; color:var(--text-muted);">+ Choisir une recette</div>
+                    </div>`;
                 }
+                
+                html += `</div>`; // Fin de la day-card
             });
-            html += `</ul><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="genererNouveauPlanning()">🔄 Réinitialiser et générer une nouvelle semaine</button></div>`;
+            
+            html += `</div><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="genererNouveauPlanning()">🔄 Réinitialiser et générer une nouvelle semaine</button>`;
             contentDiv.innerHTML = html;
         }
 
