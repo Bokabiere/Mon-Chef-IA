@@ -124,6 +124,10 @@
 
         .btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 16px; padding: 16px; width: 100%; border-radius: 12px; transition: 0.3s; margin-top: 20px;}
         .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+        @media (max-width: 850px) {
+            #btnGenererRecettes { position: sticky; bottom: 15px; z-index: 50; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        }
         .btn-secondary { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .btn-secondary:hover { background: var(--bg-color); }
         .btn-danger { background: #ff7675; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
@@ -227,10 +231,33 @@
         .rating-stars .star.filled { color: #f1c40f; }
         .rating-label { font-size: 11px; color: var(--text-muted); margin-left: 8px; }
         .badge-cat.badge-note { background: #fff9e6; border-color: #f1c40f; color: #b8860b; }
+
+        /* --- TOASTS & MODALES DE CONFIRMATION/SAISIE (remplacent alert/confirm/prompt) --- */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9000; display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; }
+        .toast { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border); border-left: 5px solid var(--primary); padding: 12px 20px; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); font-size: 14px; font-weight: 500; max-width: 90vw; opacity: 0; transform: translateY(-15px); transition: opacity 0.25s, transform 0.25s; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { border-left-color: #10ac84; }
+        .toast.error { border-left-color: #d63031; }
+        .toast.info { border-left-color: var(--primary); }
+
+        .confirm-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9500; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; opacity: 0; transition: opacity 0.2s; }
+        .confirm-overlay.show { opacity: 1; }
+        .confirm-box { background: var(--card-bg); border-radius: 16px; padding: 25px; max-width: 380px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 1px solid var(--border); transform: scale(0.92); transition: transform 0.2s; }
+        .confirm-overlay.show .confirm-box { transform: scale(1); }
+        .confirm-box p { margin: 0 0 20px 0; font-size: 15px; color: var(--text-main); line-height: 1.5; }
+        .confirm-box input[type="text"] { margin-bottom: 20px; }
+        .confirm-actions { display: flex; gap: 10px; }
+        .confirm-actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; font-family: inherit; }
+        .confirm-actions .btn-cancel { background: var(--bg-color); color: var(--text-muted); border: 1px solid var(--border); }
+        .confirm-actions .btn-ok { background: var(--primary); color: white; }
+        .confirm-actions .btn-ok.danger { background: #d63031; }
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
+
+    <!-- CONTENEUR DES TOASTS (remplace alert()) -->
+    <div id="toastContainer" class="toast-container"></div>
 
     <!-- ÉCRAN DE CONNEXION -->
     <div id="loginScreen">
@@ -322,7 +349,7 @@
                 
                 <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
                 
-                <button class="btn-primary" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
+                <button class="btn-primary" id="btnGenererRecettes" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
             </div>
 
             <!-- PANNEAU DROIT -->
@@ -456,7 +483,7 @@
                         </div>
                     </div>
                     <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
-                    <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="localStorage.removeItem('gemini_api_key'); alert('Clé API effacée !');">
+                    <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="localStorage.removeItem('gemini_api_key'); showToast('Clé API effacée !', 'success');">
                         🔑 Changer ma clé API secrète
                     </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
@@ -550,6 +577,19 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script>
+        // --- FIREBASE CONFIG & INIT (doit être fait AVANT tout appel à firebase.auth()/firestore()) ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBKgPJY1X6tYujXpsEG19fHs08nZpbXndM",
+          authDomain: "mon-chef-ia-80143.firebaseapp.com",
+          projectId: "mon-chef-ia-80143",
+          storageBucket: "mon-chef-ia-80143.firebasestorage.app",
+          messagingSenderId: "395042994130",
+          appId: "1:395042994130:web:c1cec40bcbaf61b0bfba0b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let globalIngredientsList = {};
+
         // --- GESTION DES THÈMES ---
         function setTheme(themeName) {
             document.documentElement.setAttribute('data-theme', themeName);
@@ -620,10 +660,78 @@
             firebase.auth().signOut();
         }
 
-        function getApiKey() {
+        // --- TOASTS & MODALES (remplacent alert / confirm / prompt du navigateur) ---
+        function showToast(message, type = 'info', duree = 3000) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, duree);
+        }
+
+        function showConfirm(message, { danger = false, texteOk = 'Confirmer', texteAnnuler = 'Annuler' } = {}) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'confirm-overlay';
+                overlay.innerHTML = `
+                    <div class="confirm-box">
+                        <p>${message}</p>
+                        <div class="confirm-actions">
+                            <button class="btn-cancel">${texteAnnuler}</button>
+                            <button class="btn-ok ${danger ? 'danger' : ''}">${texteOk}</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+                requestAnimationFrame(() => overlay.classList.add('show'));
+                const fermer = (result) => {
+                    overlay.classList.remove('show');
+                    setTimeout(() => overlay.remove(), 200);
+                    resolve(result);
+                };
+                overlay.querySelector('.btn-cancel').onclick = () => fermer(false);
+                overlay.querySelector('.btn-ok').onclick = () => fermer(true);
+                overlay.onclick = (e) => { if (e.target === overlay) fermer(false); };
+            });
+        }
+
+        function showPrompt(message, placeholder = '') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'confirm-overlay';
+                overlay.innerHTML = `
+                    <div class="confirm-box">
+                        <p>${message}</p>
+                        <input type="text" class="prompt-input" placeholder="${placeholder}">
+                        <div class="confirm-actions">
+                            <button class="btn-cancel">Annuler</button>
+                            <button class="btn-ok">Valider</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(overlay);
+                requestAnimationFrame(() => overlay.classList.add('show'));
+                const input = overlay.querySelector('.prompt-input');
+                input.focus();
+                const fermer = (result) => {
+                    overlay.classList.remove('show');
+                    setTimeout(() => overlay.remove(), 200);
+                    resolve(result);
+                };
+                overlay.querySelector('.btn-cancel').onclick = () => fermer(null);
+                overlay.querySelector('.btn-ok').onclick = () => fermer(input.value.trim() || null);
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') fermer(input.value.trim() || null); });
+                overlay.onclick = (e) => { if (e.target === overlay) fermer(null); };
+            });
+        }
+
+        async function getApiKey() {
             let key = localStorage.getItem('gemini_api_key');
             if (!key) {
-                key = prompt("🔒 Sécurité : Veuillez coller votre clé API Gemini.");
+                key = await showPrompt("🔒 Sécurité : Veuillez coller votre clé API Gemini.", "Collez votre clé ici...");
                 if (key) localStorage.setItem('gemini_api_key', key);
             }
             return key;
@@ -664,25 +772,20 @@
             return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${allergenes.join(", ")}.`;
         }
 
-        // --- FIREBASE CONFIG ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyBKgPJY1X6tYujXpsEG19fHs08nZpbXndM",
-          authDomain: "mon-chef-ia-80143.firebaseapp.com",
-          projectId: "mon-chef-ia-80143",
-          storageBucket: "mon-chef-ia-80143.firebasestorage.app",
-          messagingSenderId: "395042994130",
-          appId: "1:395042994130:web:c1cec40bcbaf61b0bfba0b"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore(); 
-        let globalIngredientsList = {}; 
-
         async function chargerInterfaceBase() {
             try {
                 let docRef = db.collection("config").doc("ingredients");
                 let docSnap = await docRef.get();
                 if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
                 afficherIngredientsGauche();
+                // Délégation d'événements : fonctionne aussi pour les cases ajoutées
+                // dynamiquement plus tard (scanner photo, code-barres, "Divers"...).
+                document.getElementById('categoriesContainer').addEventListener('change', (e) => {
+                    if (!e.target.classList.contains('chk-ingredient')) return;
+                    const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+                    localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+                    updateButtonLabel();
+                });
             } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
         }
 
@@ -713,13 +816,17 @@
                 html += `</div></details>`;
                 container.innerHTML += html;
             }
-            document.querySelectorAll('.chk-ingredient').forEach(cb => cb.addEventListener('change', () => {
-                const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-                localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
-            }));
+            updateButtonLabel();
         }
 
-        function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); }
+        function updateButtonLabel() {
+            const btn = document.getElementById('btnGenererRecettes');
+            if (!btn) return;
+            const n = document.querySelectorAll('.chk-ingredient:checked').length;
+            btn.innerText = n > 0 ? `✨ Inventer mes recettes (${n} ingrédient${n > 1 ? 's' : ''})` : "✨ Inventer mes recettes";
+        }
+
+        function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); updateButtonLabel(); }
 
         // --- AUTOCOMPLÉTION RECHERCHE INGRÉDIENTS ---
         function filtrerIngredients(terme) {
@@ -763,6 +870,7 @@
 
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+            updateButtonLabel();
         }
 
         // --- PARAMÈTRES ---
@@ -787,24 +895,27 @@
 
         async function ajouterIngredientDB() {
             const cat = document.getElementById('paramCat').value; const ing = document.getElementById('paramNewIng').value.trim();
-            if(!ing) return alert("Saisir un ingrédient.");
+            if(!ing) return showToast("Merci de saisir un ingrédient.", "error");
             try {
                 await db.collection("config").doc("ingredients").update({ [cat]: firebase.firestore.FieldValue.arrayUnion(ing) });
                 if(!globalIngredientsList[cat]) globalIngredientsList[cat] = [];
                 if(!globalIngredientsList[cat].includes(ing)) globalIngredientsList[cat].push(ing);
                 document.getElementById('paramNewIng').value = ""; chargerListeManageIng(); afficherIngredientsGauche();
-            } catch(e) {}
+                showToast(`"${ing}" ajouté !`, "success");
+            } catch(e) { showToast("Erreur lors de l'ajout.", "error"); }
         }
 
         async function supprimerIngredientDB(cat, ing) {
-            if(!confirm(`Supprimer "${ing}" ?`)) return;
+            const ok = await showConfirm(`Supprimer "${ing}" ?`, { danger: true, texteOk: 'Supprimer' });
+            if(!ok) return;
             try {
                 await db.collection("config").doc("ingredients").update({ [cat]: firebase.firestore.FieldValue.arrayRemove(ing) });
                 globalIngredientsList[cat] = globalIngredientsList[cat].filter(i => i !== ing);
                 chargerListeManageIng(); afficherIngredientsGauche();
                 const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
                 localStorage.setItem('ingredientsSauves', JSON.stringify(memoire.filter(i => i !== ing)));
-            } catch(e) {}
+                showToast(`"${ing}" supprimé.`, "success");
+            } catch(e) { showToast("Erreur lors de la suppression.", "error"); }
         }
 
         function chargerListeManageIng() {
@@ -833,14 +944,15 @@
             } catch(e) {}
         }
         async function supprimerRecetteCarnetDB(docId) {
-            if(!confirm("Supprimer cette recette ?")) return;
-            try { await db.collection("carnet").doc(docId).delete(); chargerListeManageCarnet(); } catch(e) {}
+            const ok = await showConfirm("Supprimer cette recette du carnet ?", { danger: true, texteOk: 'Supprimer' });
+            if(!ok) return;
+            try { await db.collection("carnet").doc(docId).delete(); chargerListeManageCarnet(); showToast("Recette supprimée.", "success"); } catch(e) { showToast("Erreur lors de la suppression.", "error"); }
         }
 
         // --- DICTÉE VOCALE ---
         let recognition;
         function toggleVocal() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return alert("Non supporté.");
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return showToast("La dictée vocale n'est pas supportée par votre navigateur.", "error");
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; recognition = new SpeechRecognition(); recognition.lang = 'fr-FR';
             const btn = document.getElementById('btnMic'); btn.classList.add('listening'); btn.innerText = "🎙️ Écoute...";
             recognition.onresult = function(event) {
@@ -848,6 +960,7 @@
                 btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter";
                 document.querySelectorAll('.chk-ingredient').forEach(cb => { if (texte.includes(cb.value.toLowerCase())) cb.checked = true; });
                 localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
+                updateButtonLabel();
             };
             recognition.onerror = function() { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter"; };
             recognition.start();
@@ -949,7 +1062,9 @@
             Dimanche: [Plat]`;
 
             try {
-                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
+                const apiKey = await getApiKey();
+                if (!apiKey) { contentDiv.innerHTML = ""; showToast("Clé API requise pour continuer.", "error"); return; }
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
@@ -971,7 +1086,9 @@
             const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
-                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
+                const apiKey = await getApiKey();
+                if (!apiKey) { showToast("Clé API requise pour continuer.", "error"); chargerPlanning(); return; }
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
@@ -981,7 +1098,7 @@
                 await db.collection("userdata").doc("planning").update({ [jour]: nouveauPlat });
                 const docSnap = await db.collection("userdata").doc("planning").get();
                 afficherPlanningHtml(docSnap.data());
-            } catch(e) { alert("Erreur."); chargerPlanning(); }
+            } catch(e) { showToast("Une erreur est survenue.", "error"); chargerPlanning(); }
         }
 
         // --- MOTEURS DE RECETTES ---
@@ -1002,7 +1119,7 @@
 
         async function chercherRecettesIA() {
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            if (checked.length === 0) return alert("Sélectionnez au moins un ingrédient !");
+            if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
             
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             resDiv.innerHTML = ""; loader.style.display = "block";
@@ -1020,7 +1137,9 @@
         async function executerRequeteIA(prompt, titleTemplate) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             try {
-                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${getApiKey()}`, {
+                const apiKey = await getApiKey();
+                if (!apiKey) { loader.style.display = "none"; showToast("Clé API requise pour continuer.", "error"); return; }
+                const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                     method: "POST", headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
@@ -1154,7 +1273,9 @@
                 const promptText = "Liste TOUS les ingrédients alimentaires visibles sur cette image. Renvoie UNIQUEMENT les noms séparés par des virgules (ex: Tomate, Oignon, Poulet).";
                 
                 try {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${getApiKey()}`, {
+                    const apiKey = await getApiKey();
+                    if (!apiKey) { loader.style.display = "none"; showToast("Clé API requise pour continuer.", "error"); return; }
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: file.type || "image/jpeg", data: base64String } }] }] })
                     });
@@ -1208,6 +1329,7 @@
             localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
             document.getElementById('modalIAScanner').style.display = 'none';
             document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) ! ✨</h3>`;
+            updateButtonLabel();
         }
 
         // --- CODE-BARRES ---
