@@ -697,6 +697,13 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let globalIngredientsList = {};
+		let memoireIngredients = [];
+let memoireAllergenes = [];
+
+function syncCloud(champ, data) {
+    const user = firebase.auth().currentUser;
+    if(user) db.collection("utilisateurs").doc(user.uid).set({ [champ]: data }, { merge: true });
+}
 
         // --- GESTION DES THÈMES ---
         function setTheme(themeName) {
@@ -864,10 +871,10 @@
         }
 
         // --- ALLERGÈNES (AVEC FIX RECHARGEMENT) ---
-        function sauvegarderAllergenes() {
-            const coches = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
-            localStorage.setItem('chef_ia_allergenes', JSON.stringify(coches));
-        }
+function sauvegarderAllergenes() {
+    memoireAllergenes = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
+    syncCloud('allergenes', memoireAllergenes);
+}
 
         function chargerAllergenesUI() {
             const coches = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
@@ -909,26 +916,37 @@
             sauvegarderAllergenes();
         }
 
-        function getAllergenesPrompt() {
-            const allergenes = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
-            if (allergenes.length === 0) return "";
-            return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${allergenes.join(", ")}.`;
-        }
+function getAllergenesPrompt() {
+    if (memoireAllergenes.length === 0) return "";
+    return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${memoireAllergenes.join(", ")}.`;
+}
 
-        async function chargerInterfaceBase() {
-            try {
-                let docRef = db.collection("config").doc("ingredients");
-                let docSnap = await docRef.get();
-                if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
-                afficherIngredientsGauche();
-                document.getElementById('categoriesContainer').addEventListener('change', (e) => {
-                    if (!e.target.classList.contains('chk-ingredient')) return;
-                    const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-                    localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
-                    updateButtonLabel();
-                });
-            } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
+async function chargerInterfaceBase() {
+    try {
+        const user = firebase.auth().currentUser;
+        if(user) {
+            const userDoc = await db.collection("utilisateurs").doc(user.uid).get();
+            if(userDoc.exists) {
+                memoireIngredients = userDoc.data().ingredients || [];
+                memoireAllergenes = userDoc.data().allergenes || [];
+            }
         }
+        
+        let docRef = db.collection("config").doc("ingredients");
+        let docSnap = await docRef.get();
+        if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
+        
+        afficherIngredientsGauche();
+        chargerAllergenesUI();
+
+        document.getElementById('categoriesContainer').addEventListener('change', (e) => {
+            if (!e.target.classList.contains('chk-ingredient')) return;
+            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            syncCloud('ingredients', memoireIngredients); // Synchro Cloud
+            updateButtonLabel();
+        });
+    } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
+}
 
         const iconesIngredients = {
             "Tomate": "🍅", "Carotte": "🥕", "Courgette": "🥒", "Aubergine": "🍆", "Oignon": "🧅", "Ail": "🧄",
@@ -1155,49 +1173,52 @@
         }
 
         // 3. Ouvrir les courses avec séparation "À acheter" et "Caddie"
-        async function ouvrirCourses() {
-            document.getElementById('modalCourses').style.display = 'flex';
-            const contentDiv = document.getElementById('coursesContent');
-            contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
-            try {
-                const snapshot = await db.collection("courses").orderBy("date", "desc").get();
-                if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
-                
-                let htmlAcheter = "";
-                let htmlCaddie = "";
-                let hasCaddie = false;
+let unsubscribeCourses = null; // Variable globale pour stopper l'écoute si besoin
 
-                snapshot.forEach(doc => {
-                    const item = doc.data();
-                    const isChecked = item.checked === true;
-                    
-                    let safeIng = item.ingredient.replace(/'/g, "\\'");
-                    let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})">
-                                        <div class="circle-check"></div>
-                                        <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
-                                    </div>`;
-                    
-                    if (isChecked) {
-                        htmlCaddie += itemHtml;
-                        hasCaddie = true;
-                    } else {
-                        htmlAcheter += itemHtml;
-                    }
-                });
+function ouvrirCourses() {
+    document.getElementById('modalCourses').style.display = 'flex';
+    const contentDiv = document.getElementById('coursesContent');
+    contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+    
+    // Annuler l'ancien écouteur si on réouvre la modal
+    if(unsubscribeCourses) unsubscribeCourses();
 
-                let finalHtml = htmlAcheter;
-                if (hasCaddie) {
-                    finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie;
-                    finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`;
-                }
-                
-                if(!htmlAcheter && hasCaddie) {
-                    finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml;
-                }
+    // onSnapshot écoute en temps réel les changements dans la base de données
+    unsubscribeCourses = db.collection("courses").orderBy("date", "desc").onSnapshot((snapshot) => {
+        if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
+        
+        let htmlAcheter = "";
+        let htmlCaddie = "";
+        let hasCaddie = false;
 
-                contentDiv.innerHTML = finalHtml;
-            } catch(e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
+        snapshot.forEach(doc => {
+            const item = doc.data();
+            const isChecked = item.checked === true;
+            let safeIng = item.ingredient.replace(/'/g, "\\'");
+            let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})">
+                                <div class="circle-check"></div>
+                                <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                            </div>`;
+            
+            if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } 
+            else { htmlAcheter += itemHtml; }
+        });
+
+        let finalHtml = htmlAcheter;
+        if (hasCaddie) {
+            finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie;
+            finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`;
         }
+        
+        if(!htmlAcheter && hasCaddie) {
+            finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml;
+        }
+
+        contentDiv.innerHTML = finalHtml;
+    }, (error) => {
+        contentDiv.innerHTML = "<p style='color:red;'>Erreur de synchronisation.</p>";
+    });
+}
 
         // 4. Mettre dans le caddie ou remettre dans la liste
         async function checkerCourse(docId, currentState) {
