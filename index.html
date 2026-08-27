@@ -342,17 +342,6 @@
                     </div>
                 </div>
 
-                <div class="row" style="margin-bottom: 15px;">
-                    <div>
-                        <label>Moteur IA</label>
-                        <select id="moteurIA">
-                            <option value="gemini">✨ Gemini (Google)</option>
-                            <option value="openai">🧠 GPT-4o-mini (OpenAI)</option>
-                            <option value="mistral">🥐 Mistral AI (France)</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div class="row">
                     <div>
                         <label>Temps dispo.</label>
@@ -511,9 +500,17 @@
                             <div class="color-dot" style="background:#f4ecd8"></div>
                         </div>
                     </div>
+
                     <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
+
+                    <label>🧠 Intelligence Artificielle par défaut</label>
+                    <select id="selecteurIaGlobal" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
+                        <option value="gemini">✨ Gemini (Google)</option>
+                        <option value="mistral">🥐 Mistral AI (France)</option>
+                    </select>
+
                     <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="reinitialiserClesAPI();">
-                        🔑 Réinitialiser mes clés API (Gemini, OpenAI, Mistral)
+                        🔑 Réinitialiser mes clés API (Gemini, Mistral)
                     </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
                         🚪 Se déconnecter
@@ -626,11 +623,18 @@
         let globalIngredientsList = {};
         let memoireIngredients = [];
         let memoireAllergenes = [];
+        let moteurIAActif = "gemini";
         let unsubscribeCourses = null;
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
-            if(user) db.collection("utilisateurs").doc(user.uid).set({ [champ]: data }, { merge: true });
+            if(user) userDb.set({ [champ]: data }, { merge: true });
+        }
+
+        function changerIaParDefaut(valeur) {
+            moteurIAActif = valeur;
+            syncCloud('moteurIA', valeur);
+            showToast(`IA par défaut : ${valeur.toUpperCase()} 🧠`, "success");
         }
 
         function setTheme(themeName) {
@@ -735,7 +739,7 @@
             let keyName = provider + '_api_key';
             let key = localStorage.getItem(keyName);
             if (!key) {
-                let nomF = provider === 'openai' ? 'OpenAI' : (provider === 'mistral' ? 'Mistral AI' : 'Gemini');
+                let nomF = provider === 'mistral' ? 'Mistral AI' : 'Gemini';
                 key = await showPrompt(`🔒 Sécurité : Veuillez coller votre clé API ${nomF}.`, "Collez votre clé ici...");
                 if (key) localStorage.setItem(keyName, key);
             }
@@ -744,7 +748,6 @@
 
         function reinitialiserClesAPI() {
             localStorage.removeItem('gemini_api_key');
-            localStorage.removeItem('openai_api_key');
             localStorage.removeItem('mistral_api_key');
             showToast("Toutes les clés API ont été effacées !", "success");
         }
@@ -824,6 +827,10 @@
                     if(userDoc.exists) {
                         memoireIngredients = userDoc.data().ingredients || [];
                         memoireAllergenes = userDoc.data().allergenes || [];
+                        moteurIAActif = userDoc.data().moteurIA || "gemini";
+                        
+                        const selectGlobal = document.getElementById('selecteurIaGlobal');
+                        if(selectGlobal) selectGlobal.value = moteurIAActif;
                     }
                 }
                 
@@ -1092,7 +1099,7 @@
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
-            const moteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
+            const moteur = moteurIAActif;
 
             const historique = await getHistoriquePrompt();
             const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${historique}
@@ -1112,9 +1119,6 @@
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
-                } else if (moteur === 'openai') {
-                    const rep = await fetch(`https://api.openai.com/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
                     const data = await rep.json(); texte = data.choices[0].message.content;
@@ -1131,7 +1135,7 @@
             const contentDiv = document.getElementById('planningContent');
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
-            const moteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
+            const moteur = moteurIAActif;
 
             const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
@@ -1142,9 +1146,6 @@
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
-                } else if (moteur === 'openai') {
-                    const rep = await fetch(`https://api.openai.com/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
                     const data = await rep.json(); texte = data.choices[0].message.content;
@@ -1161,7 +1162,7 @@
             document.getElementById('modalPlanning').style.display = 'none';
             const personnes = document.getElementById('personnes').value;
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            const moteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
+            const moteur = moteurIAActif;
             
             const cacheKey = `plat_${nomDuPlat}_${personnes}_${moteur}`.replace(/\s+/g, '_').toLowerCase();
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
@@ -1185,7 +1186,7 @@
             if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
             
             const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value; const temps = document.getElementById('temps').value;
-            const moteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
+            const moteur = moteurIAActif;
             
             const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
@@ -1205,7 +1206,7 @@
 
         async function executerRequeteIA(prompt, titleTemplate, cacheKey = null) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            const moteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
+            const moteur = moteurIAActif;
             
             const requestContext = { prompt, titleTemplate, cacheKey, moteur };
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
@@ -1225,15 +1226,6 @@
                     if(data.error) throw new Error(data.error.message);
                     texteReponse = data.candidates[0].content.parts[0].text;
                 } 
-                else if (moteur === 'openai') {
-                    const rep = await fetch(`https://api.openai.com/v1/chat/completions`, {
-                        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                        body: JSON.stringify({ model: "gpt-4o-mini", messages: [{ role: "user", content: prompt }] })
-                    });
-                    const data = await rep.json();
-                    if(data.error) throw new Error(data.error.message);
-                    texteReponse = data.choices[0].message.content;
-                }
                 else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
                         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
@@ -1283,8 +1275,6 @@
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
             resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
             
-            // Forcer la synchronisation du moteur IA utilisé pour la regénération
-            const actuelMoteur = document.getElementById('moteurIA') ? document.getElementById('moteurIA').value : 'gemini';
             const { prompt, titleTemplate, cacheKey } = context;
             let basePrompt = prompt.split('\nIMPORTANT : propose une')[0];
             const promptRegen = basePrompt + "\nIMPORTANT : propose une (ou plusieurs) recette(s) DIFFÉRENTE(S) de la précédente, avec des idées nouvelles et variées.";
@@ -1341,7 +1331,6 @@
                 const base64String = reader.result.split(',')[1];
                 const promptText = "Liste TOUS les ingrédients alimentaires visibles sur cette image. Renvoie UNIQUEMENT les noms séparés par des virgules (ex: Tomate, Oignon, Poulet).";
                 try {
-                    // Force l'utilisation de Gemini pour l'analyse d'image car c'est le seul géré ici
                     const apiKey = await getApiKey('gemini');
                     if (!apiKey) { loader.style.display = "none"; showToast("Clé API Gemini requise pour la vision.", "error"); return; }
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
