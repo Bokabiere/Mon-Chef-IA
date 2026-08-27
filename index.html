@@ -1193,7 +1193,14 @@
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
             
             const historique = await getHistoriquePrompt();
-            const prompt = `Cuisine pour ${personnes} pers. Temps: ${temps}. Dispo: ${checked.join(", ")} (hors épices/condiments de base). Style: ${humeur}. ${getAllergenesPrompt()} ${historique} Propose 3 recettes. 1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Manque ? "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres.`;
+       const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. 
+Ingrédients disponibles : ${checked.join(", ")} (hors épices/condiments de base). Style demandé : ${humeur}. ${getAllergenesPrompt()} ${historique}
+
+Règles de formatage ABSOLUES :
+1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
+2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
+3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
+4. Indique toutes les durées en chiffres (ex: 15 min).`;
             const titleTemplate = "J'ai trouvé {N} idées pour vous ! (Fraîches)";
 
             const requestContext = { prompt, titleTemplate, cacheKey, moteur };
