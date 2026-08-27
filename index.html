@@ -1273,24 +1273,35 @@ Règles de formatage ABSOLUES :
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur de génération avec l'IA sélectionnée.</p>"; }
         }
 
-        async function regenererRecette(btn) {
-            let context = window._lastRecipeRequest;
-            if (!context) { const saved = localStorage.getItem('chef_ia_last_request'); if (saved) context = JSON.parse(saved); }
-            if (!context) { showToast("Veuillez relancer la recherche depuis le bouton principal.", "error"); return; }
-            if (btn) { btn.disabled = true; btn.innerText = "⏳ Recherche..."; }
-            
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
-            resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
-            
-            const { prompt, titleTemplate, cacheKey } = context;
-            let basePrompt = prompt.split('\nIMPORTANT : propose une')[0];
-            const promptRegen = basePrompt + "\nIMPORTANT : propose une (ou plusieurs) recette(s) DIFFÉRENTE(S) de la précédente, avec des idées nouvelles et variées.";
-            const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
-            
-            try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
-            catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
-            if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
-        }
+       async function regenererRecette(btn) {
+    let context = window._lastRecipeRequest;
+    if (!context) { const saved = localStorage.getItem('chef_ia_last_request'); if (saved) context = JSON.parse(saved); }
+    if (!context) { showToast("Veuillez relancer la recherche depuis le bouton principal.", "error"); return; }
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ Recherche..."; }
+    
+    const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
+    resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
+    
+    const { prompt, titleTemplate, cacheKey } = context;
+    
+    // On extrait la base du prompt et on force explicitement 3 nouvelles recettes distinctes
+    let basePrompt = prompt.split('\nRègles de formatage')[0].split('\nIMPORTANT')[0];
+    const promptRegen = `${basePrompt}
+
+Génère OBLIGATOIREMENT 3 nouvelles recettes distinctes, différentes des précédentes, avec des idées nouvelles.
+
+Règles de formatage ABSOLUES :
+1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
+2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
+3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
+4. Indique toutes les durées en chiffres (ex: 15 min).`;
+
+    const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
+    
+    try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
+    catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
+    if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
+}
 
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex'; const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
