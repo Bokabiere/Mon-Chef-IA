@@ -1352,30 +1352,35 @@
         }
 
         // --- MOTEURS DE RECETTES & CACHE INTELLIGENT ---
-        async function cuisinerCePlat(nomDuPlat) {
-            document.getElementById('modalPlanning').style.display = 'none';
-            const personnes = document.getElementById('personnes').value;
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            
-            const cacheKey = `plat_${nomDuPlat}_${personnes}`.replace(/\s+/g, '_').toLowerCase();
+async function cuisinerCePlat(nomDuPlat) {
+    document.getElementById('modalPlanning').style.display = 'none';
+    const personnes = document.getElementById('personnes').value;
+    const resDiv = document.getElementById('resultatDiv'); 
+    const loader = document.getElementById('loader');
+    
+    const cacheKey = `plat_${nomDuPlat}_${personnes}`.replace(/\s+/g, '_').toLowerCase();
 
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
-            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+    if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
+    else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
 
-            const cachedData = getCache(cacheKey);
-            if (cachedData) {
-                resDiv.innerHTML = cachedData;
-                showToast("⚡ Recette chargée depuis le cache intelligent !", "success");
-                return;
-            }
+    // Préparation de la requête en amont
+    const historique = await getHistoriquePrompt();
+    const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${historique}
+    1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
+    const titleTemplate = `Voici la recette pour : ${nomDuPlat} 🍽️`;
 
-            resDiv.innerHTML = ""; loader.style.display = "block";
-            const historique = await getHistoriquePrompt();
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${historique}
-            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
-            
-            executerRequeteIA(prompt, `Voici la recette pour : ${nomDuPlat} 🍽️`, cacheKey);
-        }
+    const cachedData = getCache(cacheKey);
+    if (cachedData) {
+        resDiv.innerHTML = cachedData;
+        // On restaure le contexte pour que le bouton "Une autre recette" fonctionne
+        window._lastRecipeRequest = { prompt, titleTemplate, cacheKey };
+        showToast("⚡ Recette chargée depuis le cache intelligent !", "success");
+        return;
+    }
+
+    resDiv.innerHTML = ""; loader.style.display = "block";
+    executerRequeteIA(prompt, titleTemplate, cacheKey);
+}
 
         async function chercherRecettesIA() {
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
