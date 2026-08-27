@@ -1459,16 +1459,36 @@ async function cuisinerCePlat(nomDuPlat) {
         }
 
         // Relance une génération avec le même contexte, en demandant une proposition différente
-        async function regenererRecette(btn) {
-            if (!window._lastRecipeRequest) return;
-            if (btn) { btn.disabled = true; btn.innerText = "⏳ ..."; }
-            const { prompt, titleTemplate, cacheKey } = window._lastRecipeRequest;
-            const promptRegen = prompt + "\nIMPORTANT : propose une (ou plusieurs) recette(s) DIFFÉRENTE(S) de la précédente, avec des idées nouvelles et variées.";
-            // On génère un nouveau cacheKey pour ne pas réafficher l'ancien résultat mis en cache
-            const nouveauCacheKey = cacheKey ? `${cacheKey}_v${Date.now()}` : null;
-            await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey);
-        }
+async function regenererRecette(btn) {
+    if (!window._lastRecipeRequest) return;
+    
+    // 1. Désactiver le bouton visuellement (avant de vider la zone)
+    if (btn) { 
+        btn.disabled = true; 
+        btn.innerText = "⏳ Recherche..."; 
+    }
 
+    // 2. Vider les résultats actuels et afficher la mascotte (loader)
+    const resDiv = document.getElementById('resultatDiv');
+    const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loaderText');
+    
+    resDiv.innerHTML = ""; // Ceci supprime le bouton, empêchant tout double-clic
+    loader.style.display = "block";
+    if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
+
+    // 3. Lancer la nouvelle requête IA
+    const { prompt, titleTemplate, cacheKey } = window._lastRecipeRequest;
+    const promptRegen = prompt + "\nIMPORTANT : propose une (ou plusieurs) recette(s) DIFFÉRENTE(S) de la précédente, avec des idées nouvelles et variées.";
+    
+    // On génère un nouveau cacheKey pour ne pas réafficher l'ancien résultat mis en cache
+    const nouveauCacheKey = cacheKey ? `${cacheKey}_v${Date.now()}` : null;
+    
+    await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey);
+    
+    // Optionnel : réinitialiser le texte du loader pour les prochaines recherches classiques
+    if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
+}
         // --- CARNET ---
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex';
