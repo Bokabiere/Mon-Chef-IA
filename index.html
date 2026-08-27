@@ -284,7 +284,7 @@
             <video src="mascotte.webm" autoplay loop muted playsinline></video>
         </div>
         <h1 class="gradient-text" style="font-size: 36px; margin-bottom: 5px;">Mon Chef IA</h1>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
+        <p id="loginMessage" style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
         
         <div id="g_id_onload"
              data-client_id="536331491333-6t6sdotnumbbq0ms8l9ukhvk8g01718q.apps.googleusercontent.com"
@@ -293,7 +293,8 @@
         </div>
         <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
 
-        <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Vous n'êtes pas autorisé.</div>
+        <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Compte en attente de validation.</div>
+        <button id="btnLogoutPending" class="btn-secondary" style="margin-top: 20px; display: none;" onclick="seDeconnecter()">Se déconnecter</button>
     </div>
 
     <div id="appContent">
@@ -432,6 +433,7 @@
                     <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
                     <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
+                    <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
                 </div>
 
                 <div id="tabIng">
@@ -559,6 +561,13 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="tabAdmin" style="display: none;">
+                    <label>👥 Gestion des accès utilisateurs en attente</label>
+                    <div id="listeDemandesAcces" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px;">
+                        <p style="text-align:center; padding: 20px;">Chargement...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -625,6 +634,7 @@
         let memoireAllergenes = [];
         let moteurIAActif = "gemini";
         let unsubscribeCourses = null;
+        let isAdminUser = false;
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -657,8 +667,6 @@
             chargerAllergenesUI();
         };
 
-        const EMAILS_AUTORISES = ["bokabiere@gmail.com", "nouveau.compte@gmail.com"];
-
         async function handleCredentialResponse(response) {
             document.getElementById('loginError').style.display = 'none';
             try {
@@ -671,22 +679,63 @@
             }
         }
 
-        firebase.auth().onAuthStateChanged(function(user) {
+        firebase.auth().onAuthStateChanged(async function(user) {
             if (user) {
-                if (EMAILS_AUTORISES.includes(user.email)) {
-                    userDb = db.collection("utilisateurs").doc(user.uid);
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('appContent').style.display = 'block';
-                    document.getElementById('loginError').style.display = 'none';
-                    chargerInterfaceBase();
-                } else {
-                    document.getElementById('loginError').innerText = "Accès refusé. Vous n'êtes pas autorisé.";
-                    document.getElementById('loginError').style.display = 'block';
-                    firebase.auth().signOut();
+                const userRef = db.collection("utilisateurs").doc(user.uid);
+                try {
+                    const docSnap = await userRef.get();
+                    let userData = {};
+                    isAdminUser = (user.email === "bokabiere@gmail.com");
+
+                    if (!docSnap.exists) {
+                        userData = {
+                            email: user.email,
+                            nom: user.displayName || "Utilisateur",
+                            statut: isAdminUser ? "valide" : "en_attente",
+                            role: isAdminUser ? "admin" : "membre",
+                            dateInscription: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await userRef.set(userData);
+                    } else {
+                        userData = docSnap.data();
+                        // Si vous êtes l'admin mais que le statut n'était pas 'valide', on force
+                        if (isAdminUser && userData.statut !== "valide") {
+                            userData.statut = "valide";
+                            userData.role = "admin";
+                            await userRef.update({ statut: "valide", role: "admin" });
+                        }
+                    }
+
+                    userDb = userRef;
+
+                    if (userData.statut === "valide") {
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('appContent').style.display = 'block';
+                        document.getElementById('loginError').style.display = 'none';
+                        document.getElementById('btnLogoutPending').style.display = 'none';
+                        
+                        // Afficher l'onglet Admin si c'est vous
+                        const tabAdminBtn = document.getElementById('tabAdminBtn');
+                        if (tabAdminBtn) tabAdminBtn.style.display = isAdminUser ? "block" : "none";
+
+                        chargerInterfaceBase();
+                    } else {
+                        document.getElementById('appContent').style.display = 'none';
+                        document.getElementById('loginScreen').style.display = 'flex';
+                        document.getElementById('loginMessage').innerText = "Votre compte est en attente de validation par l'administrateur.";
+                        document.getElementById('loginError').innerText = "⏳ Accès restreint. Veuillez patienter.";
+                        document.getElementById('loginError').style.display = 'block';
+                        document.getElementById('btnLogoutPending').style.display = 'block';
+                    }
+                } catch(e) {
+                    console.error("Erreur auth state changed:", e);
                 }
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('loginMessage').innerText = "Veuillez vous identifier pour accéder à l'application.";
                 document.getElementById('appContent').style.display = 'none';
+                document.getElementById('loginError').style.display = 'none';
+                document.getElementById('btnLogoutPending').style.display = 'none';
             }
         });
 
@@ -931,17 +980,61 @@
             updateButtonLabel(); afficherIngredientsGauche(); 
         }
 
-        function ouvrirParametres() { document.getElementById('modalParametres').style.display = 'flex'; chargerListeManageIng(); }
+        function ouvrirParametres() { 
+            document.getElementById('modalParametres').style.display = 'flex'; 
+            chargerListeManageIng(); 
+            if (isAdminUser) chargerDemandesAcces();
+        }
+        
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
+        
         function switchTab(tab) {
-            ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene'].forEach(t => {
+            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabAdmin'];
+            tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
                 if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
             });
             const activeBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn');
             const activeContent = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
             if(activeBtn) activeBtn.classList.add('active'); if(activeContent) activeContent.style.display = 'block';
-            if(tab === 'ing') chargerListeManageIng(); if(tab === 'carnet') chargerListeManageCarnet(); if(tab === 'allergene') chargerAllergenesUI();
+            
+            if(tab === 'ing') chargerListeManageIng(); 
+            if(tab === 'carnet') chargerListeManageCarnet(); 
+            if(tab === 'allergene') chargerAllergenesUI();
+            if(tab === 'admin' && isAdminUser) chargerDemandesAcces();
+        }
+
+        async function chargerDemandesAcces() {
+            const container = document.getElementById('listeDemandesAcces');
+            container.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("utilisateurs").where("statut", "==", "en_attente").get();
+                if (snapshot.empty) return container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-muted);'>Aucune demande en attente.</p>";
+                
+                let html = "";
+                snapshot.forEach(doc => {
+                    let u = doc.data();
+                    html += `<div class="list-item-manage">
+                                <div><b>${u.email}</b><br><span style="font-size:11px; color:var(--text-muted);">${u.nom || 'Sans nom'}</span></div>
+                                <div style="display:flex; gap:5px;">
+                                    <button class="btn-primary" style="margin-top:0; padding:6px 12px; font-size:12px; background:#27ae60;" onclick="validerCompte('${doc.id}', true)">✅ Valider</button>
+                                    <button class="btn-danger" style="padding:6px 12px; font-size:12px;" onclick="validerCompte('${doc.id}', false)">❌ Refuser</button>
+                                </div>
+                             </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = "<p style='color:red;'>Erreur de chargement.</p>"; }
+        }
+
+        async function validerCompte(userId, accepter) {
+            if (accepter) {
+                await db.collection("utilisateurs").doc(userId).update({ statut: "valide" });
+                showToast("Compte validé avec succès !", "success");
+            } else {
+                await db.collection("utilisateurs").doc(userId).delete();
+                showToast("Demande refusée et supprimée.", "info");
+            }
+            chargerDemandesAcces();
         }
 
         async function ajouterIngredientDB() {
@@ -1042,7 +1135,6 @@
                 let htmlAcheter = ""; let htmlCaddie = ""; let hasCaddie = false;
                 snapshot.forEach(doc => {
                     const item = doc.data(); const isChecked = item.checked === true;
-                    let safeIng = item.ingredient.replace(/'/g, "\\'");
                     let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})"><div class="circle-check"></div><span style="font-size: 15px; font-weight:500;">${item.ingredient}</span></div>`;
                     if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } else { htmlAcheter += itemHtml; }
                 });
@@ -1193,8 +1285,7 @@
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
             
             const historique = await getHistoriquePrompt();
-       const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. 
-Ingrédients disponibles : ${checked.join(", ")} (hors épices/condiments de base). Style demandé : ${humeur}. ${getAllergenesPrompt()} ${historique}
+            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${historique}
 
 Règles de formatage ABSOLUES :
 1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
@@ -1273,20 +1364,18 @@ Règles de formatage ABSOLUES :
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur de génération avec l'IA sélectionnée.</p>"; }
         }
 
-       async function regenererRecette(btn) {
-    let context = window._lastRecipeRequest;
-    if (!context) { const saved = localStorage.getItem('chef_ia_last_request'); if (saved) context = JSON.parse(saved); }
-    if (!context) { showToast("Veuillez relancer la recherche depuis le bouton principal.", "error"); return; }
-    if (btn) { btn.disabled = true; btn.innerText = "⏳ Recherche..."; }
-    
-    const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
-    resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
-    
-    const { prompt, titleTemplate, cacheKey } = context;
-    
-    // On extrait la base du prompt et on force explicitement 3 nouvelles recettes distinctes
-    let basePrompt = prompt.split('\nRègles de formatage')[0].split('\nIMPORTANT')[0];
-    const promptRegen = `${basePrompt}
+        async function regenererRecette(btn) {
+            let context = window._lastRecipeRequest;
+            if (!context) { const saved = localStorage.getItem('chef_ia_last_request'); if (saved) context = JSON.parse(saved); }
+            if (!context) { showToast("Veuillez relancer la recherche depuis le bouton principal.", "error"); return; }
+            if (btn) { btn.disabled = true; btn.innerText = "⏳ Recherche..."; }
+            
+            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
+            resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
+            
+            const { prompt, titleTemplate, cacheKey } = context;
+            let basePrompt = prompt.split('\nRègles de formatage')[0].split('\nIMPORTANT')[0];
+            const promptRegen = `${basePrompt}
 
 Génère OBLIGATOIREMENT 3 nouvelles recettes distinctes, différentes des précédentes, avec des idées nouvelles.
 
@@ -1296,12 +1385,12 @@ Règles de formatage ABSOLUES :
 3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
 4. Indique toutes les durées en chiffres (ex: 15 min).`;
 
-    const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
-    
-    try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
-    catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
-    if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
-}
+            const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
+            
+            try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
+            catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
+            if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
+        }
 
         async function chargerCarnet() {
             document.getElementById('modalCarnet').style.display = 'flex'; const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
