@@ -696,14 +696,16 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        
         let globalIngredientsList = {};
-		let memoireIngredients = [];
-let memoireAllergenes = [];
+        let memoireIngredients = [];
+        let memoireAllergenes = [];
+        let unsubscribeCourses = null;
 
-function syncCloud(champ, data) {
-    const user = firebase.auth().currentUser;
-    if(user) db.collection("utilisateurs").doc(user.uid).set({ [champ]: data }, { merge: true });
-}
+        function syncCloud(champ, data) {
+            const user = firebase.auth().currentUser;
+            if(user) db.collection("utilisateurs").doc(user.uid).set({ [champ]: data }, { merge: true });
+        }
 
         // --- GESTION DES THÈMES ---
         function setTheme(themeName) {
@@ -870,23 +872,19 @@ function syncCloud(champ, data) {
             showToast("Cache nettoyé avec succès !", "success");
         }
 
-        // --- ALLERGÈNES (AVEC FIX RECHARGEMENT) ---
-function sauvegarderAllergenes() {
-    memoireAllergenes = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
-    syncCloud('allergenes', memoireAllergenes);
-}
+        // --- ALLERGÈNES (CLOUD SYNC) ---
+        function sauvegarderAllergenes() {
+            memoireAllergenes = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
+            syncCloud('allergenes', memoireAllergenes);
+        }
 
         function chargerAllergenesUI() {
-            const coches = JSON.parse(localStorage.getItem('chef_ia_allergenes') || '[]');
             const container = document.getElementById('customAllergene').parentElement.parentElement.previousElementSibling;
-            
-            // On récupère la liste des allergènes de base 
             const existingValues = Array.from(document.querySelectorAll('.chk-allergene')).map(cb => cb.value);
 
-            // On réinitialise toutes les cases de base à "non coché" 
             document.querySelectorAll('.chk-allergene').forEach(cb => cb.checked = false);
 
-            coches.forEach(val => {
+            memoireAllergenes.forEach(val => {
                 if (existingValues.includes(val)) {
                     const cb = document.querySelector(`.chk-allergene[value="${val}"]`);
                     if (cb) cb.checked = true;
@@ -916,37 +914,40 @@ function sauvegarderAllergenes() {
             sauvegarderAllergenes();
         }
 
-function getAllergenesPrompt() {
-    if (memoireAllergenes.length === 0) return "";
-    return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${memoireAllergenes.join(", ")}.`;
-}
+        function getAllergenesPrompt() {
+            if (memoireAllergenes.length === 0) return "";
+            return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${memoireAllergenes.join(", ")}.`;
+        }
 
-async function chargerInterfaceBase() {
-    try {
-        const user = firebase.auth().currentUser;
-        if(user) {
-            const userDoc = await db.collection("utilisateurs").doc(user.uid).get();
-            if(userDoc.exists) {
-                memoireIngredients = userDoc.data().ingredients || [];
-                memoireAllergenes = userDoc.data().allergenes || [];
+        async function chargerInterfaceBase() {
+            try {
+                const user = firebase.auth().currentUser;
+                if(user) {
+                    const userDoc = await db.collection("utilisateurs").doc(user.uid).get();
+                    if(userDoc.exists) {
+                        memoireIngredients = userDoc.data().ingredients || [];
+                        memoireAllergenes = userDoc.data().allergenes || [];
+                    }
+                }
+                
+                let docRef = db.collection("config").doc("ingredients");
+                let docSnap = await docRef.get();
+                if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
+                
+                afficherIngredientsGauche();
+                chargerAllergenesUI();
+
+                document.getElementById('categoriesContainer').addEventListener('change', (e) => {
+                    if (!e.target.classList.contains('chk-ingredient')) return;
+                    memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+                    syncCloud('ingredients', memoireIngredients);
+                    updateButtonLabel();
+                });
+            } catch (e) { 
+                console.error("Détail de l'erreur :", e);
+                document.getElementById('categoriesContainer').innerHTML = `<span style='color:red;'>Erreur : ${e.message}</span>`; 
             }
         }
-        
-        let docRef = db.collection("config").doc("ingredients");
-        let docSnap = await docRef.get();
-        if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
-        
-        afficherIngredientsGauche();
-        chargerAllergenesUI();
-
-        document.getElementById('categoriesContainer').addEventListener('change', (e) => {
-            if (!e.target.classList.contains('chk-ingredient')) return;
-            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            syncCloud('ingredients', memoireIngredients); // Synchro Cloud
-            updateButtonLabel();
-        });
-    } catch (e) { document.getElementById('categoriesContainer').innerHTML = "<span style='color:red;'>Erreur Firebase.</span>"; }
-}
 
         const iconesIngredients = {
             "Tomate": "🍅", "Carotte": "🥕", "Courgette": "🥒", "Aubergine": "🍆", "Oignon": "🧅", "Ail": "🧄",
@@ -954,11 +955,10 @@ async function chargerInterfaceBase() {
             "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
         };
 
-        // --- AFFICHAGE MODERNE INGRÉDIENTS (OPTION B) ---
+        // --- AFFICHAGE MODERNE INGRÉDIENTS ---
         function afficherIngredientsGauche() {
             const container = document.getElementById('categoriesContainer');
             container.innerHTML = "";
-            const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
             const sortedCats = Object.keys(globalIngredientsList).sort();
 
             for (const cat of sortedCats) {
@@ -966,14 +966,13 @@ async function chargerInterfaceBase() {
                 if (!items || items.length === 0) continue;
                 items.sort();
                 
-                // Compteur
-                const nbCochesCat = items.filter(i => memoire.includes(i)).length;
+                const nbCochesCat = items.filter(i => memoireIngredients.includes(i)).length;
                 const badgeCompteur = nbCochesCat > 0 ? `<span style="background:var(--primary); color:white; font-size:10px; padding:3px 7px; border-radius:12px; margin-left:8px; vertical-align: middle;">${nbCochesCat}</span>` : '';
 
                 let html = `<details class="cat-details"><summary style="display:flex; align-items:center;">${cat} ${badgeCompteur}</summary><div class="ingredient-list">`;
                 
                 items.forEach(item => {
-                    const isChecked = memoire.includes(item) ? "checked" : "";
+                    const isChecked = memoireIngredients.includes(item) ? "checked" : "";
                     const icone = iconesIngredients[item] || "🍴";
                     html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${icone} ${item}</span></label>`;
                 });
@@ -990,7 +989,13 @@ async function chargerInterfaceBase() {
             btn.innerText = n > 0 ? `✨ Inventer mes recettes (${n} ingrédient${n > 1 ? 's' : ''})` : "✨ Inventer mes recettes";
         }
 
-        function decocherTout() { document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); localStorage.setItem('ingredientsSauves', '[]'); updateButtonLabel(); afficherIngredientsGauche(); }
+        function decocherTout() { 
+            document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); 
+            memoireIngredients = [];
+            syncCloud('ingredients', memoireIngredients);
+            updateButtonLabel(); 
+            afficherIngredientsGauche(); 
+        }
 
         // --- AUTOCOMPLÉTION RECHERCHE INGRÉDIENTS ---
         function filtrerIngredients(terme) {
@@ -1032,8 +1037,8 @@ async function chargerInterfaceBase() {
                 }
             });
 
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            localStorage.setItem('ingredientsSauves', JSON.stringify(checked));
+            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            syncCloud('ingredients', memoireIngredients);
             updateButtonLabel();
             afficherIngredientsGauche(); 
         }
@@ -1077,8 +1082,9 @@ async function chargerInterfaceBase() {
                 await db.collection("config").doc("ingredients").update({ [cat]: firebase.firestore.FieldValue.arrayRemove(ing) });
                 globalIngredientsList[cat] = globalIngredientsList[cat].filter(i => i !== ing);
                 chargerListeManageIng(); afficherIngredientsGauche();
-                const memoire = JSON.parse(localStorage.getItem('ingredientsSauves') || '[]');
-                localStorage.setItem('ingredientsSauves', JSON.stringify(memoire.filter(i => i !== ing)));
+                
+                memoireIngredients = memoireIngredients.filter(i => i !== ing);
+                syncCloud('ingredients', memoireIngredients);
                 showToast(`"${ing}" supprimé.`, "success");
             } catch(e) { showToast("Erreur lors de la suppression.", "error"); }
         }
@@ -1124,7 +1130,9 @@ async function chargerInterfaceBase() {
                 const texte = event.results[0][0].transcript.toLowerCase();
                 btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter";
                 document.querySelectorAll('.chk-ingredient').forEach(cb => { if (texte.includes(cb.value.toLowerCase())) cb.checked = true; });
-                localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
+                
+                memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+                syncCloud('ingredients', memoireIngredients);
                 updateButtonLabel();
                 afficherIngredientsGauche(); 
             };
@@ -1134,22 +1142,21 @@ async function chargerInterfaceBase() {
 
         // --- COURSES AMÉLIORÉES ---
 
-        // 1. Ajouter depuis une recette (avec animation du bouton)
+        // 1. Ajouter depuis une recette
         async function ajouterCourse(btn, ingredient) {
             btn.innerText = "⏳"; btn.disabled = true;
             try { 
                 await db.collection("courses").add({ 
                     ingredient: ingredient, 
-                    checked: false, // Nouveau statut
+                    checked: false,
                     date: firebase.firestore.FieldValue.serverTimestamp() 
                 }); 
                 btn.innerText = "✅"; 
                 btn.style.background = "#27ae60"; 
                 
-                // Déclencher l'animation sur le bouton du menu principal
                 const navBtn = document.getElementById('btnNavCourses');
                 navBtn.classList.remove('animate-cart');
-                void navBtn.offsetWidth; // Force le reflow pour relancer l'animation
+                void navBtn.offsetWidth; 
                 navBtn.classList.add('animate-cart');
                 
             } catch (e) { btn.innerText = "❌"; }
@@ -1167,65 +1174,63 @@ async function chargerInterfaceBase() {
                     checked: false,
                     date: firebase.firestore.FieldValue.serverTimestamp() 
                 });
-                input.value = ""; // Vider le champ
-                ouvrirCourses(); // Rafraîchir la liste
+                input.value = "";
             } catch(e) { showToast("Erreur lors de l'ajout", "error"); }
         }
 
-        // 3. Ouvrir les courses avec séparation "À acheter" et "Caddie"
-let unsubscribeCourses = null; // Variable globale pour stopper l'écoute si besoin
-
-function ouvrirCourses() {
-    document.getElementById('modalCourses').style.display = 'flex';
-    const contentDiv = document.getElementById('coursesContent');
-    contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
-    
-    // Annuler l'ancien écouteur si on réouvre la modal
-    if(unsubscribeCourses) unsubscribeCourses();
-
-    // onSnapshot écoute en temps réel les changements dans la base de données
-    unsubscribeCourses = db.collection("courses").orderBy("date", "desc").onSnapshot((snapshot) => {
-        if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
-        
-        let htmlAcheter = "";
-        let htmlCaddie = "";
-        let hasCaddie = false;
-
-        snapshot.forEach(doc => {
-            const item = doc.data();
-            const isChecked = item.checked === true;
-            let safeIng = item.ingredient.replace(/'/g, "\\'");
-            let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})">
-                                <div class="circle-check"></div>
-                                <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
-                            </div>`;
+        // 3. Ouvrir les courses avec onSnapshot
+        function ouvrirCourses() {
+            document.getElementById('modalCourses').style.display = 'flex';
+            const contentDiv = document.getElementById('coursesContent');
+            contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
             
-            if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } 
-            else { htmlAcheter += itemHtml; }
-        });
+            if(unsubscribeCourses) unsubscribeCourses();
 
-        let finalHtml = htmlAcheter;
-        if (hasCaddie) {
-            finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie;
-            finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`;
-        }
-        
-        if(!htmlAcheter && hasCaddie) {
-            finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml;
-        }
+            unsubscribeCourses = db.collection("courses").orderBy("date", "desc").onSnapshot((snapshot) => {
+                if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
+                
+                let htmlAcheter = "";
+                let htmlCaddie = "";
+                let hasCaddie = false;
 
-        contentDiv.innerHTML = finalHtml;
-    }, (error) => {
-        contentDiv.innerHTML = "<p style='color:red;'>Erreur de synchronisation.</p>";
-    });
-}
+                snapshot.forEach(doc => {
+                    const item = doc.data();
+                    const isChecked = item.checked === true;
+                    
+                    let safeIng = item.ingredient.replace(/'/g, "\\'");
+                    let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})">
+                                        <div class="circle-check"></div>
+                                        <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                                    </div>`;
+                    
+                    if (isChecked) {
+                        htmlCaddie += itemHtml;
+                        hasCaddie = true;
+                    } else {
+                        htmlAcheter += itemHtml;
+                    }
+                });
+
+                let finalHtml = htmlAcheter;
+                if (hasCaddie) {
+                    finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie;
+                    finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`;
+                }
+                
+                if(!htmlAcheter && hasCaddie) {
+                    finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml;
+                }
+
+                contentDiv.innerHTML = finalHtml;
+            }, (error) => {
+                contentDiv.innerHTML = "<p style='color:red;'>Erreur de synchronisation.</p>";
+            });
+        }
 
         // 4. Mettre dans le caddie ou remettre dans la liste
         async function checkerCourse(docId, currentState) {
             try {
-                // Au lieu de supprimer, on inverse simplement l'état "checked"
                 await db.collection("courses").doc(docId).update({ checked: !currentState });
-                ouvrirCourses(); // On recharge pour déplacer visuellement l'article
             } catch(e) { showToast("Erreur de mise à jour", "error"); }
         }
 
@@ -1235,14 +1240,11 @@ function ouvrirCourses() {
             if (!ok) return;
             
             try {
-                // Récupérer et supprimer tous les articles cochés
                 const snapshot = await db.collection("courses").where("checked", "==", true).get();
                 const batch = db.batch();
                 snapshot.forEach(doc => { batch.delete(doc.ref); });
                 await batch.commit();
-                
                 showToast("Caddie vidé !", "success");
-                ouvrirCourses();
             } catch(e) { showToast("Erreur lors de la suppression.", "error"); }
         }
 
@@ -1676,11 +1678,13 @@ function ouvrirCourses() {
                 }
             });
             
-            localStorage.setItem('ingredientsSauves', JSON.stringify(Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value)));
+            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            syncCloud('ingredients', memoireIngredients);
+            
             document.getElementById('modalIAScanner').style.display = 'none';
             document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) ! ✨</h3>`;
             updateButtonLabel();
-            afficherIngredientsGauche(); // Met à jour les compteurs
+            afficherIngredientsGauche(); 
         }
 
         // --- CODE-BARRES ---
@@ -1777,7 +1781,6 @@ function ouvrirCourses() {
         }
 
         function declencherAlerteFinMinuteur() {
-            // Lancer les confettis 🎉
             if (typeof confetti === "function") {
                 confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 });
             }
