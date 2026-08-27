@@ -205,6 +205,17 @@
         .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        .loader-mascot-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto; }
+        .loader-mascot { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary); background: var(--card-bg); box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: mascotBounce 1.1s ease-in-out infinite; }
+        .loader-mascot video { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+        @keyframes mascotBounce { 0%, 100% { transform: translateY(0) scale(1) rotate(0deg); } 50% { transform: translateY(-14px) scale(1.04) rotate(-3deg); } }
+
+        .loader-steam { position: absolute; font-size: 24px; opacity: 0; pointer-events: none; animation: steamRise 2.4s ease-in infinite; }
+        .loader-steam.s1 { left: 8%; top: 0; animation-delay: 0s; }
+        .loader-steam.s2 { left: 48%; top: -10px; font-size: 28px; animation-delay: 0.8s; }
+        .loader-steam.s3 { left: 82%; top: 0; animation-delay: 1.6s; }
+        @keyframes steamRise { 0% { opacity: 0; transform: translateY(0) scale(0.7); } 25% { opacity: 0.85; } 100% { opacity: 0; transform: translateY(-70px) scale(1.3); } }
+
         details.recipe-card { background: var(--card-bg); border-radius: 16px; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.04); overflow: hidden; position: relative; transition: all 0.4s ease; border: 1px solid var(--border);}
         details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); border:none;}
         details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 20px; background: var(--card-bg); min-height: 100vh;}
@@ -432,7 +443,17 @@
             <!-- PANNEAU DROIT -->
             <div class="right-panel" id="rightPanel">
                 <div class="right-content">
-                    <div id="loader" class="loader"><div class="loader-spinner"></div><p style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p></div>
+                    <div id="loader" class="loader">
+                        <div class="loader-mascot-wrap">
+                            <span class="loader-steam s1">💨</span>
+                            <span class="loader-steam s2">💨</span>
+                            <span class="loader-steam s3">💨</span>
+                            <div class="loader-mascot">
+                                <video src="mascotte.webm" autoplay loop muted playsinline></video>
+                            </div>
+                        </div>
+                        <p id="loaderText" style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p>
+                    </div>
                     <div id="resultatDiv"><h3 style="color:var(--text-muted); text-align:center; margin-top:20vh; font-weight:400; opacity:0.6;">Sélectionnez vos ingrédients et lancez la magie ! ✨</h3></div>
                 </div>
             </div>
@@ -1389,6 +1410,7 @@
 
         async function executerRequeteIA(prompt, titleTemplate, cacheKey = null) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
+            window._lastRecipeRequest = { prompt, titleTemplate, cacheKey };
             try {
                 const apiKey = await getApiKey();
                 if (!apiKey) { loader.style.display = "none"; showToast("Clé API requise pour continuer.", "error"); return; }
@@ -1400,7 +1422,7 @@
 
                 let blocs = data.candidates[0].content.parts[0].text.split('---RECETTE---').filter(b => b.trim().length > 50);
                 let mainTitle = titleTemplate.replace('{N}', blocs.length);
-                let html = `<h3>${mainTitle}</h3>`;
+                let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
                 
                 blocs.forEach((bloc, index) => {
                     bloc = bloc.trim(); let iSaut = bloc.indexOf('\n');
@@ -1429,6 +1451,17 @@
 
                 if (cacheKey) setCache(cacheKey, html); 
             } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "Erreur IA."; }
+        }
+
+        // Relance une génération avec le même contexte, en demandant une proposition différente
+        async function regenererRecette(btn) {
+            if (!window._lastRecipeRequest) return;
+            if (btn) { btn.disabled = true; btn.innerText = "⏳ ..."; }
+            const { prompt, titleTemplate, cacheKey } = window._lastRecipeRequest;
+            const promptRegen = prompt + "\nIMPORTANT : propose une (ou plusieurs) recette(s) DIFFÉRENTE(S) de la précédente, avec des idées nouvelles et variées.";
+            // On génère un nouveau cacheKey pour ne pas réafficher l'ancien résultat mis en cache
+            const nouveauCacheKey = cacheKey ? `${cacheKey}_v${Date.now()}` : null;
+            await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey);
         }
 
         // --- CARNET ---
