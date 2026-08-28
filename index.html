@@ -283,7 +283,7 @@
 
     <div id="loginScreen">
         <div class="mascot-bubble">
-            <video src="img/loader.webm" autoplay loop muted playsinline></video>
+            <video src="Img/Loader.webm" autoplay loop muted playsinline></video>
         </div>
         <h1 class="gradient-text" style="font-size: 36px; margin-bottom: 5px;">Mon Chef IA</h1>
         <p id="loginMessage" style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
@@ -306,7 +306,7 @@
                 <div class="app-header">
                     <div class="app-header-title">
                         <div class="mascot-small">
-                            <video src="img/mascotte.webm" autoplay loop muted playsinline></video>
+                            <video src="Img/mascotte.webm" autoplay loop muted playsinline></video>
                         </div>
                         <h2 class="gradient-text" style="font-size: 26px;">Chef IA</h2>
                     </div>
@@ -380,7 +380,7 @@
                             <span class="loader-steam s2">💨</span>
                             <span class="loader-steam s3">💨</span>
                             <div class="loader-mascot">
-                                <video src="img/loader.webm" autoplay loop muted playsinline></video>
+                                <video src="Img/Loader.webm" autoplay loop muted playsinline></video>
                             </div>
                         </div>
                         <p id="loaderText" style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p>
@@ -1453,10 +1453,10 @@
             const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
 
 Règles de formatage ABSOLUES :
-1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
-2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
+1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles. Ne mets AUCUN texte d'introduction ni de conclusion.
+2. La TOUTE PREMIÈRE ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
 3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
-4. Indique toutes les durées en chiffres (ex: 15 min).`;
+4. Indique toutes les durées en chiffres (ex: 15 min). Pas de blabla inutile avant ou après les recettes.`;
             const titleTemplate = "J'ai trouvé {N} idées pour vous ! (Fraîches)";
 
             const requestContext = { prompt, titleTemplate, cacheKey, moteur };
@@ -1501,7 +1501,7 @@ Règles de formatage ABSOLUES :
 
                 loader.style.display = "none";
 
-                let blocs = texteReponse.split('---RECETTE---').filter(b => b.trim().length > 50);
+                let blocs = texteReponse.split(/-{2,}\s*RECETTE\s*-{2,}/i).filter(b => b.trim().length > 50);
                 let mainTitle = titleTemplate.replace('{N}', blocs.length);
                 let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
                 
@@ -1545,10 +1545,10 @@ Règles de formatage ABSOLUES :
 Génère OBLIGATOIREMENT 3 nouvelles recettes distinctes, différentes des précédentes, avec des idées nouvelles.
 
 Règles de formatage ABSOLUES :
-1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
-2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
+1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles. Ne mets AUCUN texte d'introduction ni de conclusion.
+2. La TOUTE PREMIÈRE ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
 3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
-4. Indique toutes les durées en chiffres (ex: 15 min).`;
+4. Indique toutes les durées en chiffres (ex: 15 min). Pas de blabla inutile avant ou après les recettes.`;
 
             const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
             
