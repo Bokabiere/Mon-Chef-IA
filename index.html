@@ -515,7 +515,10 @@
                         <option value="mistral">🥐 Mistral AI (France)</option>
                     </select>
 
-                    <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="reinitialiserClesAPI();">
+                    <button class="btn-secondary" style="width: 100%;" onclick="voirModifierClesAPI();">
+                        👁️ Voir / modifier ma clé API
+                    </button>
+                    <button class="btn-secondary" style="width: 100%; margin-top: 10px; border-color: red; color: red;" onclick="reinitialiserClesAPI();">
                         🔑 Réinitialiser mes clés API (Gemini, Mistral)
                     </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="viderCacheApp()">
@@ -871,6 +874,26 @@
                 if (key) localStorage.setItem(keyName, key);
             }
             return key;
+        }
+
+        function voirModifierClesAPI() {
+            document.getElementById('inputKeyGemini').value = localStorage.getItem('gemini_api_key') || "";
+            document.getElementById('inputKeyMistral').value = localStorage.getItem('mistral_api_key') || "";
+            document.getElementById('modalApiKeys').style.display = 'flex';
+        }
+
+        function sauvegarderCleAPI(provider) {
+            const inputId = provider === 'mistral' ? 'inputKeyMistral' : 'inputKeyGemini';
+            const nomF = provider === 'mistral' ? 'Mistral AI' : 'Gemini';
+            const val = document.getElementById(inputId).value.trim();
+            const keyName = provider + '_api_key';
+            if (val) {
+                localStorage.setItem(keyName, val);
+                showToast(`Clé ${nomF} enregistrée ✅`, "success");
+            } else {
+                localStorage.removeItem(keyName);
+                showToast(`Clé ${nomF} effacée`, "info");
+            }
         }
 
         function reinitialiserClesAPI() {
