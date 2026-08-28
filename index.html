@@ -9,9 +9,6 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FF6B6B" id="metaThemeColor">
 
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    
     <!-- Script pour les Confettis -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -474,5 +471,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src='app.js'></script>
+    
+    <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>
