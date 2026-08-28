@@ -6,10 +6,8 @@ echo =========================================
 echo.
 cd /d "c:\IA\Projets\Mon chef_IA"
 
-echo 1. Enregistrement des fichiers (index.html, mascotte.webm et dossier Img)...
-git add index.html
-git add mascotte.webm
-git add Img
+echo 1. Enregistrement des fichiers (HTML, CSS, JS et images)...
+git add .
 
 echo 2. Validation...
 git commit -m "Mise a jour automatique de l'interface"
