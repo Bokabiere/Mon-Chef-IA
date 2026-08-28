@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// À déployer via la console Firebase (Firestore Database > Règles) ou avec
+// `firebase deploy --only firestore:rules`.
+//
+// Ceci est LE véritable rempart de sécurité de l'application : le code
+// client (index.html) peut toujours être lu, modifié ou contourné par
+// n'importe qui, donc il ne doit JAMAIS être la seule protection. Ces règles
+// sont évaluées côté serveur Firebase et ne peuvent pas être contournées
+// depuis le navigateur.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Autorisé uniquement si l'utilisateur est authentifié via Firebase Auth
+    // (donc via un jeton Google vérifié par les serveurs Google/Firebase,
+    // et non plus par le code JS de la page) ET que son email correspond.
+    function estProprietaire() {
+      return request.auth != null && request.auth.token.email == "bokabiere@gmail.com";
+    }
+
+    match /carnet/{document=**} {
+      allow read, write: if estProprietaire();
+    }
+
+    match /courses/{document=**} {
+      allow read, write: if estProprietaire();
+    }
+
+    match /userdata/{document=**} {
+      allow read, write: if estProprietaire();
+    }
+
+    // La liste d'ingrédients peut être lue par le propriétaire ; elle n'est
+    // écrite qu'une fois automatiquement au premier lancement.
+    match /config/{document=**} {
+      allow read: if estProprietaire();
+      allow write: if estProprietaire();
+    }
+
+    // Tout le reste est refusé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

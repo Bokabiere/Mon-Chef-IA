@@ -1,0 +1,16 @@
+{
+  "name": "Mon Chef IA",
+  "short_name": "ChefIA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f7f6",
+  "theme_color": "#FF6B6B",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921822.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
