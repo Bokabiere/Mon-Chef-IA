@@ -19,10 +19,13 @@
 
     
         <!-- MODALE CUISSON -->
-    <div id="modalCuisson" class="modal" style="z-index: 2000;">
+    <div id="modalCuisson" class="modal-overlay" style="z-index: 2000;">
         <div class="modal-content">
-            <span class="close-modal" onclick="fermerModalCuisson()">&times;</span>
-            <h2 class="gradient-text" style="text-align: center; margin-bottom: 20px;">🍳 En cuisine !</h2>
+            <div class="modal-header">
+                <h3 class="gradient-text">🍳 En cuisine !</h3>
+                <button class="btn-secondary" style="padding: 5px 10px; margin: 0;" onclick="fermerModalCuisson()">✖</button>
+            </div>
+            <div class="modal-body">
             
             <div class="row" style="margin-bottom: 15px;">
                 <div>
@@ -53,8 +56,11 @@
                 </div>
             </div>
             
-            <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-bottom:10px; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide(); fermerModalCuisson();">⚡ Soir de flemme (15 min max)</button>
+            </div>
+            <div style="padding: 20px; border-top: 1px solid var(--border);">
+                <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-bottom:10px; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide(); fermerModalCuisson();">⚡ Soir de flemme (15 min max)</button>
             <button class="btn-primary" id="btnGenererRecettes" style="width:100%;" onclick="fermerModalCuisson(); chercherRecettesIA();">✨ Inventer mes recettes</button>
+            </div>
         </div>
     </div>
 
