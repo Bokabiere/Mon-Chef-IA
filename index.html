@@ -366,6 +366,7 @@
                 
                 <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
                 
+                <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-top:10px; margin-bottom:0; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide()">⚡ Soir de flemme (recette en 15 min max)</button>
                 <button class="btn-primary" id="btnGenererRecettes" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
             </div>
 
@@ -524,7 +525,7 @@
 
                 <div id="tabAllergene" style="display: none;">
                     <label>⚠️ Mes restrictions & allergènes à éviter</label>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments.</p>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments. Défini une seule fois, appliqué à chaque recette généré.</p>
                     
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
@@ -559,6 +560,41 @@
                             <input type="text" id="customAllergene" placeholder="Ex: Céleri, Moutarde...">
                             <button class="btn-primary" style="margin-top:0; padding: 8px 15px;" onclick="ajouterAllergenCustom()">Ajouter</button>
                         </div>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
+
+                    <label>🍽️ Mon régime alimentaire</label>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Sélectionnez votre régime : il sera respecté automatiquement dans toutes vos recettes, sans avoir à le repréciser.</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Végétarien (aucune viande ni poisson)" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">🥦 Végétarien</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Végan (aucun produit d'origine animale)" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">🌱 Végan</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Sans porc" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">🚫🐖 Sans porc</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Halal" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">☪️ Halal</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Casher" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">✡️ Casher</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Sans alcool, y compris comme ingrédient de cuisson" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">🚫🍷 Sans alcool</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-regime" value="Peu épicé / doux" onchange="sauvegarderRegimes()">
+                            <span style="display: block; width: 100%;">🌶️ Peu épicé</span>
+                        </label>
                     </div>
                 </div>
 
@@ -632,6 +668,7 @@
         let globalIngredientsList = {};
         let memoireIngredients = [];
         let memoireAllergenes = [];
+        let memoireRegimes = [];
         let moteurIAActif = "gemini";
         let unsubscribeCourses = null;
         let isAdminUser = false;
@@ -741,6 +778,44 @@
 
         function seDeconnecter() {
             firebase.auth().signOut();
+        }
+
+        function messageErreurIA(e, moteur = "IA") {
+            const msg = (e && e.message) ? e.message : "";
+            const lower = msg.toLowerCase();
+            let titre = "😕 Oups, une erreur est survenue.";
+            let detail = "Réessayez, ou changez d'IA dans ⚙️ Config si le problème persiste.";
+
+            if (!navigator.onLine || lower.includes("failed to fetch") || lower.includes("network")) {
+                titre = "📡 Problème de connexion.";
+                detail = "Vérifiez votre connexion internet, puis réessayez.";
+            } else if (lower.includes("api key not valid") || lower.includes("invalid api key") || lower.includes("unauthorized") || lower.includes("401") || lower.includes("403") || lower.includes("permission_denied")) {
+                titre = "🔑 Clé API invalide ou refusée.";
+                detail = `Vérifiez votre clé ${moteur.toUpperCase()} dans ⚙️ Config, ou réinitialisez-la.`;
+            } else if (lower.includes("quota") || lower.includes("429") || lower.includes("rate limit") || lower.includes("resource_exhausted")) {
+                titre = "⏳ Trop de demandes en peu de temps.";
+                detail = `Le quota de l'IA ${moteur.toUpperCase()} est atteint. Réessayez dans quelques minutes, ou changez d'IA dans ⚙️ Config.`;
+            } else if (lower.includes("safety") || lower.includes("blocked") || lower.includes("recitation")) {
+                titre = "🚫 Réponse bloquée par les filtres de sécurité de l'IA.";
+                detail = "Reformulez votre demande ou changez d'IA dans ⚙️ Config.";
+            } else if (lower.includes("500") || lower.includes("503") || lower.includes("internal") || lower.includes("unavailable")) {
+                titre = "🛠️ Le service IA est momentanément indisponible.";
+                detail = "Ce n'est pas un problème de votre côté. Réessayez dans quelques instants.";
+            } else if (msg) {
+                detail = `Détail technique : ${msg}`;
+            }
+
+            return { titre, detail };
+        }
+
+        function afficherErreurIA(container, e, moteur) {
+            console.error("Erreur IA:", e);
+            const { titre, detail } = messageErreurIA(e, moteur);
+            container.innerHTML = `<div style="text-align:center; padding: 30px 20px;">
+                <p style="font-size:17px; font-weight:700; color:#d63031; margin-bottom:8px;">${titre}</p>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">${detail}</p>
+                <button class="btn-secondary" onclick="ouvrirParametres()">⚙️ Vérifier ma configuration</button>
+            </div>`;
         }
 
         function showToast(message, type = 'info', duree = 3000) {
@@ -868,6 +943,23 @@
             return `\nATTENTION - RESTRICTIONS STRICTES / ALLERGÈNES : Tu dois ABSOLUMENT EXCLURE ces ingrédients ou leurs dérivés : ${memoireAllergenes.join(", ")}.`;
         }
 
+        function sauvegarderRegimes() {
+            memoireRegimes = Array.from(document.querySelectorAll('.chk-regime:checked')).map(cb => cb.value);
+            syncCloud('regimes', memoireRegimes);
+            showToast("Préférences alimentaires mises à jour 🥦", "success");
+        }
+
+        function chargerRegimesUI() {
+            document.querySelectorAll('.chk-regime').forEach(cb => {
+                cb.checked = memoireRegimes.includes(cb.value);
+            });
+        }
+
+        function getRegimesPrompt() {
+            if (memoireRegimes.length === 0) return "";
+            return `\nPRÉFÉRENCE ALIMENTAIRE PERMANENTE DE L'UTILISATEUR (à respecter dans toutes les recettes) : ${memoireRegimes.join(", ")}.`;
+        }
+
         async function chargerInterfaceBase() {
             try {
                 const user = firebase.auth().currentUser;
@@ -876,6 +968,7 @@
                     if(userDoc.exists) {
                         memoireIngredients = userDoc.data().ingredients || [];
                         memoireAllergenes = userDoc.data().allergenes || [];
+                        memoireRegimes = userDoc.data().regimes || [];
                         moteurIAActif = userDoc.data().moteurIA || "gemini";
                         
                         const selectGlobal = document.getElementById('selecteurIaGlobal');
@@ -889,6 +982,7 @@
                 
                 afficherIngredientsGauche();
                 chargerAllergenesUI();
+                chargerRegimesUI();
 
                 document.getElementById('categoriesContainer').addEventListener('change', (e) => {
                     if (!e.target.classList.contains('chk-ingredient')) return;
@@ -1000,7 +1094,7 @@
             
             if(tab === 'ing') chargerListeManageIng(); 
             if(tab === 'carnet') chargerListeManageCarnet(); 
-            if(tab === 'allergene') chargerAllergenesUI();
+            if(tab === 'allergene') { chargerAllergenesUI(); chargerRegimesUI(); }
             if(tab === 'admin' && isAdminUser) chargerDemandesAcces();
         }
 
@@ -1194,7 +1288,7 @@
             const moteur = moteurIAActif;
 
             const historique = await getHistoriquePrompt();
-            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${historique}
+            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
             Format STRICT requis (un par ligne) :
             Lundi: [Plat]
             Mardi: [Plat]
@@ -1220,7 +1314,7 @@
                 lignes.forEach(l => { let parts = l.split(':'); planningObj[parts[0].trim()] = parts[1].trim(); });
                 await userDb.collection("planning").doc("semaine").set(planningObj);
                 afficherPlanningHtml(planningObj);
-            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur IA.</p>"; }
+            } catch (e) { afficherErreurIA(contentDiv, e, moteur); }
         }
 
         async function relancerJour(jour, platActuel) {
@@ -1229,7 +1323,7 @@
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
             const moteur = moteurIAActif;
 
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
                 const apiKey = await getApiKey(moteur);
@@ -1247,7 +1341,7 @@
                 await userDb.collection("planning").doc("semaine").update({ [jour]: nouveauPlat });
                 const docSnap = await userDb.collection("planning").doc("semaine").get();
                 afficherPlanningHtml(docSnap.data());
-            } catch(e) { showToast("Une erreur est survenue.", "error"); chargerPlanning(); }
+            } catch(e) { const { titre, detail } = messageErreurIA(e, moteur); showToast(`${titre} ${detail}`, "error", 5000); chargerPlanning(); }
         }
 
         async function cuisinerCePlat(nomDuPlat) {
@@ -1261,7 +1355,7 @@
             else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
 
             const historique = await getHistoriquePrompt();
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${historique}
+            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
             const titleTemplate = `Voici la recette pour : ${nomDuPlat} 🍽️`;
 
@@ -1273,11 +1367,25 @@
             resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
         }
 
-        async function chercherRecettesIA() {
+        function lancerRecetteRapide() {
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
+            const personnes = document.getElementById('personnes').value;
+            showToast("⚡ Recherche de recettes ultra rapides (15 min max) !", "info");
+            chercherRecettesIA({
+                humeur: "flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide",
+                temps: "15 minutes max",
+                personnes: personnes
+            });
+        }
+
+        async function chercherRecettesIA(optionsForcees = null) {
             const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
             
-            const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value; const temps = document.getElementById('temps').value;
+            const humeur = optionsForcees ? optionsForcees.humeur : document.getElementById('humeur').value;
+            const personnes = optionsForcees ? optionsForcees.personnes : document.getElementById('personnes').value;
+            const temps = optionsForcees ? optionsForcees.temps : document.getElementById('temps').value;
             const moteur = moteurIAActif;
             
             const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
@@ -1285,7 +1393,7 @@
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
             
             const historique = await getHistoriquePrompt();
-            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${historique}
+            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
 
 Règles de formatage ABSOLUES :
 1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
@@ -1361,7 +1469,7 @@ Règles de formatage ABSOLUES :
                 resDiv.innerHTML = html;
                 if (typeof confetti === "function") confetti({ particleCount: 60, spread: 60, origin: { y: 0.9 }, zIndex: 100 });
                 if (cacheKey) setCache(cacheKey, html); 
-            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur de génération avec l'IA sélectionnée.</p>"; }
+            } catch (e) { loader.style.display = "none"; afficherErreurIA(resDiv, e, moteur); }
         }
 
         async function regenererRecette(btn) {
@@ -1388,7 +1496,7 @@ Règles de formatage ABSOLUES :
             const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
             
             try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
-            catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
+            catch (e) { afficherErreurIA(resDiv, e, context.moteur); loader.style.display = "none"; }
             if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
         }
 
@@ -1456,7 +1564,7 @@ Règles de formatage ABSOLUES :
                         htmlList += `<div class="scan-result-item"><span>${nomExact} ${match ? '✅' : '🆕'}</span><input type="checkbox" checked value="${nomExact}" class="pending-scan-chk"></div>`;
                     });
                     document.getElementById('iaScanResults').innerHTML = htmlList; document.getElementById('modalIAScanner').style.display = 'flex'; event.target.value = "";
-                } catch (e) { loader.style.display = "none"; resDiv.innerHTML = `<p style="color:red; text-align:center;">Erreur : ${e.message}</p>`; }
+                } catch (e) { loader.style.display = "none"; afficherErreurIA(resDiv, e, 'gemini'); }
             };
             reader.readAsDataURL(file);
         }
