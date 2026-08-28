@@ -302,7 +302,6 @@
              data-auto_prompt="false">
         </div>
         <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
-        <button class="btn-secondary" style="margin-top: 15px;" onclick="activerModeTest()">👀 Voir le rendu (Mode Test)</button>
 
         <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Compte en attente de validation.</div>
         <button id="btnLogoutPending" class="btn-secondary" style="margin-top: 20px; display: none;" onclick="seDeconnecter()">Se déconnecter</button>
@@ -1815,14 +1814,6 @@ Règles de formatage ABSOLUES :
                 }
             }
             document.getElementById('modalParametres').style.display = 'none'; // Cacher la modale d'origine
-        }
-
-        function activerModeTest() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appContent').style.display = 'block';
-            document.getElementById('loginError').style.display = 'none';
-            document.getElementById('btnLogoutPending').style.display = 'none';
-            showToast("Mode test activé. Vous pouvez prévisualiser l'interface.", "info");
         }
 
     </script>
