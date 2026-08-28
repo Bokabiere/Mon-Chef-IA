@@ -1329,7 +1329,7 @@
                 if (!apiKey) { contentDiv.innerHTML = ""; showToast(`Clé API ${moteur} requise.`, "error"); return; }
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1356,7 +1356,7 @@
                 if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1368,6 +1368,11 @@
                 const docSnap = await userDb.collection("planning").doc("semaine").get();
                 afficherPlanningHtml(docSnap.data());
             } catch(e) { const { titre, detail } = messageErreurIA(e, moteur); showToast(`${titre} ${detail}`, "error", 5000); chargerPlanning(); }
+        }
+
+        function garantirBoutonRegenerer(html) {
+            if (html.includes('regenererRecette')) return html;
+            return `<div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:10px;"><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>` + html;
         }
 
         async function cuisinerCePlat(nomDuPlat) {
@@ -1389,7 +1394,7 @@
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             const cachedData = getCache(cacheKey);
-            if (cachedData) { resDiv.innerHTML = cachedData; showToast("⚡ Recette chargée depuis le cache !", "success"); return; }
+            if (cachedData) { resDiv.innerHTML = garantirBoutonRegenerer(cachedData); showToast("⚡ Recette chargée depuis le cache !", "success"); return; }
             resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
         }
 
@@ -1432,7 +1437,7 @@ Règles de formatage ABSOLUES :
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             const cachedData = getCache(cacheKey);
-            if (cachedData) { resDiv.innerHTML = cachedData; showToast("⚡ Recettes chargées depuis le cache !", "success"); return; }
+            if (cachedData) { resDiv.innerHTML = garantirBoutonRegenerer(cachedData); showToast("⚡ Recettes chargées depuis le cache !", "success"); return; }
             resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
         }
 
@@ -1450,7 +1455,7 @@ Règles de formatage ABSOLUES :
                 let texteReponse = "";
 
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                     });
@@ -1574,7 +1579,7 @@ Règles de formatage ABSOLUES :
                 try {
                     const apiKey = await getApiKey('gemini');
                     if (!apiKey) { loader.style.display = "none"; showToast("Clé API Gemini requise pour la vision.", "error"); return; }
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: file.type || "image/jpeg", data: base64String } }] }] })
                     });
