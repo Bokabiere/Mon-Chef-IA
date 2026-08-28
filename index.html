@@ -17,6 +17,29 @@
 </head>
 <body>
 
+    
+    <!-- MODALE INGREDIENTS -->
+    <div id="modalIngredients" class="modal" style="z-index: 2000;">
+        <div class="modal-content" style="max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+            <span class="close-modal" onclick="fermerModalIngredients()">&times;</span>
+            <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 10px;">🍅 Mes Ingrédients</h2>
+            
+            <div class="search-container" style="margin-top: 5px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="ingredientSearch" placeholder="Rechercher un ingrédient..." oninput="filtrerIngredients(this.value)" autocomplete="off">
+                <div id="autocompleteResults" class="autocomplete-results"></div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; margin-top: 10px;">
+                <button class="btn-secondary" onclick="decocherTout(); mettreAJourResumeIngredients();" style="margin: 0; padding: 5px 10px;">🔄 Tout décocher</button>
+            </div>
+            
+            <div class="categories" id="categoriesContainer" style="overflow-y: auto; flex: 1; margin-bottom: 15px;"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
+            
+            <button class="btn-primary" style="width: 100%; padding: 12px;" onclick="fermerModalIngredients()">✅ Valider mes choix</button>
+        </div>
+    </div>
+
     <div id="toastContainer" class="toast-container"></div>
 
     <div id="loginScreen">
@@ -66,12 +89,12 @@
                     <input type="file" id="iaScannerInput" accept="image/*" capture="environment" style="display:none;" onchange="analyserImageIA(event)">
                 </div>
 
-                <div class="search-container">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="ingredientSearch" placeholder="Rechercher un ingrédient..." oninput="filtrerIngredients(this.value)" autocomplete="off">
-                    <div id="autocompleteResults" class="autocomplete-results"></div>
-                </div>
+                <button class="btn-primary" style="width: 100%; margin-top: 20px; font-size: 18px; padding: 15px;" onclick="document.getElementById('modalIngredients').style.display='flex'">🍅 Mes Ingrédients</button>
                 
+                <div id="selectedIngredientsSummary" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;">
+                    <!-- Résumé des ingrédients sélectionnés ici -->
+                </div>
+
                 <div class="row" style="margin-bottom: 15px;">
                     <div>
                         <label>Humeur / Style</label>
@@ -100,13 +123,6 @@
                         <input type="number" id="personnes" value="2" min="1">
                     </div>
                 </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <label style="margin: 0;">Vos ingrédients</label>
-                    <button class="btn-secondary" onclick="decocherTout()">🔄 Tout décocher</button>
-                </div>
-                
-                <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
                 
                 <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-top:10px; margin-bottom:0; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide()">⚡ Soir de flemme (recette en 15 min max)</button>
                 <button class="btn-primary" id="btnGenererRecettes" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
@@ -161,7 +177,7 @@
         <!-- BOTTOM NAVIGATION -->
         <nav class="bottom-nav">
             <button class="nav-item active" onclick="switchView('generator')" id="nav-btn-generator">
-                <i>🏠</i><span>Générateur</span>
+                <i>🏠</i><span>Accueil</span>
             </button>
             <button class="nav-item" onclick="switchView('results')" id="nav-btn-results">
                 <i>🍳</i><span>Résultats</span>

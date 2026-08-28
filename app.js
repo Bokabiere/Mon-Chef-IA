@@ -1161,3 +1161,39 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
         input.disabled = false;
     }
 }
+
+
+// --- GESTION DE L'ACCUEIL ET DES INGREDIENTS ---
+
+window.fermerModalIngredients = function() {
+    document.getElementById('modalIngredients').style.display = 'none';
+    window.mettreAJourResumeIngredients();
+};
+
+window.mettreAJourResumeIngredients = function() {
+    const summaryDiv = document.getElementById('selectedIngredientsSummary');
+    if (!summaryDiv) return;
+    
+    let checked = [];
+    document.querySelectorAll('.ingredient-checkbox:checked').forEach(cb => {
+        checked.push(cb.value);
+    });
+    
+    if (checked.length === 0) {
+        summaryDiv.innerHTML = '<span style="color: var(--text-muted); font-size: 14px; font-style: italic;">Aucun ingrédient sélectionné.</span>';
+        return;
+    }
+    
+    let html = '';
+    checked.forEach(ing => {
+        // Enlever une éventuelle citation pour ne pas casser le html
+        const safeIng = ing.replace(/'/g, "\\'");
+        html += `<span style="background: var(--primary); color: white; padding: 5px 12px; border-radius: 15px; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    ${ing}
+                 </span>`;
+    });
+    summaryDiv.innerHTML = html;
+};
+
+// Hook dans renderCategories (si on voulait mettre a jour)
+// Mais on peut juste appeler mettreAJourResumeIngredients apres le premier chargement.
