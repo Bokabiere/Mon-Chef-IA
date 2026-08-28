@@ -268,6 +268,8 @@
         .caddie-divider { margin: 25px 0 15px 0; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px dashed var(--border); padding-bottom: 8px; letter-spacing: 1px; }
         
         .modal-content.shopping-mode { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-width: none; max-height: none; border-radius: 0; border: none; margin: 0; z-index: 9999; }
+
+        #modalParametres .modal-content { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; max-width: none; max-height: none; border-radius: 0; border: none; margin: 0; }
         .shopping-mode .modal-header h3 { font-size: 24px; }
         .shopping-mode .course-item { padding: 18px 12px; font-size: 18px !important; }
         .shopping-mode .circle-check { width: 26px; height: 26px; border-width: 3px; }
@@ -434,6 +436,7 @@
                     <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
                     <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
+                    <button class="tab-btn" id="tabOptionsBtn" onclick="switchTab('options')">⚙️ Options</button>
                     <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
                 </div>
 
@@ -503,9 +506,9 @@
                             <div class="color-dot" style="background:#f4ecd8"></div>
                         </div>
                     </div>
+                </div>
 
-                    <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
-
+                <div id="tabOptions" style="display: none;">
                     <label>🧠 Intelligence Artificielle par défaut</label>
                     <select id="selecteurIaGlobal" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
                         <option value="gemini">✨ Gemini (Google)</option>
@@ -515,11 +518,11 @@
                     <button class="btn-secondary" style="width: 100%; border-color: red; color: red;" onclick="reinitialiserClesAPI();">
                         🔑 Réinitialiser mes clés API (Gemini, Mistral)
                     </button>
-                    <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
-                        🚪 Se déconnecter
-                    </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="viderCacheApp()">
                         🧹 Vider le cache des recettes
+                    </button>
+                    <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
+                        🚪 Se déconnecter
                     </button>
                 </div>
 
@@ -1083,7 +1086,7 @@
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
         
         function switchTab(tab) {
-            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabAdmin'];
+            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabOptions', 'tabAdmin'];
             tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
                 if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
