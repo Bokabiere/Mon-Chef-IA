@@ -5,14 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mon Chef IA 👨‍🍳</title>
     
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#FF6B6B" id="metaThemeColor">
 
-    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
-    <!-- Script pour les Confettis -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
@@ -313,6 +310,7 @@
                         <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
                         <button class="btn-top" onclick="chargerPlanning()">📅 Planning</button>
                         <button id="btnNavCourses" class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
+                        <button class="btn-top" onclick="ouvrirModalBug()" style="border-color: #ff7675; color: #ff7675;">🐛 Bug</button>
                         <button class="btn-top" onclick="ouvrirParametres()">⚙️ Config</button>
                     </div>
                 </div>
@@ -421,6 +419,20 @@
         </div>
     </div>
 
+    <div id="modalBug" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>🐛 Signaler un bug</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalBug').style.display='none'">✖ Fermer</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px; color:var(--text-muted);">Un problème rencontré ? Dites-le-nous pour qu'on corrige ça au plus vite !</p>
+                <textarea id="bugDescription" placeholder="Décrivez le problème rencontré..." style="width:100%; height:100px; padding:12px; border:2px solid var(--border); border-radius:10px; font-family:inherit; background:var(--card-bg); color:var(--text-main); box-sizing:border-box; margin:10px 0; resize:none;"></textarea>
+                <button class="btn-primary" style="margin-top:0; width:100%; background:#ff7675;" onclick="envoyerRapportBug()">Envoyer le rapport</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalParametres" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -434,6 +446,7 @@
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
                     <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
                     <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
+                    <button class="tab-btn" id="tabBugsBtn" onclick="switchTab('bugs')" style="display:none; color:#ff7675;">🐛 Bugs</button>
                 </div>
 
                 <div id="tabIng">
@@ -568,6 +581,13 @@
                         <p style="text-align:center; padding: 20px;">Chargement...</p>
                     </div>
                 </div>
+
+                <div id="tabBugs" style="display: none;">
+                    <label>🐛 Liste des bugs signalés</label>
+                    <div id="listeBugsAdmin" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px;">
+                        <p style="text-align:center; padding: 20px;">Chargement...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -698,7 +718,6 @@
                         await userRef.set(userData);
                     } else {
                         userData = docSnap.data();
-                        // Si vous êtes l'admin mais que le statut n'était pas 'valide', on force
                         if (isAdminUser && userData.statut !== "valide") {
                             userData.statut = "valide";
                             userData.role = "admin";
@@ -714,9 +733,11 @@
                         document.getElementById('loginError').style.display = 'none';
                         document.getElementById('btnLogoutPending').style.display = 'none';
                         
-                        // Afficher l'onglet Admin si c'est vous
                         const tabAdminBtn = document.getElementById('tabAdminBtn');
                         if (tabAdminBtn) tabAdminBtn.style.display = isAdminUser ? "block" : "none";
+                        
+                        const tabBugsBtn = document.getElementById('tabBugsBtn');
+                        if (tabBugsBtn) tabBugsBtn.style.display = isAdminUser ? "block" : "none";
 
                         chargerInterfaceBase();
                     } else {
@@ -983,13 +1004,16 @@
         function ouvrirParametres() { 
             document.getElementById('modalParametres').style.display = 'flex'; 
             chargerListeManageIng(); 
-            if (isAdminUser) chargerDemandesAcces();
+            if (isAdminUser) {
+                chargerDemandesAcces();
+                chargerListeBugsAdmin();
+            }
         }
         
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
         
         function switchTab(tab) {
-            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabAdmin'];
+            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabAdmin', 'tabBugs'];
             tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
                 if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
@@ -1002,6 +1026,69 @@
             if(tab === 'carnet') chargerListeManageCarnet(); 
             if(tab === 'allergene') chargerAllergenesUI();
             if(tab === 'admin' && isAdminUser) chargerDemandesAcces();
+            if(tab === 'bugs' && isAdminUser) chargerListeBugsAdmin();
+        }
+
+        function ouvrirModalBug() {
+            document.getElementById('bugDescription').value = "";
+            document.getElementById('modalBug').style.display = 'flex';
+        }
+
+        async function envoyerRapportBug() {
+            const desc = document.getElementById('bugDescription').value.trim();
+            if (!desc) return showToast("Veuillez décrire le bug rencontré.", "error");
+
+            const user = firebase.auth().currentUser;
+            try {
+                await db.collection("bugs").add({
+                    description: desc,
+                    auteurEmail: user ? user.email : "Anonyme",
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    resolu: false
+                });
+                document.getElementById('modalBug').style.display = 'none';
+                showToast("Rapport envoyé avec succès ! Merci 🛠️", "success");
+            } catch(e) {
+                showToast("Erreur lors de l'envoi du rapport.", "error");
+            }
+        }
+
+        async function chargerListeBugsAdmin() {
+            const container = document.getElementById('listeBugsAdmin');
+            container.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("bugs").orderBy("date", "desc").get();
+                if (snapshot.empty) return container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-muted);'>Aucun bug signalé. 🎉</p>";
+                
+                let html = "";
+                snapshot.forEach(doc => {
+                    let b = doc.data();
+                    let dateStr = b.date ? b.date.toDate().toLocaleDateString() + " à " + b.date.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "";
+                    html += `<div class="list-item-manage" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                                <div style="width:100%; display:flex; justify-content:space-between;">
+                                    <span style="font-size:11px; color:var(--primary); font-weight:600;">Par : ${b.auteurEmail}</span>
+                                    <span style="font-size:11px; color:var(--text-muted);">${dateStr}</span>
+                                </div>
+                                <div style="font-size:13px; width:100%; word-break:break-word;">${b.description}</div>
+                                <div style="width:100%; display:flex; justify-content:flex-end;">
+                                    <button class="btn-danger" style="padding:4px 10px; font-size:11px;" onclick="supprimerBug('${doc.id}')">🗑️ Résolu / Supprimer</button>
+                                </div>
+                             </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = "<p style='color:red;'>Erreur de chargement.</p>"; }
+        }
+
+        async function supprimerBug(bugId) {
+            const ok = await showConfirm("Marquer ce bug comme résolu et le supprimer ?", { danger: true, texteOk: 'Supprimer' });
+            if (!ok) return;
+            try {
+                await db.collection("bugs").doc(bugId).delete();
+                showToast("Bug supprimé.", "success");
+                chargerListeBugsAdmin();
+            } catch(e) {
+                showToast("Erreur lors de la suppression.", "error");
+            }
         }
 
         async function chargerDemandesAcces() {
@@ -1225,317 +1312,4 @@
 
         async function relancerJour(jour, platActuel) {
             const contentDiv = document.getElementById('planningContent');
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
-            const moteur = moteurIAActif;
-
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
-
-            try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
-                }
-
-                let nouveauPlat = texte.trim().replace(/[*#]/g, '');
-                await userDb.collection("planning").doc("semaine").update({ [jour]: nouveauPlat });
-                const docSnap = await userDb.collection("planning").doc("semaine").get();
-                afficherPlanningHtml(docSnap.data());
-            } catch(e) { showToast("Une erreur est survenue.", "error"); chargerPlanning(); }
-        }
-
-        async function cuisinerCePlat(nomDuPlat) {
-            document.getElementById('modalPlanning').style.display = 'none';
-            const personnes = document.getElementById('personnes').value;
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            const moteur = moteurIAActif;
-            
-            const cacheKey = `plat_${nomDuPlat}_${personnes}_${moteur}`.replace(/\s+/g, '_').toLowerCase();
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
-            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
-
-            const historique = await getHistoriquePrompt();
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${historique}
-            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
-            const titleTemplate = `Voici la recette pour : ${nomDuPlat} 🍽️`;
-
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
-            window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
-
-            const cachedData = getCache(cacheKey);
-            if (cachedData) { resDiv.innerHTML = cachedData; showToast("⚡ Recette chargée depuis le cache !", "success"); return; }
-            resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
-        }
-
-        async function chercherRecettesIA() {
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-            if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
-            
-            const humeur = document.getElementById('humeur').value; const personnes = document.getElementById('personnes').value; const temps = document.getElementById('temps').value;
-            const moteur = moteurIAActif;
-            
-            const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
-            
-            const historique = await getHistoriquePrompt();
-            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${historique}
-
-Règles de formatage ABSOLUES :
-1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
-2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
-3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
-4. Indique toutes les durées en chiffres (ex: 15 min).`;
-            const titleTemplate = "J'ai trouvé {N} idées pour vous ! (Fraîches)";
-
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
-            window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
-
-            const cachedData = getCache(cacheKey);
-            if (cachedData) { resDiv.innerHTML = cachedData; showToast("⚡ Recettes chargées depuis le cache !", "success"); return; }
-            resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
-        }
-
-        async function executerRequeteIA(prompt, titleTemplate, cacheKey = null) {
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            const moteur = moteurIAActif;
-            
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
-            window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
-
-            try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { loader.style.display = "none"; showToast(`Clé API ${moteur} requise.`, "error"); return; }
-                
-                let texteReponse = "";
-
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                        method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
-                    const data = await rep.json();
-                    if(data.error) throw new Error(data.error.message);
-                    texteReponse = data.candidates[0].content.parts[0].text;
-                } 
-                else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
-                        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                        body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] })
-                    });
-                    const data = await rep.json();
-                    if(data.error) throw new Error(data.error.message);
-                    texteReponse = data.choices[0].message.content;
-                }
-
-                loader.style.display = "none";
-
-                let blocs = texteReponse.split('---RECETTE---').filter(b => b.trim().length > 50);
-                let mainTitle = titleTemplate.replace('{N}', blocs.length);
-                let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
-                
-                blocs.forEach((bloc, index) => {
-                    bloc = bloc.trim(); let iSaut = bloc.indexOf('\n');
-                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
-                    
-                    let coursesMatch = contenu.match(/COURSES:\s*(.*)/i);
-                    if (coursesMatch) {
-                        let items = coursesMatch[1].split(',').map(i => i.trim());
-                        let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
-                        items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
-                        coursesUI += `</ul></div>`; contenu = contenu.replace(coursesMatch[0], coursesUI);
-                    }
-                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
-                    let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
-                    let stepsArrayString = `['${rawSteps.join("','")}']`;
-
-                    html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary>${titre}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
-                });
-                
-                resDiv.innerHTML = html;
-                if (typeof confetti === "function") confetti({ particleCount: 60, spread: 60, origin: { y: 0.9 }, zIndex: 100 });
-                if (cacheKey) setCache(cacheKey, html); 
-            } catch (e) { loader.style.display = "none"; resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur de génération avec l'IA sélectionnée.</p>"; }
-        }
-
-        async function regenererRecette(btn) {
-            let context = window._lastRecipeRequest;
-            if (!context) { const saved = localStorage.getItem('chef_ia_last_request'); if (saved) context = JSON.parse(saved); }
-            if (!context) { showToast("Veuillez relancer la recherche depuis le bouton principal.", "error"); return; }
-            if (btn) { btn.disabled = true; btn.innerText = "⏳ Recherche..."; }
-            
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader'); const loaderText = document.getElementById('loaderText');
-            resDiv.innerHTML = ""; loader.style.display = "block"; if (loaderText) loaderText.innerText = "Le Chef cherche de nouvelles idées... 💭";
-            
-            const { prompt, titleTemplate, cacheKey } = context;
-            let basePrompt = prompt.split('\nRègles de formatage')[0].split('\nIMPORTANT')[0];
-            const promptRegen = `${basePrompt}
-
-Génère OBLIGATOIREMENT 3 nouvelles recettes distinctes, différentes des précédentes, avec des idées nouvelles.
-
-Règles de formatage ABSOLUES :
-1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles.
-2. La première ligne de chaque recette doit commencer par un émoji suivi du TITRE du plat.
-3. Si un ingrédient non coché est nécessaire, termine la recette par la ligne exacte : "COURSES: ingrédient1, ingrédient2".
-4. Indique toutes les durées en chiffres (ex: 15 min).`;
-
-            const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
-            
-            try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
-            catch (e) { resDiv.innerHTML = "<p style='color:red; text-align:center;'>Erreur lors de la regénération.</p>"; loader.style.display = "none"; }
-            if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
-        }
-
-        async function chargerCarnet() {
-            document.getElementById('modalCarnet').style.display = 'flex'; const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
-            try {
-                const snapshot = await userDb.collection("carnet").orderBy("date", "desc").get();
-                if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
-                let html = ""; let index = 0;
-                snapshot.forEach(doc => {
-                    const item = doc.data(); let bloc = item.recette; let iSaut = bloc.indexOf('\n'); let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, ''); let dateStr = item.date ? item.date.toDate().toLocaleDateString() : ""; let note = item.note || 0;
-                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
-                    let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;')); let stepsArrayString = `['${rawSteps.join("','")}']`;
-                    let starsHtml = `<div class="rating-stars" data-doc="${doc.id}">`; for (let n = 1; n <= 5; n++) { starsHtml += `<span class="star ${n <= note ? 'filled' : ''}" onclick="noterRecette('${doc.id}', ${n})">★</span>`; } starsHtml += `<span class="rating-label">${note > 0 ? 'Votre note' : 'Notez cette recette'}</span></div>`;
-                    html += `<details class="recipe-card" id="carnet-card-${index}"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${starsHtml}<button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="carnet-step-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('carnet-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('carnet-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
-                    index++;
-                });
-                contentDiv.innerHTML = html;
-            } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
-        }
-
-        async function noterRecette(docId, note) {
-            const container = document.querySelector(`.rating-stars[data-doc="${docId}"]`);
-            try {
-                await userDb.collection("carnet").doc(docId).update({ note: note });
-                if (container) { container.querySelectorAll('.star').forEach((star, i) => { star.classList.toggle('filled', i < note); }); container.querySelector('.rating-label').innerText = "Votre note"; }
-            } catch (e) { if (container) container.querySelector('.rating-label').innerText = "Erreur, réessayez"; }
-        }
-
-        async function getHistoriquePrompt() {
-            try {
-                const snapshot = await userDb.collection("carnet").where("note", ">", 0).get();
-                if (snapshot.empty) return "";
-                let aimes = [], evites = [];
-                snapshot.forEach(doc => { const item = doc.data(); let titre = item.recette.split('\n')[0].replace(/[*#⭐0-9.]/g, '').trim(); if (!titre) return; if (item.note >= 4) aimes.push(titre); else if (item.note <= 2) evites.push(titre); });
-                let txt = ""; if (aimes.length) txt += `\nL'utilisateur a AIMÉ ces plats par le passé (note ≥4/5) : ${aimes.slice(0, 8).join(", ")}. Inspire-toi de styles similaires si pertinent.`; if (evites.length) txt += `\nL'utilisateur N'A PAS aimé ces plats (note ≤2/5) : ${evites.slice(0, 8).join(", ")}. Évite de reproposer des plats trop proches.`;
-                return txt;
-            } catch (e) { return ""; }
-        }
-
-        async function analyserImageIA(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            resDiv.innerHTML = ""; loader.style.display = "block"; loader.querySelector('p').innerText = "Le Chef analyse votre photo... 📸";
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result.split(',')[1];
-                const promptText = "Liste TOUS les ingrédients alimentaires visibles sur cette image. Renvoie UNIQUEMENT les noms séparés par des virgules (ex: Tomate, Oignon, Poulet).";
-                try {
-                    const apiKey = await getApiKey('gemini');
-                    if (!apiKey) { loader.style.display = "none"; showToast("Clé API Gemini requise pour la vision.", "error"); return; }
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                        method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: file.type || "image/jpeg", data: base64String } }] }] })
-                    });
-                    const data = await rep.json(); loader.style.display = "none";
-                    if(data.error) throw new Error(data.error.message);
-                    const text = data.candidates[0].content.parts[0].text;
-                    const itemsTrouves = text.split(',').map(i => i.trim()).filter(i => i.length > 1);
-                    if (itemsTrouves.length === 0) return resDiv.innerHTML = "<h3 style='text-align:center;'>Aucun ingrédient détecté.</h3>";
-                    const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient')); let htmlList = ""; window.scanPendingItems = [];
-                    itemsTrouves.forEach(item => {
-                        const match = existingCheckboxes.find(cb => cb.value.toLowerCase().includes(item.toLowerCase()) || item.toLowerCase().includes(cb.value.toLowerCase()));
-                        const nomExact = match ? match.value : item.charAt(0).toUpperCase() + item.slice(1);
-                        htmlList += `<div class="scan-result-item"><span>${nomExact} ${match ? '✅' : '🆕'}</span><input type="checkbox" checked value="${nomExact}" class="pending-scan-chk"></div>`;
-                    });
-                    document.getElementById('iaScanResults').innerHTML = htmlList; document.getElementById('modalIAScanner').style.display = 'flex'; event.target.value = "";
-                } catch (e) { loader.style.display = "none"; resDiv.innerHTML = `<p style="color:red; text-align:center;">Erreur : ${e.message}</p>`; }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function validerScanIA() {
-            const confirmedItems = Array.from(document.querySelectorAll('.pending-scan-chk:checked')).map(cb => cb.value); const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient')); let checkedCount = 0;
-            confirmedItems.forEach(item => {
-                const cb = existingCheckboxes.find(c => c.value === item);
-                if (cb) { cb.checked = true; checkedCount++; } 
-                else {
-                    const container = document.getElementById('categoriesContainer');
-                    let diversDetails = Array.from(container.querySelectorAll('details')).find(d => d.querySelector('summary').innerText.includes('Divers'));
-                    if (!diversDetails) { diversDetails = document.createElement('details'); diversDetails.className = 'cat-details'; diversDetails.innerHTML = `<summary style="display:flex; align-items:center;">Divers</summary><div class="ingredient-list"></div>`; container.appendChild(diversDetails); }
-                    const list = diversDetails.querySelector('.ingredient-list'); list.insertAdjacentHTML('beforeend', `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" checked><span>🍴 ${item}</span></label>`); checkedCount++;
-                }
-            });
-            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value); syncCloud('ingredients', memoireIngredients);
-            document.getElementById('modalIAScanner').style.display = 'none'; document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) ! ✨</h3>`;
-            updateButtonLabel(); afficherIngredientsGauche(); 
-        }
-
-        let html5QrcodeScanner;
-        function ouvrirBarcodeScanner() {
-            document.getElementById('modalBarcode').style.display = 'flex'; document.getElementById('barcode-status').innerText = "Caméra en cours...";
-            html5QrcodeScanner = new Html5Qrcode("barcode-scanner-container");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 200 } }, onScanSuccess, () => {}).catch(err => { document.getElementById('barcode-status').innerText = "Erreur : " + err; });
-        }
-        function fermerBarcodeScanner() { document.getElementById('modalBarcode').style.display = 'none'; if (html5QrcodeScanner) html5QrcodeScanner.stop().catch(err => {}); }
-        let isScanning = false;
-        async function onScanSuccess(decodedText) {
-            if (isScanning) return; isScanning = true; document.getElementById('barcode-status').innerText = "Recherche Open Food Facts... ⏳";
-            try {
-                const rep = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`); const data = await rep.json();
-                if (data.status === 1 && data.product) {
-                    let productName = (data.product.product_name_fr || data.product.product_name || "Inconnu").split(',')[0].trim(); productName = productName.charAt(0).toUpperCase() + productName.slice(1);
-                    fermerBarcodeScanner(); document.getElementById('iaScanResults').innerHTML = `<div class="scan-result-item"><span>${productName}</span><input type="checkbox" checked value="${productName}" class="pending-scan-chk"></div>`; document.getElementById('modalIAScanner').style.display = 'flex';
-                } else { document.getElementById('barcode-status').innerText = "Introuvable ❌"; setTimeout(() => { isScanning = false; }, 2000); }
-            } catch(e) { isScanning = false; }
-        }
-
-        function toggleExpand(cardId, btn) { const card = document.getElementById(cardId); card.classList.toggle('is-fullscreen'); btn.innerHTML = card.classList.contains('is-fullscreen') ? ">< Réduire" : "⛶ Agrandir"; }
-        let recipeSteps = {};
-        function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
-            const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
-            if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
-            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-').slice(2).join('-'); recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[index]); }
-        }
-        function changeStep(recipeIndex, direction) {
-            let data = recipeSteps[recipeIndex]; data.current += direction;
-            if (data.current < 0) data.current = 0; if (data.current >= data.steps.length) data.current = data.steps.length - 1; 
-            let containerId = recipeIndex.toString().includes('carnet') ? `carnet-step-${recipeIndex.split('-')[2]}` : `step-view-${recipeIndex}`; updateStepDisplayCustom(containerId, data);
-        }
-        function updateStepDisplayCustom(containerId, data) {
-            const container = document.getElementById(containerId); if(!container) return;
-            container.querySelector('.step-counter').innerText = `Étape ${data.current + 1} / ${data.steps.length}`; container.querySelector('.step-text').innerHTML = data.steps[data.current];
-            container.querySelectorAll('.btn-step')[0].disabled = (data.current === 0); container.querySelectorAll('.btn-step')[1].disabled = (data.current === data.steps.length - 1);
-        }
-
-        async function sauvegarder(btn, titre, contentId) {
-            btn.innerText = "⏳..."; btn.disabled = true; let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
-            try { await userDb.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
-        }
-
-        let timerInterval;
-        function startTimer(minutes) {
-            clearInterval(timerInterval); let timeInSeconds = parseInt(minutes) * 60; const timerUI = document.getElementById('floatingTimer'); const timeDisplay = document.getElementById('timeDisplay');
-            timerUI.style.display = 'flex';
-            timerInterval = setInterval(() => {
-                let m = Math.floor(timeInSeconds / 60); let s = timeInSeconds % 60; timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "🔔 Fin !"; declencherAlerteFinMinuteur(); }
-                timeInSeconds--;
-            }, 1000);
-        }
-        function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
-        function declencherAlerteFinMinuteur() {
-            if (typeof confetti === "function") { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 }); }
-            try { const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 587.33; gain.gain.setValueAtTime(0.5, audioCtx.currentTime); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); } catch(e) {}
-            if ('speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance("Attention chef, le minuteur est écoulé ! Votre cuisson est prête !"); utterance.lang = 'fr-FR'; window.speechSynthesis.speak(utterance); }
-        }
-    </script>
-</body>
-</html>
+            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map
