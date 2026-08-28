@@ -146,7 +146,7 @@
         .ingredient-item span:active { transform: scale(0.9); }
         .ingredient-item input[type="checkbox"]:checked + span { background: var(--primary); color: white; transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
 
-        .loader { display: none; text-align: center; margin-top: 10vh; }
+        .loader { display: none; text-align: center; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 9999; padding-top: 35vh; margin: 0 !important; opacity: 0.95; }
         .loader-spinner { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(255,107,107,0.2); border-radius: 50%; border-top-color: var(--primary); animation: spin 1s infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -1445,7 +1445,7 @@
             const temps = optionsForcees ? optionsForcees.temps : document.getElementById('temps').value;
             const moteur = moteurIAActif;
             
-            const cacheKey = `recettes_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
+            const cacheKey = `recettes_v2_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
             
@@ -1492,7 +1492,7 @@ Règles de formatage ABSOLUES :
                 else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
                         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                        body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] })
+                        body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'." }, { role: "user", content: prompt }] })
                     });
                     const data = await rep.json();
                     if(data.error) throw new Error(data.error.message);
