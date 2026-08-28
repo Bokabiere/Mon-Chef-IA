@@ -267,3 +267,26 @@
         .shopping-mode .modal-header h3 { font-size: 24px; }
         .shopping-mode .course-item { padding: 18px 12px; font-size: 18px !important; }
         .shopping-mode .circle-check { width: 26px; height: 26px; border-width: 3px; }
+.shortcut-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.shortcut-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+.shortcut-card span {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-main);
+}
