@@ -7,7 +7,14 @@ echo.
 cd /d "c:\IA\Projets\Mon chef_IA"
 
 echo 1. Enregistrement des fichiers (HTML, CSS, JS et images)...
-git add .
+git add Index.html
+git add style.css
+git add app.js
+git add manifest.json
+git add firestore.rules
+git add Img
+git add Icone.ico
+git add Icone.png
 
 echo 2. Validation...
 git commit -m "Mise a jour automatique de l'interface"

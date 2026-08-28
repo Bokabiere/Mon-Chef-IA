@@ -1112,23 +1112,23 @@ async function affinerRecette(index, titre) {
     const textDiv = document.getElementById('text-view-' + index);
     const contenuActuel = textDiv.innerText;
     
-    input.value = "Affinage en cours... ?";
+    input.value = "Affinage en cours... ‚è≥";
     input.disabled = true;
     
     const moteur = moteurIAActif;
-    const prompt = \Voici une recette intitulÈe "\" :
-\
+    const prompt = `Voici une recette intitul√©e "${titre}" :
+${contenuActuel}
 
-La demande de modification est : "\".
-Renvoie UNIQUEMENT la recette modifiÈe, sans introduction ni conclusion, en gardant le mÍme format de liste et d'Ètapes.\;
+La demande de modification est : "${consigne}".
+Renvoie UNIQUEMENT la recette modifi√©e, sans introduction ni conclusion, en gardant le m√™me format de liste et d'√©tapes.`;
 
     try {
         const apiKey = await getApiKey(moteur);
-        if (!apiKey) throw new Error("ClÈ API manquante");
+        if (!apiKey) throw new Error("Cl√© API manquante");
         
         let texteReponse = "";
         if (moteur === 'gemini') {
-            const rep = await fetch(\https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=\\, {
+            const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });
@@ -1136,8 +1136,8 @@ Renvoie UNIQUEMENT la recette modifiÈe, sans introduction ni conclusion, en gard
             if(data.error) throw new Error(data.error.message);
             texteReponse = data.candidates[0].content.parts[0].text;
         } else if (moteur === 'mistral') {
-            const rep = await fetch(\https://api.mistral.ai/v1/chat/completions\, {
-                method: "POST", headers: { "Content-Type": "application/json", "Authorization": \Bearer \\ },
+            const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
+                method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
                 body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] })
             });
             const data = await rep.json();
@@ -1147,11 +1147,11 @@ Renvoie UNIQUEMENT la recette modifiÈe, sans introduction ni conclusion, en gard
         
         // Formater le nouveau contenu
         let contenuFormate = texteReponse.replace(/[*#]/g, '').trim();
-        contenuFormate = contenuFormate.replace(/(\d+)\s*(min|minute|minutes)/gi, \<span class="timer-tag" onclick="startTimer(\)">?? \ min</span>\);
+        contenuFormate = contenuFormate.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">‚è±Ô∏è $1 min</span>`);
         
         textDiv.innerHTML = contenuFormate.replace(/\n/g, '<br>');
         
-        showToast("Recette affinÈe avec succËs ! ?", "success");
+        showToast("Recette affin√©e avec succ√®s ! ‚ú®", "success");
         input.value = "";
     } catch (err) {
         console.error(err);
