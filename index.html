@@ -83,19 +83,27 @@
         #loginScreen h1 { color: var(--primary); margin-bottom: 20px; font-size: 32px; }
         #appContent { display: none; height: 100%; width: 100%; }
 
-        .split-layout { display: flex; height: 100vh; width: 100%; }
-        .left-panel { width: 40%; min-width: 350px; background: var(--card-bg); padding: 30px; overflow-y: auto; box-shadow: 2px 0 20px rgba(0,0,0,0.06); z-index: 10; display: flex; flex-direction: column; transition: background-color 0.3s;}
-        .right-panel { width: 60%; background: var(--bg-color); padding: 40px; overflow-y: auto; scroll-behavior: smooth; position: relative; transition: background-color 0.3s;}
-        .right-content { max-width: 800px; margin: 0 auto; }
+        .app-container { display: flex; flex-direction: column; height: 100vh; width: 100%; }
+        .view-container { flex: 1; position: relative; overflow: hidden; background: var(--bg-color); transition: background-color 0.3s; }
+        
+        .view { display: none; height: 100%; width: 100%; overflow-y: auto; padding: 20px 20px 80px 20px; box-sizing: border-box; scroll-behavior: smooth; }
+        .view.active { display: block; }
+        .view-content { max-width: 800px; margin: 0 auto; background: var(--card-bg); padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--card-bg); display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; border-top: 1px solid var(--border); }
+        .nav-item { background: transparent; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.3s; padding: 5px 10px; border-radius: 10px;}
+        .nav-item i { font-size: 20px; margin-bottom: 4px; font-style: normal; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item:hover { background: var(--bg-color); }
 
         @media (max-width: 850px) {
-            body { overflow: auto; height: auto; }
-            .split-layout { flex-direction: column; height: auto; display: block; }
-            .left-panel { width: 100%; min-width: auto; padding: 20px; box-sizing: border-box; border-bottom: 2px solid var(--border); box-shadow: none; display: block; }
-            .right-panel { width: 100%; padding: 20px; box-sizing: border-box; min-height: 100vh; }
+            body { overflow: hidden; height: 100vh; }
+            .view { padding: 15px 15px 75px 15px; }
+            .view-content { padding: 15px; }
             .app-header { flex-direction: column; align-items: flex-start !important; gap: 15px !important;}
             .nav-buttons { flex-wrap: wrap; width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px;}
             .btn-top { text-align: center; width: 100%; padding: 10px;}
+
         }
 
         .app-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; }
@@ -294,15 +302,18 @@
              data-auto_prompt="false">
         </div>
         <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+        <button class="btn-secondary" style="margin-top: 15px;" onclick="activerModeTest()">👀 Voir le rendu (Mode Test)</button>
 
         <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Compte en attente de validation.</div>
         <button id="btnLogoutPending" class="btn-secondary" style="margin-top: 20px; display: none;" onclick="seDeconnecter()">Se déconnecter</button>
     </div>
 
     <div id="appContent">
-        <div class="split-layout">
+        <div class="app-container">
             
-            <div class="left-panel">
+            <!-- VUE GENERATEUR -->
+            <div id="view-generator" class="view-container view active">
+                <div class="view-content">
                 <div class="app-header">
                     <div class="app-header-title">
                         <div class="mascot-small">
@@ -312,10 +323,10 @@
                     </div>
                     
                     <div class="nav-buttons">
-                        <button class="btn-top" onclick="chargerCarnet()">📖 Carnet</button>
+                        <button class="btn-top" onclick="switchView('favorites')">📖 Carnet</button>
                         <button class="btn-top" onclick="chargerPlanning()">📅 Planning</button>
-                        <button id="btnNavCourses" class="btn-top" onclick="ouvrirCourses()" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
-                        <button class="btn-top" onclick="ouvrirParametres()">⚙️ Config</button>
+                        <button id="btnNavCourses" class="btn-top" onclick="switchView('cart')" style="border-color: var(--primary); color: var(--primary);">🛒 Courses</button>
+                        <button class="btn-top" onclick="switchView('settings')">⚙️ Config</button>
                     </div>
                 </div>
 
@@ -370,10 +381,12 @@
                 
                 <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-top:10px; margin-bottom:0; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide()">⚡ Soir de flemme (recette en 15 min max)</button>
                 <button class="btn-primary" id="btnGenererRecettes" onclick="chercherRecettesIA()">✨ Inventer mes recettes</button>
-            </div>
+                </div> <!-- fin view-content generator -->
+            </div> <!-- fin view-generator -->
 
-            <div class="right-panel" id="rightPanel">
-                <div class="right-content">
+            <!-- VUE RESULTATS -->
+            <div id="view-results" class="view-container view">
+                <div class="view-content" id="rightPanel">
                     <div id="loader" class="loader">
                         <div class="loader-mascot-wrap">
                             <span class="loader-steam s1">💨</span>
@@ -386,10 +399,53 @@
                         <p id="loaderText" style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p>
                     </div>
                     <div id="resultatDiv"><h3 style="color:var(--text-muted); text-align:center; margin-top:20vh; font-weight:400; opacity:0.6;">Sélectionnez vos ingrédients et lancez la magie ! ✨</h3></div>
+                </div> <!-- fin view-content results -->
+            </div> <!-- fin view-results -->
+
+            <!-- VUE FAVORIS -->
+            <div id="view-favorites" class="view-container view">
+                <div class="view-content">
+                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">💖 Mes Favoris</h2>
+                    <div id="carnetRecettesList"></div> <!-- On y injectera le contenu de la modal carnet -->
                 </div>
             </div>
 
-        </div> 
+            <!-- VUE COURSES -->
+            <div id="view-cart" class="view-container view">
+                <div class="view-content">
+                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">🛒 Ma Liste de Courses</h2>
+                    <div id="listeCoursesContent"></div> <!-- On y injectera le contenu de la modal courses -->
+                </div>
+            </div>
+
+            <!-- VUE PARAMETRES -->
+            <div id="view-settings" class="view-container view">
+                <div class="view-content">
+                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">⚙️ Paramètres</h2>
+                    <div id="parametresContent"></div> <!-- On y injectera le contenu de la modal parametres -->
+                </div>
+            </div>
+
+        </div> <!-- fin app-container -->
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchView('generator')" id="nav-btn-generator">
+                <i>🏠</i><span>Générateur</span>
+            </button>
+            <button class="nav-item" onclick="switchView('results')" id="nav-btn-results">
+                <i>🍳</i><span>Résultats</span>
+            </button>
+            <button class="nav-item" onclick="switchView('favorites')" id="nav-btn-favorites">
+                <i>💖</i><span>Favoris</span>
+            </button>
+            <button class="nav-item" onclick="switchView('cart')" id="nav-btn-cart">
+                <i>🛒</i><span>Courses</span>
+            </button>
+            <button class="nav-item" onclick="switchView('settings')" id="nav-btn-settings">
+                <i>⚙️</i><span>Paramètres</span>
+            </button>
+        </nav>
     </div> 
 
     <div id="floatingTimer" class="floating-timer">
@@ -1408,8 +1464,7 @@
             const moteur = moteurIAActif;
             
             const cacheKey = `plat_${nomDuPlat}_${personnes}_${moteur}`.replace(/\s+/g, '_').toLowerCase();
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' });
-            else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+            switchView('results');
 
             const historique = await getHistoriquePrompt();
             const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
@@ -1447,7 +1502,7 @@
             
             const cacheKey = `recettes_v2_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            if(window.innerWidth <= 850) document.getElementById('rightPanel').scrollIntoView({ behavior: 'smooth' }); else document.getElementById('rightPanel').scrollTo({ top: 0, behavior: 'smooth' });
+            switchView('results');
             
             const historique = await getHistoriquePrompt();
             const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
@@ -1701,6 +1756,75 @@ Règles de formatage ABSOLUES :
             try { const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 587.33; gain.gain.setValueAtTime(0.5, audioCtx.currentTime); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); } catch(e) {}
             if ('speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance("Attention chef, le minuteur est écoulé ! Votre cuisson est prête !"); utterance.lang = 'fr-FR'; window.speechSynthesis.speak(utterance); }
         }
+
+        // --- NAVIGATION MOBILE (BOTTOM NAV) ---
+        function switchView(viewId) {
+            // Masquer toutes les vues
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            // Désactiver tous les boutons de la navbar
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            
+            // Activer la vue correspondante
+            const targetView = document.getElementById('view-' + viewId);
+            if (targetView) targetView.classList.add('active');
+            
+            // Activer le bouton de la navbar
+            const targetBtn = document.getElementById('nav-btn-' + viewId);
+            if (targetBtn) targetBtn.classList.add('active');
+
+            // Logique spécifique aux vues pour charger leur contenu depuis les modales/fonctions existantes
+            if (viewId === 'favorites') {
+                chargerCarnetDansVue();
+            } else if (viewId === 'cart') {
+                chargerCoursesDansVue();
+            } else if (viewId === 'settings') {
+                chargerParametresDansVue();
+            } else if (viewId === 'results') {
+                // Scroll top on results
+                targetView.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function chargerCarnetDansVue() {
+            chargerCarnet(); // Fonction existante
+            // Déplacer le contenu de la modale vers la vue
+            const modalBody = document.querySelector('#modalCarnet .modal-body');
+            const vueDest = document.getElementById('carnetRecettesList');
+            if(modalBody && vueDest && modalBody.innerHTML !== "") {
+                vueDest.innerHTML = modalBody.innerHTML;
+            }
+        }
+
+        function chargerCoursesDansVue() {
+            ouvrirCourses(); // Fonction existante
+            const modalBody = document.querySelector('#modalCourses .modal-body');
+            const vueDest = document.getElementById('listeCoursesContent');
+            if(modalBody && vueDest && modalBody.innerHTML !== "") {
+                vueDest.innerHTML = modalBody.innerHTML;
+            }
+        }
+
+        function chargerParametresDansVue() {
+            ouvrirParametres(); // Initialiser
+            const modalBody = document.querySelector('#modalParametres .modal-body');
+            const vueDest = document.getElementById('parametresContent');
+            if(modalBody && vueDest && modalBody.innerHTML !== "") {
+                // Pour éviter d'écraser si on a déjà déplacé
+                if (vueDest.children.length === 0) {
+                   vueDest.appendChild(modalBody); // Déplacer tout l'élément
+                }
+            }
+            document.getElementById('modalParametres').style.display = 'none'; // Cacher la modale d'origine
+        }
+
+        function activerModeTest() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContent').style.display = 'block';
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('btnLogoutPending').style.display = 'none';
+            showToast("Mode test activé. Vous pouvez prévisualiser l'interface.", "info");
+        }
+
     </script>
 </body>
 </html>
