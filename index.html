@@ -654,6 +654,32 @@
             </div>
         </div>
     </div>
+	
+	<div id="modalApiKeys" class="modal-overlay">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>🔑 Gestion des Clés API</h3>
+                <button class="btn-secondary" onclick="document.getElementById('modalApiKeys').style.display='none'">✖ Fermer</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 20px;">
+                    Renseignez vos clés API pour connecter Mon Chef IA aux différents moteurs d'intelligence artificielle.
+                </p>
+
+                <label>✨ Clé API Gemini (Google)</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="inputKeyGemini" placeholder="Collez votre clé Gemini ici..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button class="btn-primary" style="margin-top: 0; padding: 10px 20px; width: auto;" onclick="sauvegarderCleAPI('gemini')">Sauver</button>
+                </div>
+
+                <label>🥐 Clé API Mistral AI (France)</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="inputKeyMistral" placeholder="Collez votre clé Mistral ici..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button class="btn-primary" style="margin-top: 0; padding: 10px 20px; width: auto;" onclick="sauvegarderCleAPI('mistral')">Sauver</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
