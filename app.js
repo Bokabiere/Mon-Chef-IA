@@ -576,14 +576,178 @@ const firebaseConfig = {
             } catch (e) { btn.innerText = "❌"; }
         }
 
-        async function ajouterCourseManuelle() {
-            const input = document.getElementById('inputCourseManuelle'); const ingredient = input.value.trim();
-            if(!ingredient) return;
-            try {
-                await userDb.collection("courses").add({ ingredient: ingredient.charAt(0).toUpperCase() + ingredient.slice(1), checked: false, date: firebase.firestore.FieldValue.serverTimestamp() });
-                input.value = "";
-            } catch(e) { showToast("Erreur lors de l'ajout", "error"); }
-        }
+        
+        window.ajouterCourseManuelle = function() {
+            const input = document.getElementById('courseInput');
+            if(!input) return;
+            const texte = input.value.trim();
+            if(texte) {
+                const items = document.querySelectorAll('.course-item');
+                let maxOrder = 0;
+                items.forEach(el => {
+                    const order = parseInt(el.dataset.order || '0');
+                    if(order > maxOrder) maxOrder = order;
+                });
+                
+                userDb.collection("courses").add({
+                    ingredient: texte.charAt(0).toUpperCase() + texte.slice(1),
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    checked: false,
+                    order: maxOrder + 1
+                });
+                input.value = '';
+            }
+        };
+
+        window.supprimerCourseDoc = function(event, docId) {
+            event.stopPropagation();
+            userDb.collection("courses").doc(docId).delete().then(() => {
+                showToast("Article supprimé", "success");
+            });
+        };
+
+        let isVocalCourses = false;
+        let coursesRecognition = null;
+
+        window.toggleVocalCourses = function() {
+            const btn = document.getElementById('btnMicCourses');
+            if (isVocalCourses) {
+                if (coursesRecognition) coursesRecognition.stop();
+                return;
+            }
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert("La dictée vocale n'est pas supportée sur ce navigateur.");
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            coursesRecognition = new SpeechRecognition();
+            coursesRecognition.lang = 'fr-FR';
+            coursesRecognition.interimResults = false;
+            coursesRecognition.maxAlternatives = 1;
+
+            coursesRecognition.onstart = function() {
+                isVocalCourses = true;
+                if(btn) {
+                    btn.style.backgroundColor = "#ff4757";
+                    btn.style.animation = "pulse 1.5s infinite";
+                }
+                const inp = document.getElementById('courseInput');
+                if(inp) inp.placeholder = "Écoute en cours...";
+            };
+
+            coursesRecognition.onresult = function(event) {
+                let transcript = event.results[0][0].transcript;
+                
+                let replaced = transcript.replace(/ et /gi, ',')
+                                         .replace(/ des /gi, ',')
+                                         .replace(/ du /gi, ',')
+                                         .replace(/ de la /gi, ',')
+                                         .replace(/ un /gi, ',')
+                                         .replace(/ une /gi, ',');
+                
+                let articles = replaced.split(',').map(s => s.trim()).filter(s => s.length > 1);
+                
+                const items = document.querySelectorAll('.course-item');
+                let maxOrder = 0;
+                items.forEach(el => {
+                    const order = parseInt(el.dataset.order || '0');
+                    if(order > maxOrder) maxOrder = order;
+                });
+
+                let batch = userDb.batch();
+                articles.forEach((art) => {
+                    maxOrder++;
+                    let docRef = userDb.collection("courses").doc();
+                    batch.set(docRef, {
+                        ingredient: art.charAt(0).toUpperCase() + art.slice(1),
+                        date: firebase.firestore.FieldValue.serverTimestamp(),
+                        checked: false,
+                        order: maxOrder
+                    });
+                });
+                
+                batch.commit().then(() => {
+                    showToast(articles.length + " article(s) ajouté(s)", "success");
+                });
+            };
+
+            coursesRecognition.onerror = function(event) {
+                showToast("Erreur vocale : " + event.error, "error");
+            };
+
+            coursesRecognition.onend = function() {
+                isVocalCourses = false;
+                if(btn) {
+                    btn.style.backgroundColor = "var(--card-bg)";
+                    btn.style.animation = "none";
+                }
+                const inp = document.getElementById('courseInput');
+                if(inp) inp.placeholder = "Ajouter (ex: Lait)...";
+            };
+
+            coursesRecognition.start();
+        };
+        
+        let draggedCourseItem = null;
+
+        window.handleDragStart = function(e) {
+            draggedCourseItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        };
+
+        window.handleDragOver = function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        };
+        
+        window.handleDragEnter = function(e) {
+            this.classList.add('drag-over');
+        };
+
+        window.handleDragLeave = function(e) {
+            this.classList.remove('drag-over');
+        };
+
+        window.handleDrop = function(e) {
+            e.stopPropagation();
+            if (draggedCourseItem !== this) {
+                let list = Array.from(this.parentNode.children);
+                let draggedIndex = list.indexOf(draggedCourseItem);
+                let targetIndex = list.indexOf(this);
+                
+                if (draggedIndex < targetIndex) {
+                    this.parentNode.insertBefore(draggedCourseItem, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(draggedCourseItem, this);
+                }
+                
+                sauvegarderOrdreCourses(this.parentNode);
+            }
+            return false;
+        };
+
+        window.handleDragEnd = function(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.course-item').forEach(item => item.classList.remove('drag-over'));
+        };
+
+        window.sauvegarderOrdreCourses = function(container) {
+            let items = container.querySelectorAll('.course-item');
+            let batch = userDb.batch();
+            items.forEach((item, index) => {
+                let docId = item.dataset.id;
+                if(docId) {
+                    let docRef = userDb.collection("courses").doc(docId);
+                    batch.update(docRef, { order: index });
+                }
+            });
+            batch.commit().then(() => console.log("Ordre courses sauvegardé"));
+        };
+
 
                         function ouvrirCourses() {
             const contentDiv = document.getElementById('listeCoursesContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
