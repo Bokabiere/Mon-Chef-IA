@@ -517,7 +517,13 @@ const firebaseConfig = {
 
                 const summary = document.createElement('summary');
                 summary.className = 'category-summary';
-                summary.innerHTML = `${cat} ${badgeCompteur}`;
+                summary.innerHTML = `
+                    <span>${cat}</span>
+                    <div class="category-meta">
+                        <span class="category-count">${nbCochesCat}/${items.length}</span>
+                        ${badgeCompteur}
+                    </div>
+                `;
                 details.appendChild(summary);
 
                 const contentDiv = document.createElement('div');
@@ -972,9 +978,25 @@ const firebaseConfig = {
                     if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } else { htmlAcheter += itemHtml; }
                 });
                 
-                let finalHtml = htmlAcheter ? `<div id="courses-active-list">${htmlAcheter}</div>` : "";
+                const pendingCount = docs.filter(item => item.checked !== true).length;
+                const caddieCount = docs.filter(item => item.checked === true).length;
+                const summaryHtml = `
+                    <div class="courses-summary">
+                        <div>
+                            <span class="courses-summary-label">À acheter</span>
+                            <strong>${pendingCount}</strong>
+                        </div>
+                        <div>
+                            <span class="courses-summary-label">Caddie</span>
+                            <strong>${caddieCount}</strong>
+                        </div>
+                    </div>
+                `;
+
+                let finalHtml = summaryHtml + (htmlAcheter ? `<div id="courses-active-list">${htmlAcheter}</div>` : "");
                 if (hasCaddie) { finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div><div id="courses-caddie-list">${htmlCaddie}</div>`; finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`; }
-                if(!htmlAcheter && hasCaddie) { finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml; }
+                if(!htmlAcheter && !hasCaddie) { finalHtml = summaryHtml + "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>"; }
+                if(!htmlAcheter && hasCaddie) { finalHtml = summaryHtml + "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml.replace(summaryHtml, ''); }
                 contentDiv.innerHTML = finalHtml;
                 
                 document.querySelectorAll('.course-item').forEach(item => {
@@ -1366,6 +1388,9 @@ Règles de formatage ABSOLUES :
                         let missingItems = state.missingItems.length ? state.missingItems : parseMissingIngredientsFromText(contenu);
                         if (missingItems.length === 0) missingItems = parseMissingIngredientsFromText(bloc);
                         const missingBadge = buildMissingIngredientsBadge(missingItems);
+                        const recipeMeta = missingItems.length
+                            ? `<div class="recipe-mini-meta">${missingItems.length} ingrédient${missingItems.length > 1 ? 's' : ''} à compléter</div>`
+                            : `<div class="recipe-mini-meta recipe-mini-meta-ready">Recette prête</div>`;
 
                         let coursesMatch = contenu.match(/COURSES\s*:\s*(.*)/i) || contenu.match(/(?:IL VOUS MANQUE|MANQUE|À ACHETER|A ACHETER)[^\n]*[:\-]?\s*(.*)/i);
                         if (coursesMatch) {
@@ -1391,7 +1416,7 @@ Règles de formatage ABSOLUES :
                         if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
                         let stepsArrayString = `['${rawSteps.join("','")}']`;
 
-                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><span>${titre}</span>${missingBadge}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
+                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
                     });
                     
                     resDiv.innerHTML = html;
