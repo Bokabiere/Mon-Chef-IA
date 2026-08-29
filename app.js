@@ -367,8 +367,16 @@ const firebaseConfig = {
             "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
         };
 
-        function afficherIngredientsGauche() {
+                function afficherIngredientsGauche() {
             const container = document.getElementById('categoriesContainer');
+            if(!container) return;
+            // On mémorise les états ouverts
+            const openStates = {};
+            container.querySelectorAll('details').forEach(d => {
+                const title = d.querySelector('summary').innerText.split(' ')[0];
+                openStates[title] = d.open;
+            });
+
             container.innerHTML = "";
             const sortedCats = Object.keys(globalIngredientsList).sort();
 
@@ -376,68 +384,50 @@ const firebaseConfig = {
                 let items = globalIngredientsList[cat];
                 if (!items || items.length === 0) continue;
                 items.sort();
+                
                 const nbCochesCat = items.filter(i => memoireIngredients.includes(i)).length;
                 const badgeCompteur = nbCochesCat > 0 ? `<span style="background:var(--primary); color:white; font-size:10px; padding:3px 7px; border-radius:12px; margin-left:8px; vertical-align: middle;">${nbCochesCat}</span>` : '';
 
-                let html = `<details class="cat-details"><summary style="display:flex; align-items:center;">${cat} ${badgeCompteur}</summary><div class="ingredient-list">`;
-                items.forEach(item => {
-                    const isChecked = memoireIngredients.includes(item) ? "checked" : "";
-                    const icone = iconesIngredients[item] || "🍴";
-                    html += `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" ${isChecked}><span>${icone} ${item}</span></label>`;
+                const details = document.createElement('details');
+                details.className = 'category-details';
+                if(openStates[cat] || nbCochesCat > 0) details.open = true;
+
+                const summary = document.createElement('summary');
+                summary.className = 'category-summary';
+                summary.innerHTML = `${cat} ${badgeCompteur}`;
+                details.appendChild(summary);
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'category-content ingredient-tags';
+
+                items.forEach(ing => {
+                    const isChecked = memoireIngredients.includes(ing);
+                    const icone = iconesIngredients[ing] || "🍽️";
+                    const tag = document.createElement('div');
+                    tag.className = 'ingredient-tag' + (isChecked ? ' active' : '');
+                    tag.innerHTML = `${icone} ${ing}`;
+                    tag.onclick = function() {
+                        toggleIngredient(ing, this);
+                    };
+                    contentDiv.appendChild(tag);
                 });
-                html += `</div></details>`;
-                container.innerHTML += html;
+
+                details.appendChild(contentDiv);
+                container.appendChild(details);
             }
-            updateButtonLabel();
         }
 
-        function updateButtonLabel() {
-            const btn = document.getElementById('btnGenererRecettes');
-            if (!btn) return;
-            const n = document.querySelectorAll('.chk-ingredient:checked').length;
-            btn.innerText = n > 0 ? `✨ Inventer mes recettes (${n} ingrédient${n > 1 ? 's' : ''})` : "✨ Inventer mes recettes";
-        }
-
-        function decocherTout() { 
-            document.querySelectorAll('.chk-ingredient:checked').forEach(cb => cb.checked = false); 
-            memoireIngredients = []; syncCloud('ingredients', memoireIngredients);
-            updateButtonLabel(); afficherIngredientsGauche(); 
-        }
-
-        function filtrerIngredients(terme) {
-            const resDiv = document.getElementById('autocompleteResults');
-            terme = terme.trim().toLowerCase();
-            if(!terme) { resDiv.style.display = 'none'; return; }
-            let matches = [];
-            for(const cat in globalIngredientsList) {
-                globalIngredientsList[cat].forEach(ing => {
-                    if(ing.toLowerCase().includes(terme)) matches.push({ nom: ing, cat: cat });
-                });
+        window.toggleIngredient = function(nom, element) {
+            const index = memoireIngredients.indexOf(nom);
+            if (index > -1) {
+                memoireIngredients.splice(index, 1);
+            } else {
+                memoireIngredients.push(nom);
             }
-            if(matches.length === 0) { resDiv.style.display = 'none'; return; }
-            let html = "";
-            matches.forEach(m => {
-                const icone = iconesIngredients[m.nom] || "🍴";
-                html += `<div class="autocomplete-item" onclick="selectionnerIngredientAutocomplete('${m.nom}')">${icone} <b>${m.nom}</b> <span style="font-size:10px; color:var(--text-muted);">(${m.cat})</span></div>`;
-            });
-            resDiv.innerHTML = html; resDiv.style.display = 'block';
-        }
-
-        function selectionnerIngredientAutocomplete(nom) {
-            document.getElementById('ingredientSearch').value = "";
-            document.getElementById('autocompleteResults').style.display = 'none';
-            document.querySelectorAll('.chk-ingredient').forEach(cb => {
-                if(cb.value === nom) {
-                    cb.checked = true;
-                    let details = cb.closest('details');
-                    if(details) details.open = true;
-                    cb.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            });
-            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
             syncCloud('ingredients', memoireIngredients);
-            updateButtonLabel(); afficherIngredientsGauche(); 
-        }
+            updateButtonLabel();
+            afficherIngredientsGauche();
+        };
 
         function ouvrirParametres() { 
              
@@ -552,16 +542,26 @@ const firebaseConfig = {
         }
 
         let recognition;
-        function toggleVocal() {
+                function toggleVocal() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return showToast("La dictée vocale n'est pas supportée par votre navigateur.", "error");
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition; recognition = new SpeechRecognition(); recognition.lang = 'fr-FR';
             const btn = document.getElementById('btnMic'); btn.classList.add('listening'); btn.innerText = "🎙️ Écoute...";
             recognition.onresult = function(event) {
                 const texte = event.results[0][0].transcript.toLowerCase();
                 btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter";
-                document.querySelectorAll('.chk-ingredient').forEach(cb => { if (texte.includes(cb.value.toLowerCase())) cb.checked = true; });
-                memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
-                syncCloud('ingredients', memoireIngredients); updateButtonLabel(); afficherIngredientsGauche(); 
+                let count = 0;
+                for(let cat in globalIngredientsList) {
+                    globalIngredientsList[cat].forEach(ing => {
+                        if(texte.includes(ing.toLowerCase())) {
+                            if(!memoireIngredients.includes(ing)) {
+                                memoireIngredients.push(ing);
+                                count++;
+                            }
+                        }
+                    });
+                }
+                syncCloud('ingredients', memoireIngredients); updateButtonLabel(); afficherIngredientsGauche();
+                if(count > 0) showToast(count + " ingrédient(s) ajouté(s)", "success");
             };
             recognition.onerror = function() { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter"; };
             recognition.start();
@@ -1099,7 +1099,7 @@ Règles de formatage ABSOLUES :
             } catch (e) { return ""; }
         }
 
-        async function analyserImageIA(event) {
+                async function analyserImageIA(event) {
             const file = event.target.files[0]; if (!file) return;
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             resDiv.innerHTML = ""; loader.style.display = "block"; loader.querySelector('p').innerText = "Le Chef analyse votre photo... 📸";
@@ -1119,11 +1119,16 @@ Règles de formatage ABSOLUES :
                     const text = data.candidates[0].content.parts[0].text;
                     const itemsTrouves = text.split(',').map(i => i.trim()).filter(i => i.length > 1);
                     if (itemsTrouves.length === 0) return resDiv.innerHTML = "<h3 style='text-align:center;'>Aucun ingrédient détecté.</h3>";
-                    const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient')); let htmlList = ""; window.scanPendingItems = [];
+                    
+                    let htmlList = "";
                     itemsTrouves.forEach(item => {
-                        const match = existingCheckboxes.find(cb => cb.value.toLowerCase().includes(item.toLowerCase()) || item.toLowerCase().includes(cb.value.toLowerCase()));
-                        const nomExact = match ? match.value : item.charAt(0).toUpperCase() + item.slice(1);
-                        htmlList += `<div class="scan-result-item"><span>${nomExact} ${match ? '✅' : '🆕'}</span><input type="checkbox" checked value="${nomExact}" class="pending-scan-chk"></div>`;
+                        let match = null;
+                        for(let cat in globalIngredientsList) {
+                            let found = globalIngredientsList[cat].find(g => g.toLowerCase().includes(item.toLowerCase()) || item.toLowerCase().includes(g.toLowerCase()));
+                            if(found) { match = found; break; }
+                        }
+                        const nomExact = match ? match : item.charAt(0).toUpperCase() + item.slice(1);
+                        htmlList += `<div class="scan-result-item"><span>${nomExact} ${match ? '✅' : '🆕'}</span><input type="checkbox" checked value="${nomExact.replace(/'/g, "\'")}" class="pending-scan-chk"></div>`;
                     });
                     document.getElementById('iaScanResults').innerHTML = htmlList; document.getElementById('modalIAScanner').style.display = 'flex'; event.target.value = "";
                 } catch (e) { loader.style.display = "none"; afficherErreurIA(resDiv, e, 'gemini'); }
@@ -1131,21 +1136,28 @@ Règles de formatage ABSOLUES :
             reader.readAsDataURL(file);
         }
 
-        function validerScanIA() {
-            const confirmedItems = Array.from(document.querySelectorAll('.pending-scan-chk:checked')).map(cb => cb.value); const existingCheckboxes = Array.from(document.querySelectorAll('.chk-ingredient')); let checkedCount = 0;
-            confirmedItems.forEach(item => {
-                const cb = existingCheckboxes.find(c => c.value === item);
-                if (cb) { cb.checked = true; checkedCount++; } 
-                else {
-                    const container = document.getElementById('categoriesContainer');
-                    let diversDetails = Array.from(container.querySelectorAll('details')).find(d => d.querySelector('summary').innerText.includes('Divers'));
-                    if (!diversDetails) { diversDetails = document.createElement('details'); diversDetails.className = 'cat-details'; diversDetails.innerHTML = `<summary style="display:flex; align-items:center;">Divers</summary><div class="ingredient-list"></div>`; container.appendChild(diversDetails); }
-                    const list = diversDetails.querySelector('.ingredient-list'); list.insertAdjacentHTML('beforeend', `<label class="ingredient-item"><input type="checkbox" value="${item}" class="chk-ingredient" checked><span>🍴 ${item}</span></label>`); checkedCount++;
+        async function validerScanIA() {
+            const confirmedItems = Array.from(document.querySelectorAll('.pending-scan-chk:checked')).map(cb => cb.value);
+            let checkedCount = 0;
+            for(let item of confirmedItems) {
+                let found = false;
+                for(let cat in globalIngredientsList) {
+                    if(globalIngredientsList[cat].includes(item)) found = true;
                 }
-            });
-            memoireIngredients = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value); syncCloud('ingredients', memoireIngredients);
-            document.getElementById('modalIAScanner').style.display = 'none'; document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) ! ✨</h3>`;
-            updateButtonLabel(); afficherIngredientsGauche(); 
+                if(!found) {
+                    if(typeof ajouterIngredientPersonnalise === 'function') {
+                        await ajouterIngredientPersonnalise(item);
+                    }
+                } else {
+                    if(!memoireIngredients.includes(item)) memoireIngredients.push(item);
+                }
+                checkedCount++;
+            }
+            syncCloud('ingredients', memoireIngredients);
+            updateButtonLabel();
+            afficherIngredientsGauche();
+            document.getElementById('modalIAScanner').style.display = 'none';
+            document.getElementById('resultatDiv').innerHTML = `<h3 style='text-align:center; color:var(--primary);'>${checkedCount} ingrédient(s) ajouté(s) ! ✨</h3>`;
         }
 
         let html5QrcodeScanner;
