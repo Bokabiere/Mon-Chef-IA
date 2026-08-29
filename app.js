@@ -440,7 +440,7 @@ const firebaseConfig = {
         }
 
         function ouvrirParametres() { 
-            document.getElementById('modalParametres').style.display = 'flex'; 
+             
             chargerListeManageIng(); 
             if (isAdminUser) chargerDemandesAcces();
         }
@@ -586,8 +586,7 @@ const firebaseConfig = {
         }
 
         function ouvrirCourses() {
-            document.getElementById('modalCourses').style.display = 'flex';
-            const contentDiv = document.getElementById('coursesContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            const contentDiv = document.getElementById('listeCoursesContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
             if(unsubscribeCourses) unsubscribeCourses();
             unsubscribeCourses = userDb.collection("courses").orderBy("date", "desc").onSnapshot((snapshot) => {
                 if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
@@ -870,7 +869,7 @@ Règles de formatage ABSOLUES :
         }
 
         async function chargerCarnet() {
-            document.getElementById('modalCarnet').style.display = 'flex'; const contentDiv = document.getElementById('carnetContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            const contentDiv = document.getElementById('carnetRecettesList'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
             try {
                 const snapshot = await userDb.collection("carnet").orderBy("date", "desc").get();
                 if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
@@ -1054,35 +1053,23 @@ Règles de formatage ABSOLUES :
         }
 
         function chargerCarnetDansVue() {
-            chargerCarnet(); // Fonction existante
-            // Déplacer le contenu de la modale vers la vue
-            const modalBody = document.querySelector('#modalCarnet .modal-body');
-            const vueDest = document.getElementById('carnetRecettesList');
-            if(modalBody && vueDest && modalBody.innerHTML !== "") {
-                vueDest.innerHTML = modalBody.innerHTML;
-            }
+            chargerCarnet();
         }
 
         function chargerCoursesDansVue() {
-            ouvrirCourses(); // Fonction existante
-            const modalBody = document.querySelector('#modalCourses .modal-body');
-            const vueDest = document.getElementById('listeCoursesContent');
-            if(modalBody && vueDest && modalBody.innerHTML !== "") {
-                vueDest.innerHTML = modalBody.innerHTML;
-            }
+            ouvrirCourses();
         }
 
         function chargerParametresDansVue() {
-            ouvrirParametres(); // Initialiser
+            ouvrirParametres();
+            // Move parametres if they are still in modal (for backward compatibility if HTML isn't updated)
             const modalBody = document.querySelector('#modalParametres .modal-body');
             const vueDest = document.getElementById('parametresContent');
-            if(modalBody && vueDest && modalBody.innerHTML !== "") {
-                // Pour éviter d'écraser si on a déjà déplacé
-                if (vueDest.children.length === 0) {
-                   vueDest.appendChild(modalBody); // Déplacer tout l'élément
-                }
+            if(modalBody && vueDest && vueDest.children.length === 0) {
+                while(modalBody.firstChild) vueDest.appendChild(modalBody.firstChild);
             }
-            document.getElementById('modalParametres').style.display = 'none'; // Cacher la modale d'origine
+            const modalOrig = document.getElementById('modalParametres');
+            if(modalOrig) modalOrig.style.display = 'none';
         }
 // --- INSTALLATION PWA ---
 let deferredPrompt;
