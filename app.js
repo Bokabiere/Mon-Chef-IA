@@ -585,21 +585,51 @@ const firebaseConfig = {
             } catch(e) { showToast("Erreur lors de l'ajout", "error"); }
         }
 
-        function ouvrirCourses() {
+                        function ouvrirCourses() {
             const contentDiv = document.getElementById('listeCoursesContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
             if(unsubscribeCourses) unsubscribeCourses();
-            unsubscribeCourses = userDb.collection("courses").orderBy("date", "desc").onSnapshot((snapshot) => {
+            
+            unsubscribeCourses = userDb.collection("courses").onSnapshot((snapshot) => {
                 if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
+                
+                let docs = [];
+                snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
+                
+                docs.sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 0;
+                    const orderB = b.order !== undefined ? b.order : 0;
+                    if(orderA !== orderB) return orderA - orderB;
+                    const dateA = a.date ? a.date.toMillis() : 0;
+                    const dateB = b.date ? b.date.toMillis() : 0;
+                    return dateB - dateA;
+                });
+
                 let htmlAcheter = ""; let htmlCaddie = ""; let hasCaddie = false;
-                snapshot.forEach(doc => {
-                    const item = doc.data(); const isChecked = item.checked === true;
-                    let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" onclick="checkerCourse('${doc.id}', ${isChecked})"><div class="circle-check"></div><span style="font-size: 15px; font-weight:500;">${item.ingredient}</span></div>`;
+                docs.forEach(item => {
+                    const isChecked = item.checked === true;
+                    let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" draggable="true" data-id="${item.id}" data-order="${item.order || 0}" onclick="checkerCourse('${item.id}', ${isChecked})">
+                                        <div class="course-content">
+                                            <div class="circle-check"></div>
+                                            <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                                        </div>
+                                        <button class="btn-delete-course" onclick="supprimerCourseDoc(event, '${item.id}')">🗑️</button>
+                                    </div>`;
                     if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } else { htmlAcheter += itemHtml; }
                 });
-                let finalHtml = htmlAcheter;
-                if (hasCaddie) { finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div>` + htmlCaddie; finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`; }
+                
+                let finalHtml = htmlAcheter ? `<div id="courses-active-list">${htmlAcheter}</div>` : "";
+                if (hasCaddie) { finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div><div id="courses-caddie-list">${htmlCaddie}</div>`; finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`; }
                 if(!htmlAcheter && hasCaddie) { finalHtml = "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml; }
                 contentDiv.innerHTML = finalHtml;
+                
+                document.querySelectorAll('.course-item').forEach(item => {
+                    item.addEventListener('dragstart', handleDragStart, false);
+                    item.addEventListener('dragenter', handleDragEnter, false);
+                    item.addEventListener('dragover', handleDragOver, false);
+                    item.addEventListener('dragleave', handleDragLeave, false);
+                    item.addEventListener('drop', handleDrop, false);
+                    item.addEventListener('dragend', handleDragEnd, false);
+                });
             }, (error) => { contentDiv.innerHTML = "<p style='color:red;'>Erreur de synchronisation.</p>"; });
         }
 
