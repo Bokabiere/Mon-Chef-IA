@@ -169,6 +169,10 @@
         .btn-expand { background: var(--primary); margin-left: auto;} .btn-expand:hover { background: var(--primary-hover);}
         .btn-course { background: #0984e3; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 5px; }
         .courses-box { background: var(--bg-color); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .missing-ingredient-pill {
+            display: inline-flex; align-items: center; gap: 6px; background: #fff4d6; color: #b7791f; border: 1px solid #f4c95d; border-radius: 999px;
+            padding: 5px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; margin-left: 8px;
+        }
 
         .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
         .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 10000; align-items: center; gap: 15px; }
@@ -297,7 +301,7 @@
 .btn-delete-course { background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 5px; margin-left: 10px; transition: color 0.2s; }
 .btn-delete-course:hover { color: #ff4757; }
 .course-content { display: flex; align-items: center; flex: 1; }
-/* INGREDIENTS 2.0: Accordéons et Pastilles */
+/* INGREDIENTS 2.0: Accordï¿½ons et Pastilles */
 .category-details { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; overflow: hidden; }
 .category-summary { padding: 15px 20px; font-weight: bold; font-size: 16px; cursor: pointer; list-style: none; display: flex; align-items: center; background: var(--bg-color); transition: background 0.2s; }
 .category-summary:hover { background: var(--border); }

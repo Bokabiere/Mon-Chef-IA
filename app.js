@@ -1102,66 +1102,234 @@ Règles de formatage ABSOLUES :
             resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
         }
 
-        async function executerRequeteIA(prompt, titleTemplate, cacheKey = null) {
+        function normalizeRecipeResponse(text) {
+            return (text || "").replace(/\r/g, "").replace(/\u00A0/g, " ").trim();
+        }
+
+        function splitRecipeBlocks(rawText) {
+            const normalized = normalizeRecipeResponse(rawText);
+            if (!normalized) return [];
+
+            const explicitBlocks = normalized.split(/-{2,}\s*RECETTE\s*-{2,}/i).filter(block => block.trim().length > 50);
+            if (explicitBlocks.length > 0) {
+                return explicitBlocks.map(block => block.trim());
+            }
+
+            return [normalized];
+        }
+
+        function looksLikeRecipeBlock(block) {
+            const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+            const text = lines.join(' ');
+            if (lines.length < 3 || text.length < 80) return false;
+            const hasTitle = /^[^\n]{3,}$/.test(lines[0]);
+            const hasCookingSignal = /(ingrédients|ingredients|étapes|etapes|préparation|preparation|temps|min|courses)/i.test(text);
+            return hasTitle && hasCookingSignal;
+        }
+
+        function sanitizeRecipeBlock(block) {
+            return block
+                .replace(/\*\*|\*|#/g, '')
+                .replace(/\s+\n\s+/g, '\n')
+                .trim();
+        }
+
+        function normalizeTextForCheck(value) {
+            return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        }
+
+        function parseMissingIngredientsFromText(text) {
+            if (!text) return [];
+            const source = String(text).replace(/\r/g, '').trim();
+            const patterns = [
+                /(?:^|\n)\s*(?:COURSES|COURSE|INGRÉDIENTS MANQUANTS|INGREDIENTS MANQUANTS|À ACHETER|A ACHETER|IL VOUS MANQUE|MANQUE)\s*[:\-]?\s*(.+)/i,
+                /(?:^|\n)\s*(?:COURSES|COURSE|INGRÉDIENTS MANQUANTS|INGREDIENTS MANQUANTS|À ACHETER|A ACHETER|IL VOUS MANQUE|MANQUE)\s*[:\-]?\s*([\s\S]+)/i
+            ];
+
+            for (const pattern of patterns) {
+                const match = source.match(pattern);
+                if (!match) continue;
+                const rawList = match[1].replace(/\n+/g, ' ');
+                const items = rawList
+                    .split(/[;,]/)
+                    .map(item => item.replace(/^[\-•\*\s]+/, '').replace(/[.]+$/, '').trim())
+                    .filter(Boolean)
+                    .filter(item => !/^(?:et|ou|des|du|de la|un|une|de)$/i.test(item));
+                if (items.length) return items.slice(0, 8);
+            }
+
+            return [];
+        }
+
+        function buildMissingIngredientsBadge(items) {
+            if (!Array.isArray(items) || items.length === 0) return '';
+            const label = items.length > 1 ? `${items.length} ingrédients manquent` : '1 ingrédient manque';
+            const listText = items.map(item => item.replace(/'/g, "\\'")).join(', ');
+            return `<span class="missing-ingredient-pill" title="${listText}">⚠️ ${label}</span>`;
+        }
+
+        function getRegimeForbiddenKeywords() {
+            const forbidden = {
+                'végétarien': ['boeuf', 'veau', 'porc', 'poulet', 'canard', 'saumon', 'poisson', 'crevette', 'jambon', 'bacon', 'merguez', 'charcuterie'],
+                'vegetarien': ['boeuf', 'veau', 'porc', 'poulet', 'canard', 'saumon', 'poisson', 'crevette', 'jambon', 'bacon', 'merguez', 'charcuterie'],
+                'végétalien': ['boeuf', 'veau', 'porc', 'poulet', 'canard', 'saumon', 'poisson', 'crevette', 'jambon', 'bacon', 'merguez', 'charcuterie', 'lait', 'beurre', 'fromage', 'oeufs', 'oeuf', 'yaourt', 'crème', 'creme'],
+                'vegetalien': ['boeuf', 'veau', 'porc', 'poulet', 'canard', 'saumon', 'poisson', 'crevette', 'jambon', 'bacon', 'merguez', 'charcuterie', 'lait', 'beurre', 'fromage', 'oeufs', 'oeuf', 'yaourt', 'crème', 'creme'],
+                'sans gluten': ['blé', 'ble', 'farine de ble', 'farine de blé', 'pain', 'pate', 'pâtes', 'biscuit', 'brioche', 'seigle', 'orge'],
+                'sans lactose': ['lait', 'beurre', 'fromage', 'yaourt', 'creme', 'crème', 'chèvre', 'chevre'],
+                'sans porc': ['porc', 'jambon', 'bacon', 'merguez', 'grillade de porc'],
+                'vegan': ['lait', 'beurre', 'fromage', 'oeufs', 'oeuf', 'yaourt', 'creme', 'crème', 'poisson', 'poulet', 'boeuf', 'porc', 'merguez', 'jambon', 'bacon'],
+                'detox': ['friture', 'gras', 'beignet', 'burger', 'frite', 'sauce lourde']
+            };
+
+            const map = {};
+            memoireRegimes.forEach(regime => {
+                const key = normalizeTextForCheck(regime);
+                if (forbidden[key]) map[key] = forbidden[key];
+            });
+            return map;
+        }
+
+        function validateRecipeAgainstRestrictions(block) {
+            if (!block || !block.trim()) return false;
+            const text = normalizeTextForCheck(block);
+            if (text.length < 80) return false;
+
+            const allergenes = memoireAllergenes.map(a => normalizeTextForCheck(a));
+            for (const allergene of allergenes) {
+                if (!allergene) continue;
+                if (text.includes(allergene)) return false;
+            }
+
+            const regimeRules = getRegimeForbiddenKeywords();
+            for (const [regimeKey, forbiddenWords] of Object.entries(regimeRules)) {
+                if (forbiddenWords.some(word => text.includes(normalizeTextForCheck(word)))) {
+                    return false;
+                }
+            }
+
+            const ingredients = memoireIngredients.map(i => normalizeTextForCheck(i));
+            const hasAnyIngredients = ingredients.length > 0;
+            if (hasAnyIngredients) {
+                const mentionsSelectedIngredients = ingredients.filter(item => item && text.includes(item)).length;
+                if (mentionsSelectedIngredients === 0 && !/courses:|manque|à acheter|a acheter/i.test(block)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function filterValidRecipeBlocks(blocks) {
+            return blocks
+                .map(block => sanitizeRecipeBlock(block))
+                .filter(block => looksLikeRecipeBlock(block))
+                .filter(validateRecipeAgainstRestrictions);
+        }
+
+        async function executerRequeteIA(prompt, titleTemplate, cacheKey = null, retries = 2) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             const moteur = moteurIAActif;
             
             const requestContext = { prompt, titleTemplate, cacheKey, moteur };
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
-            try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { loader.style.display = "none"; showToast(`Clé API ${moteur} requise.`, "error"); return; }
-                
-                let texteReponse = "";
+            let lastError = null;
 
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
-                        method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
-                    const data = await rep.json();
-                    if(data.error) throw new Error(data.error.message);
-                    texteReponse = data.candidates[0].content.parts[0].text;
-                } 
-                else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
-                        method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                        body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'." }, { role: "user", content: prompt }] })
-                    });
-                    const data = await rep.json();
-                    if(data.error) throw new Error(data.error.message);
-                    texteReponse = data.choices[0].message.content;
-                }
-
-                loader.style.display = "none";
-
-                let blocs = texteReponse.split(/-{2,}\s*RECETTE\s*-{2,}/i).filter(b => b.trim().length > 50);
-                let mainTitle = titleTemplate.replace('{N}', blocs.length);
-                let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
-                
-                blocs.forEach((bloc, index) => {
-                    bloc = bloc.trim(); let iSaut = bloc.indexOf('\n');
-                    let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, '');
+            for (let attempt = 0; attempt <= retries; attempt++) {
+                try {
+                    const apiKey = await getApiKey(moteur);
+                    if (!apiKey) { loader.style.display = "none"; showToast(`Clé API ${moteur} requise.`, "error"); return; }
                     
-                    let coursesMatch = contenu.match(/COURSES:\s*(.*)/i);
-                    if (coursesMatch) {
-                        let items = coursesMatch[1].split(',').map(i => i.trim());
-                        let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
-                        items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
-                        coursesUI += `</ul></div>`; contenu = contenu.replace(coursesMatch[0], coursesUI);
-                    }
-                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
-                    let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
-                    let stepsArrayString = `['${rawSteps.join("','")}']`;
+                    let texteReponse = "";
 
-                    html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary>${titre}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
-                });
-                
-                resDiv.innerHTML = html;
-                if (typeof confetti === "function") confetti({ particleCount: 60, spread: 60, origin: { y: 0.9 }, zIndex: 100 });
-                if (cacheKey) setCache(cacheKey, html); 
-            } catch (e) { loader.style.display = "none"; afficherErreurIA(resDiv, e, moteur); }
+                    if (moteur === 'gemini') {
+                        const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        const data = await rep.json();
+                        if(data.error) throw new Error(data.error.message);
+                        texteReponse = data.candidates[0].content.parts[0].text;
+                    } 
+                    else if (moteur === 'mistral') {
+                        const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
+                            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                            body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'." }, { role: "user", content: prompt }] })
+                        });
+                        const data = await rep.json();
+                        if(data.error) throw new Error(data.error.message);
+                        texteReponse = data.choices[0].message.content;
+                    }
+
+                    const blocsBruts = splitRecipeBlocks(texteReponse);
+                    const blocs = filterValidRecipeBlocks(blocsBruts);
+
+                    if (blocs.length === 0) {
+                        throw new Error("La réponse de l'IA est incomplète, incohérente ou incompatible avec vos restrictions.");
+                    }
+
+                    loader.style.display = "none";
+
+                    const blocsAFaire = blocs.slice(0, 3);
+                    let mainTitle = titleTemplate.replace('{N}', blocsAFaire.length);
+                    let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
+                    
+                    blocsAFaire.forEach((bloc, index) => {
+                        let lines = bloc.split('\n').map(l => l.trim()).filter(Boolean);
+                        let titre = lines[0].replace(/^[^\wÀ-ÿ\d]+/, '').trim();
+                        let contenu = lines.slice(1).join('\n').trim();
+                        if (!titre) titre = `Recette ${index + 1}`;
+                        if (!contenu) contenu = bloc;
+
+                        let missingItems = parseMissingIngredientsFromText(contenu);
+                        if (missingItems.length === 0) missingItems = parseMissingIngredientsFromText(bloc);
+                        const missingBadge = buildMissingIngredientsBadge(missingItems);
+
+                        let coursesMatch = contenu.match(/COURSES\s*:\s*(.*)/i) || contenu.match(/(?:IL VOUS MANQUE|MANQUE|À ACHETER|A ACHETER)[^\n]*[:\-]?\s*(.*)/i);
+                        if (coursesMatch) {
+                            let items = parseMissingIngredientsFromText(coursesMatch[0]);
+                            if (items.length === 0) {
+                                items = (coursesMatch[1] || '').split(',').map(i => i.trim()).filter(Boolean);
+                            }
+                            if (items.length) {
+                                let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
+                                items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
+                                coursesUI += `</ul></div>`;
+                                contenu = contenu.replace(coursesMatch[0], coursesUI);
+                            }
+                        }
+                        if (missingItems.length && !coursesMatch) {
+                            const itemList = missingItems.map(item => `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`).join('');
+                            contenu += `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">${itemList}</ul></div>`;
+                        }
+                        contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+                        let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+                        if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
+                        let stepsArrayString = `['${rawSteps.join("','")}']`;
+
+                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><span>${titre}</span>${missingBadge}</summary><div class="recipe-content"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
+                    });
+                    
+                    resDiv.innerHTML = html;
+                    if (typeof confetti === "function") confetti({ particleCount: 60, spread: 60, origin: { y: 0.9 }, zIndex: 100 });
+                    if (cacheKey) setCache(cacheKey, html);
+                    return;
+                } catch (e) {
+                    lastError = e;
+                    if (attempt < retries) {
+                        showToast("La réponse IA est incomplète, nouvelle tentative...", "info", 2500);
+                        continue;
+                    }
+                    loader.style.display = "none";
+                    afficherErreurIA(resDiv, e, moteur);
+                    return;
+                }
+            }
+
+            if (lastError) {
+                loader.style.display = "none";
+                afficherErreurIA(resDiv, lastError, moteur);
+            }
         }
 
         async function regenererRecette(btn) {
