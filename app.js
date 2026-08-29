@@ -17,6 +17,7 @@ const firebaseConfig = {
         let moteurIAActif = "gemini";
         let unsubscribeCourses = null;
         let isAdminUser = false;
+        let ingredientPrices = {}; // Dictionnaire des prix des ingrédients
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -325,7 +326,22 @@ const firebaseConfig = {
             return `\nPRÉFÉRENCE ALIMENTAIRE PERMANENTE DE L'UTILISATEUR (à respecter dans toutes les recettes) : ${memoireRegimes.join(", ")}.`;
         }
 
+        async function loadPrices() {
+            try {
+                const response = await fetch('./prix_ingredients.json');
+                if (response.ok) {
+                    ingredientPrices = await response.json();
+                    console.log(`✅ ${Object.keys(ingredientPrices).length} prix chargés avec succès`);
+                } else {
+                    console.warn('⚠️ Fichier prix_ingredients.json non trouvé');
+                }
+            } catch (e) {
+                console.warn('⚠️ Erreur lors du chargement des prix:', e.message);
+            }
+        }
+
         async function chargerInterfaceBase() {
+            await loadPrices();
             try {
                 const user = firebase.auth().currentUser;
                 if(user) {
@@ -535,11 +551,13 @@ const firebaseConfig = {
                     const tag = document.createElement('div');
                     tag.className = 'ingredient-tag' + (isChecked ? ' active' : '');
                     
+                    const priceHtml = ingredientPrices[ing] ? ` <span style="font-size:11px; opacity:0.7; margin-left:6px;">${ingredientPrices[ing].prix.toFixed(2)}€</span>` : '';
+                    
                     if (cat === 'Mes Ajouts') {
                         let safeIng = ing.replace(/'/g, "\\\'");
-                        tag.innerHTML = `${icone} ${ing} <span class="delete-tag-btn" onclick="supprimerIngredientPersonnalise(event, '${safeIng}')">✖</span>`;
+                        tag.innerHTML = `${icone} ${ing} ${priceHtml}<span class="delete-tag-btn" onclick="supprimerIngredientPersonnalise(event, '${safeIng}')">✖</span>`;
                     } else {
-                        tag.innerHTML = `${icone} ${ing}`;
+                        tag.innerHTML = `${icone} ${ing}${priceHtml}`;
                     }
 
                     tag.onclick = function() {
@@ -966,30 +984,54 @@ const firebaseConfig = {
                 });
 
                 let htmlAcheter = ""; let htmlCaddie = ""; let hasCaddie = false;
+                let totalAcheter = 0; let totalCaddie = 0;
+                
                 docs.forEach(item => {
                     const isChecked = item.checked === true;
+                    const price = ingredientPrices[item.ingredient]?.prix || 0;
+                    const priceHtml = price > 0 ? `<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${price.toFixed(2)}€</div>` : '';
+                    
                     let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" draggable="true" data-id="${item.id}" data-order="${item.order || 0}" onclick="checkerCourse('${item.id}', ${isChecked})">
                                         <div class="course-content">
                                             <div class="circle-check"></div>
-                                            <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                                            <div>
+                                                <span style="font-size: 15px; font-weight:500;">${item.ingredient}</span>
+                                                ${priceHtml}
+                                            </div>
                                         </div>
                                         <button class="btn-delete-course" onclick="supprimerCourseDoc(event, '${item.id}')">🗑️</button>
                                     </div>`;
-                    if (isChecked) { htmlCaddie += itemHtml; hasCaddie = true; } else { htmlAcheter += itemHtml; }
+                    
+                    if (isChecked) { 
+                        htmlCaddie += itemHtml; 
+                        hasCaddie = true;
+                        totalCaddie += price;
+                    } else { 
+                        htmlAcheter += itemHtml;
+                        totalAcheter += price;
+                    }
                 });
                 
                 const pendingCount = docs.filter(item => item.checked !== true).length;
                 const caddieCount = docs.filter(item => item.checked === true).length;
+                const totalPrice = totalAcheter + totalCaddie;
+                
                 const summaryHtml = `
                     <div class="courses-summary">
                         <div>
                             <span class="courses-summary-label">À acheter</span>
                             <strong>${pendingCount}</strong>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${totalAcheter.toFixed(2)}€</div>
                         </div>
                         <div>
                             <span class="courses-summary-label">Caddie</span>
                             <strong>${caddieCount}</strong>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${totalCaddie.toFixed(2)}€</div>
                         </div>
+                    </div>
+                    <div style="background: linear-gradient(135deg, rgba(16,172,132,0.06), rgba(76,175,80,0.04)); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center;">
+                        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">COÛT TOTAL</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #1e8e5a;">${totalPrice.toFixed(2)}€</div>
                     </div>
                 `;
 
