@@ -18,38 +18,6 @@ const firebaseConfig = {
         let unsubscribeCourses = null;
         let isAdminUser = false;
         let ingredientPrices = {}; // Dictionnaire des prix des ingrédients
-let config = {}; // Configuration de l'application
-
-async function loadConfig() {
-    try {
-        const response = await fetch('config.prod.json');
-        if (response.ok) {
-            config = await response.json();
-            console.log('✅ Configuration de production chargée avec succès');
-        } else {
-            console.warn('⚠️ Fichier config.prod.json non trouvé, utilisation des valeurs par défaut');
-            config = { pricing_file: './prix_ingredients.json' };
-        }
-    } catch (e) {
-        console.warn('⚠️ Erreur lors du chargement de la configuration:', e.message);
-        config = { pricing_file: './prix_ingredients.json' };
-    }
-}
-
-async function loadPrices() {
-    try {
-        const pricingFile = config.pricing_file || './prix_ingredients.json';
-        const response = await fetch(pricingFile);
-        if (response.ok) {
-            ingredientPrices = await response.json();
-            console.log(`✅ ${Object.keys(ingredientPrices).length} prix chargés avec succès`);
-        } else {
-            console.warn('⚠️ Fichier prix_ingredients.json non trouvé');
-        }
-    } catch (e) {
-        console.warn('⚠️ Erreur lors du chargement des prix:', e.message);
-    }
-}
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -358,8 +326,21 @@ async function loadPrices() {
             return `\nPRÉFÉRENCE ALIMENTAIRE PERMANENTE DE L'UTILISATEUR (à respecter dans toutes les recettes) : ${memoireRegimes.join(", ")}.`;
         }
 
+        async function loadPrices() {
+            try {
+                const response = await fetch('./prix_ingredients.json');
+                if (response.ok) {
+                    ingredientPrices = await response.json();
+                    console.log(`✅ ${Object.keys(ingredientPrices).length} prix chargés avec succès`);
+                } else {
+                    console.warn('⚠️ Fichier prix_ingredients.json non trouvé');
+                }
+            } catch (e) {
+                console.warn('⚠️ Erreur lors du chargement des prix:', e.message);
+            }
+        }
+
         async function chargerInterfaceBase() {
-            await loadConfig();
             await loadPrices();
             try {
                 const user = firebase.auth().currentUser;
