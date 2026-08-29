@@ -169,10 +169,16 @@
         .btn-expand { background: var(--primary); margin-left: auto;} .btn-expand:hover { background: var(--primary-hover);}
         .btn-course { background: #0984e3; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 5px; }
         .courses-box { background: var(--bg-color); border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .add-all-courses-btn { margin-top: 0; background: #00b894; }
         .missing-ingredient-pill {
             display: inline-flex; align-items: center; gap: 6px; background: #fff4d6; color: #b7791f; border: 1px solid #f4c95d; border-radius: 999px;
             padding: 5px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; margin-left: 8px;
         }
+        .recipe-status-badge {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; margin-left: 10px;
+        }
+        .recipe-status-ready { background: rgba(39, 174, 96, 0.12); color: #1e8e5a; border: 1px solid rgba(39, 174, 96, 0.25); }
+        .recipe-status-missing { background: rgba(255, 186, 59, 0.12); color: #b7791f; border: 1px solid rgba(255, 186, 59, 0.3); }
 
         .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
         .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 10000; align-items: center; gap: 15px; }

@@ -698,34 +698,95 @@ const firebaseConfig = {
         }
 
         async function ajouterCourse(btn, ingredient) {
-            btn.innerText = "⏳"; btn.disabled = true;
-            try { 
-                await userDb.collection("courses").add({ ingredient: ingredient, checked: false, date: firebase.firestore.FieldValue.serverTimestamp() }); 
-                btn.innerText = "✅"; btn.style.background = "#27ae60"; 
-                const navBtn = document.getElementById('btnNavCourses'); navBtn.classList.remove('animate-cart'); void navBtn.offsetWidth; navBtn.classList.add('animate-cart');
-            } catch (e) { btn.innerText = "❌"; }
+            const ingredientNom = formatCourseName(ingredient || '');
+            if (!ingredientNom) return;
+
+            try {
+                const snapshot = await userDb.collection("courses").get();
+                const dejaPresent = snapshot.docs.some(doc => normalizeCourseValue(doc.data().ingredient) === normalizeCourseValue(ingredientNom));
+                if (dejaPresent) {
+                    if (btn) {
+                        btn.innerText = "✓ Déjà";
+                        btn.disabled = true;
+                        btn.style.background = "#636e72";
+                    }
+                    showToast(`"${ingredientNom}" est déjà dans la liste de courses.`, "info");
+                    return;
+                }
+
+                if (btn) { btn.innerText = "⏳"; btn.disabled = true; }
+                await userDb.collection("courses").add({
+                    ingredient: ingredientNom,
+                    checked: false,
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    order: Date.now()
+                });
+
+                if (btn) { btn.innerText = "✅"; btn.style.background = "#27ae60"; }
+                showToast(`"${ingredientNom}" ajouté à la liste de courses ✅`, "success");
+                const navBtn = document.getElementById('btnNavCourses');
+                if (navBtn) {
+                    navBtn.classList.remove('animate-cart'); void navBtn.offsetWidth; navBtn.classList.add('animate-cart');
+                }
+            } catch (e) {
+                if (btn) {
+                    btn.innerText = "❌";
+                    btn.disabled = false;
+                }
+                showToast("Erreur lors de l’ajout à la liste.", "error");
+            }
         }
 
-        
-        window.ajouterCourseManuelle = function() {
+        window.ajouterTousIngredientsManquants = async function(container) {
+            if (!container) return;
+            const boutons = Array.from(container.querySelectorAll('.missing-add-btn'));
+            const items = boutons
+                .map(btn => btn.dataset.ingredient)
+                .filter(Boolean)
+                .filter((item, index, arr) => arr.findIndex(existing => normalizeCourseValue(existing) === normalizeCourseValue(item)) === index);
+
+            if (!items.length) return;
+
+            for (const item of items) {
+                const btn = container.querySelector(`.missing-add-btn[data-ingredient="${item.replace(/"/g, '\\"')}"]`);
+                if (btn && !btn.disabled) {
+                    await ajouterCourse(btn, item);
+                }
+            }
+        };
+
+        window.ajouterCourseManuelle = async function() {
             const input = document.getElementById('courseInput');
             if(!input) return;
             const texte = input.value.trim();
-            if(texte) {
+            if(!texte) return;
+
+            try {
+                const snapshot = await userDb.collection("courses").get();
+                const dejaPresent = snapshot.docs.some(doc => normalizeCourseValue(doc.data().ingredient) === normalizeCourseValue(texte));
+                if (dejaPresent) {
+                    showToast(`"${texte}" est déjà dans la liste de courses.`, "info");
+                    input.value = '';
+                    return;
+                }
+
                 const items = document.querySelectorAll('.course-item');
                 let maxOrder = 0;
                 items.forEach(el => {
                     const order = parseInt(el.dataset.order || '0');
                     if(order > maxOrder) maxOrder = order;
                 });
-                
-                userDb.collection("courses").add({
-                    ingredient: texte.charAt(0).toUpperCase() + texte.slice(1),
+
+                await userDb.collection("courses").add({
+                    ingredient: formatCourseName(texte),
                     date: firebase.firestore.FieldValue.serverTimestamp(),
                     checked: false,
                     order: maxOrder + 1
                 });
                 input.value = '';
+                showToast(`"${formatCourseName(texte)}" ajouté à la liste ✅`, "success");
+            } catch (e) {
+                showToast("Erreur lors de l’ajout manuel.", "error");
             }
         };
 
@@ -1138,6 +1199,23 @@ Règles de formatage ABSOLUES :
             return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         }
 
+        function normalizeCourseValue(value) {
+            return normalizeTextForCheck(value).replace(/[\s\-_]+/g, ' ');
+        }
+
+        function formatCourseName(value) {
+            return String(value || '').trim().replace(/\s+/g, ' ').replace(/^\w/, c => c.toUpperCase());
+        }
+
+        function getRecipeStateFromText(text) {
+            const missingItems = parseMissingIngredientsFromText(text);
+            if (!missingItems.length) {
+                return { missingItems: [], badge: '<span class="recipe-status-badge recipe-status-ready">🟢 Prête</span>', ready: true };
+            }
+            const label = missingItems.length === 1 ? '1 ingrédient manquant' : `${missingItems.length} ingrédients manquants`;
+            return { missingItems, badge: `<span class="recipe-status-badge recipe-status-missing">🟡 ${label}</span>`, ready: false };
+        }
+
         function parseMissingIngredientsFromText(text) {
             if (!text) return [];
             const source = String(text).replace(/\r/g, '').trim();
@@ -1274,14 +1352,18 @@ Règles de formatage ABSOLUES :
                     let mainTitle = titleTemplate.replace('{N}', blocsAFaire.length);
                     let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
                     
-                    blocsAFaire.forEach((bloc, index) => {
+                    const blocsTriees = blocsAFaire
+                        .map((bloc, index) => ({ bloc, index, state: getRecipeStateFromText(bloc) }))
+                        .sort((a, b) => a.state.missingItems.length - b.state.missingItems.length);
+
+                    blocsTriees.forEach(({ bloc, index, state }) => {
                         let lines = bloc.split('\n').map(l => l.trim()).filter(Boolean);
                         let titre = lines[0].replace(/^[^\wÀ-ÿ\d]+/, '').trim();
                         let contenu = lines.slice(1).join('\n').trim();
                         if (!titre) titre = `Recette ${index + 1}`;
                         if (!contenu) contenu = bloc;
 
-                        let missingItems = parseMissingIngredientsFromText(contenu);
+                        let missingItems = state.missingItems.length ? state.missingItems : parseMissingIngredientsFromText(contenu);
                         if (missingItems.length === 0) missingItems = parseMissingIngredientsFromText(bloc);
                         const missingBadge = buildMissingIngredientsBadge(missingItems);
 
@@ -1292,15 +1374,17 @@ Règles de formatage ABSOLUES :
                                 items = (coursesMatch[1] || '').split(',').map(i => i.trim()).filter(Boolean);
                             }
                             if (items.length) {
-                                let coursesUI = `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">`;
-                                items.forEach(item => { coursesUI += `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`; });
+                                const uniqueItems = [...new Map(items.map(item => [normalizeCourseValue(item), item])).values()];
+                                let coursesUI = `<div class="courses-box"><div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px;"><b>🛒 Il vous manque :</b><button class="btn-course add-all-courses-btn" onclick="ajouterTousIngredientsManquants(this.closest('.courses-box'))">➕ Ajouter tout</button></div><ul style="padding-left: 20px; margin-top:10px;">`;
+                                uniqueItems.forEach(item => { coursesUI += `<li>${item} <button class="btn-course missing-add-btn" data-ingredient="${item.replace(/"/g, '&quot;')}" onclick="ajouterCourse(this, this.dataset.ingredient)">➕ Ajouter</button></li>`; });
                                 coursesUI += `</ul></div>`;
                                 contenu = contenu.replace(coursesMatch[0], coursesUI);
                             }
                         }
                         if (missingItems.length && !coursesMatch) {
-                            const itemList = missingItems.map(item => `<li>${item} <button class="btn-course" onclick="ajouterCourse(this, '${item.replace(/'/g, "\\'")}')">➕ Ajouter</button></li>`).join('');
-                            contenu += `<div class="courses-box"><b>🛒 Il vous manque :</b><ul style="padding-left: 20px; margin-top:10px;">${itemList}</ul></div>`;
+                            const uniqueItems = [...new Map(missingItems.map(item => [normalizeCourseValue(item), item])).values()];
+                            const itemList = uniqueItems.map(item => `<li>${item} <button class="btn-course missing-add-btn" data-ingredient="${item.replace(/"/g, '&quot;')}" onclick="ajouterCourse(this, this.dataset.ingredient)">➕ Ajouter</button></li>`).join('');
+                            contenu += `<div class="courses-box"><div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;"><b>🛒 Il vous manque :</b><button class="btn-course add-all-courses-btn" onclick="ajouterTousIngredientsManquants(this.closest('.courses-box'))">➕ Ajouter tout</button></div><ul style="padding-left: 20px; margin-top:10px;">${itemList}</ul></div>`;
                         }
                         contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
                         let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
