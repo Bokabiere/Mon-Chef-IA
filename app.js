@@ -970,7 +970,7 @@ const firebaseConfig = {
 
         async function genererNouveauPlanning() {
             const contentDiv = document.getElementById('planningContent');
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            const checked = memoireIngredients;
             if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
             const moteur = moteurIAActif;
@@ -1007,7 +1007,7 @@ const firebaseConfig = {
 
         async function relancerJour(jour, platActuel) {
             const contentDiv = document.getElementById('planningContent');
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            const checked = memoireIngredients;
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
             const moteur = moteurIAActif;
 
@@ -1060,7 +1060,7 @@ const firebaseConfig = {
         }
 
         function lancerRecetteRapide() {
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            const checked = memoireIngredients;
             if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
             const personnes = document.getElementById('personnes').value;
             showToast("⚡ Recherche de recettes ultra rapides (15 min max) !", "info");
@@ -1072,7 +1072,7 @@ const firebaseConfig = {
         }
 
         async function chercherRecettesIA(optionsForcees = null) {
-            const checked = Array.from(document.querySelectorAll('.chk-ingredient:checked')).map(c => c.value);
+            const checked = memoireIngredients;
             if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
             
             const humeur = optionsForcees ? optionsForcees.humeur : document.getElementById('humeur').value;
