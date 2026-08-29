@@ -309,3 +309,5 @@
 .ingredient-tag { display: inline-flex; align-items: center; padding: 8px 16px; background: var(--bg-color); border: 1px solid var(--border); border-radius: 20px; font-size: 14px; font-weight: 500; color: var(--text-main); cursor: pointer; transition: all 0.2s; user-select: none; }
 .ingredient-tag:hover { border-color: var(--primary); transform: translateY(-2px); }
 .ingredient-tag.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.delete-tag-btn { margin-left: 8px; color: #ff6b6b; font-size: 14px; font-weight: bold; background: rgba(255,107,107,0.15); border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.delete-tag-btn:hover { background: #ff6b6b; color: white; transform: scale(1.1); }

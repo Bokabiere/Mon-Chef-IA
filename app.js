@@ -423,6 +423,30 @@ const firebaseConfig = {
             }
         };;
 
+        
+        window.supprimerIngredientPersonnalise = async function(event, nom) {
+            event.stopPropagation();
+            if(!globalIngredientsList['Mes Ajouts']) return;
+            
+            globalIngredientsList['Mes Ajouts'] = globalIngredientsList['Mes Ajouts'].filter(i => i !== nom);
+            
+            if(memoireIngredients.includes(nom)) {
+                memoireIngredients = memoireIngredients.filter(i => i !== nom);
+                syncCloud('ingredients', memoireIngredients);
+                updateButtonLabel();
+            }
+            
+            try {
+                const docRef = userDb.collection("userData").doc("customIngredients");
+                await docRef.update({
+                    items: firebase.firestore.FieldValue.arrayRemove(nom)
+                });
+            } catch(e) { console.error("Erreur suppression:", e); }
+            
+            afficherIngredientsGauche();
+            showToast(`"${nom}" supprimé`, "success");
+        };
+
         window.ajouterIngredientPersonnalise = async function(nom) {
             nom = nom.charAt(0).toUpperCase() + nom.slice(1);
             if(!globalIngredientsList['Mes Ajouts']) globalIngredientsList['Mes Ajouts'] = [];
@@ -504,7 +528,14 @@ const firebaseConfig = {
                     const icone = iconesIngredients[ing] || "🍽️";
                     const tag = document.createElement('div');
                     tag.className = 'ingredient-tag' + (isChecked ? ' active' : '');
-                    tag.innerHTML = `${icone} ${ing}`;
+                    
+                    if (cat === 'Mes Ajouts') {
+                        let safeIng = ing.replace(/'/g, "\\\'");
+                        tag.innerHTML = `${icone} ${ing} <span class="delete-tag-btn" onclick="supprimerIngredientPersonnalise(event, '${safeIng}')">✖</span>`;
+                    } else {
+                        tag.innerHTML = `${icone} ${ing}`;
+                    }
+
                     tag.onclick = function() {
                         toggleIngredient(ing, this);
                     };
