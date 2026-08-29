@@ -367,37 +367,47 @@ const firebaseConfig = {
             "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
         };
 
-        window.filtrerIngredients = function(terme) {
-            const resDiv = document.getElementById('autocompleteResults');
-            const originalTerm = terme.trim();
-            terme = originalTerm.toLowerCase();
-            if(!terme) { resDiv.style.display = 'none'; return; }
-            let matches = [];
-            let exactMatchFound = false;
-            for(const cat in globalIngredientsList) {
-                globalIngredientsList[cat].forEach(ing => {
-                    if(ing.toLowerCase() === terme) exactMatchFound = true;
-                    if(ing.toLowerCase().includes(terme)) matches.push({ nom: ing, cat: cat });
+                window.filtrerIngredients = function(terme) {
+            try {
+                const resDiv = document.getElementById('autocompleteResults');
+                const originalTerm = terme.trim();
+                terme = originalTerm.toLowerCase();
+                if(!terme) { resDiv.style.display = 'none'; return; }
+                let matches = [];
+                let exactMatchFound = false;
+                for(const cat in globalIngredientsList) {
+                    if (Array.isArray(globalIngredientsList[cat])) {
+                        globalIngredientsList[cat].forEach(ing => {
+                            if(typeof ing === 'string') {
+                                if(ing.toLowerCase() === terme) exactMatchFound = true;
+                                if(ing.toLowerCase().includes(terme)) matches.push({ nom: ing, cat: cat });
+                            }
+                        });
+                    }
+                }
+                
+                let html = "";
+                matches.forEach(m => {
+                    const icone = iconesIngredients[m.nom] || "🍽️";
+                    let safeNom = m.nom.replace(/'/g, "\\\'");
+                    html += `<div class="autocomplete-item" onclick="selectionnerIngredientAutocomplete('${safeNom}')">${icone} <b>${m.nom}</b> <span style="font-size:10px; color:var(--text-muted);">(${m.cat})</span></div>`;
                 });
-            }
-            
-            let html = "";
-            matches.forEach(m => {
-                const icone = iconesIngredients[m.nom] || "🍽️";
-                html += `<div class="autocomplete-item" onclick="selectionnerIngredientAutocomplete('${m.nom.replace(/'/g, "\'")}')">${icone} <b>${m.nom}</b> <span style="font-size:10px; color:var(--text-muted);">(${m.cat})</span></div>`;
-            });
 
-            if(!exactMatchFound && originalTerm.length > 1) {
-                html += `<div class="autocomplete-item" style="color:var(--primary); font-weight:bold; justify-content:center;" onclick="ajouterIngredientPersonnalise('${originalTerm.replace(/'/g, "\'")}')">➕ Ajouter "${originalTerm}" à mon frigo</div>`;
-            }
+                if(!exactMatchFound && originalTerm.length > 1) {
+                    let safeTerm = originalTerm.replace(/'/g, "\\\'");
+                    html += `<div class="autocomplete-item" style="color:var(--primary); font-weight:bold; justify-content:center;" onclick="ajouterIngredientPersonnalise('${safeTerm}')">➕ Ajouter "${originalTerm}" à mon frigo</div>`;
+                }
 
-            if(html === "") {
-                resDiv.style.display = 'none';
-            } else {
-                resDiv.innerHTML = html;
-                resDiv.style.display = 'block';
+                if(html === "") {
+                    resDiv.style.display = 'none';
+                } else {
+                    resDiv.innerHTML = html;
+                    resDiv.style.display = 'block';
+                }
+            } catch(e) {
+                console.error("Erreur filtrerIngredients:", e);
             }
-        };
+        };;
 
         window.ajouterIngredientPersonnalise = async function(nom) {
             nom = nom.charAt(0).toUpperCase() + nom.slice(1);
