@@ -361,6 +361,20 @@ const firebaseConfig = {
             }
         }
 
+        
+        window.updateButtonLabel = function() {
+            const btn = document.getElementById('btnCuisinerFrigo');
+            if(btn) {
+                const n = memoireIngredients.length;
+                btn.innerText = n > 0 ? `✨ Cuisiner avec ces ingrédients (${n})` : "✨ Cuisiner avec ces ingrédients";
+            }
+            const oldBtn = document.getElementById('btnGenererRecettes');
+            if(oldBtn) {
+                const n = memoireIngredients.length;
+                oldBtn.innerText = n > 0 ? `✨ Inventer mes recettes (${n})` : "✨ Inventer mes recettes";
+            }
+        };
+
         const iconesIngredients = {
             "Tomate": "🍅", "Carotte": "🥕", "Courgette": "🥒", "Aubergine": "🍆", "Oignon": "🧅", "Ail": "🧄",
             "Oeufs": "🥚", "Poulet": "🍗", "Boeuf haché": "🥩", "Pâtes": "🍝", "Riz blanc": "🍚", "Pomme de terre": "🥔",
