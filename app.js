@@ -367,6 +367,81 @@ const firebaseConfig = {
             "Sauce tomate": "🥫", "Sauce soja": "🍾", "Moutarde": "🟡", "Fromage": "🧀", "Lait": "🥛"
         };
 
+        window.filtrerIngredients = function(terme) {
+            const resDiv = document.getElementById('autocompleteResults');
+            const originalTerm = terme.trim();
+            terme = originalTerm.toLowerCase();
+            if(!terme) { resDiv.style.display = 'none'; return; }
+            let matches = [];
+            let exactMatchFound = false;
+            for(const cat in globalIngredientsList) {
+                globalIngredientsList[cat].forEach(ing => {
+                    if(ing.toLowerCase() === terme) exactMatchFound = true;
+                    if(ing.toLowerCase().includes(terme)) matches.push({ nom: ing, cat: cat });
+                });
+            }
+            
+            let html = "";
+            matches.forEach(m => {
+                const icone = iconesIngredients[m.nom] || "🍽️";
+                html += `<div class="autocomplete-item" onclick="selectionnerIngredientAutocomplete('${m.nom.replace(/'/g, "\'")}')">${icone} <b>${m.nom}</b> <span style="font-size:10px; color:var(--text-muted);">(${m.cat})</span></div>`;
+            });
+
+            if(!exactMatchFound && originalTerm.length > 1) {
+                html += `<div class="autocomplete-item" style="color:var(--primary); font-weight:bold; justify-content:center;" onclick="ajouterIngredientPersonnalise('${originalTerm.replace(/'/g, "\'")}')">➕ Ajouter "${originalTerm}" à mon frigo</div>`;
+            }
+
+            if(html === "") {
+                resDiv.style.display = 'none';
+            } else {
+                resDiv.innerHTML = html;
+                resDiv.style.display = 'block';
+            }
+        };
+
+        window.ajouterIngredientPersonnalise = async function(nom) {
+            nom = nom.charAt(0).toUpperCase() + nom.slice(1);
+            if(!globalIngredientsList['Mes Ajouts']) globalIngredientsList['Mes Ajouts'] = [];
+            if(!globalIngredientsList['Mes Ajouts'].includes(nom)) {
+                globalIngredientsList['Mes Ajouts'].push(nom);
+                
+                try {
+                    const docRef = userDb.collection("userData").doc("customIngredients");
+                    await docRef.set({
+                        items: firebase.firestore.FieldValue.arrayUnion(nom)
+                    }, { merge: true });
+                } catch(e) { console.error("Erreur save custom:", e); }
+            }
+            
+            if(!memoireIngredients.includes(nom)) memoireIngredients.push(nom);
+            syncCloud('ingredients', memoireIngredients);
+            updateButtonLabel();
+            afficherIngredientsGauche();
+            
+            document.getElementById('ingredientSearch').value = '';
+            document.getElementById('autocompleteResults').style.display = 'none';
+            showToast(nom + " ajouté au frigo !", "success");
+        };
+
+        window.selectionnerIngredientAutocomplete = function(nom) {
+            if (!memoireIngredients.includes(nom)) {
+                memoireIngredients.push(nom);
+                syncCloud('ingredients', memoireIngredients);
+                updateButtonLabel();
+                afficherIngredientsGauche();
+            }
+            document.getElementById('ingredientSearch').value = "";
+            document.getElementById('autocompleteResults').style.display = 'none';
+        };
+
+        window.decocherTout = function() {
+            memoireIngredients = [];
+            syncCloud('ingredients', memoireIngredients);
+            updateButtonLabel();
+            afficherIngredientsGauche();
+        };
+
+
                 function afficherIngredientsGauche() {
             const container = document.getElementById('categoriesContainer');
             if(!container) return;
