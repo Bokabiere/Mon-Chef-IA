@@ -1286,7 +1286,7 @@ const firebaseConfig = {
                         <div class="meal-actions">
                             <button class="btn-action" style="background:#ff7675; padding: 4px; font-size: 11px; flex:0.3;" onclick="retirerRepas('${jour}', '${repas}')" title="Retirer">🗑️</button>
                             <button class="btn-action" style="background:#6c5ce7; padding: 4px; font-size: 11px; flex:0.3;" onclick="relancerRepasPlanning('${jour}', '${repas}', '${safePlat}')" title="Autre plat">🎲</button>
-                            <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}')">🍳 Cuisiner</button>
+                            <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}', '${jour}', '${repas}')">🍳 Cuisiner</button>
                         </div>
                     </div>`;
                 } else {
@@ -1423,27 +1423,96 @@ const firebaseConfig = {
             return `<div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:10px;"><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>` + html;
         }
 
-        async function cuisinerCePlat(nomDuPlat) {
+        window.cuisinerCePlat = async function(nomDuPlat, jour, repas) {
             document.getElementById('modalPlanning').style.display = 'none';
-            const personnes = document.getElementById('personnes').value;
-            const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
-            const moteur = moteurIAActif;
+            const resDiv = document.getElementById('resultatDiv'); 
+            const loader = document.getElementById('loader');
             
-            const cacheKey = `plat_${nomDuPlat}_${personnes}_${moteur}`.replace(/\s+/g, '_').toLowerCase();
+            // Check if we already have the detailed recipe saved in the planning
+            let docSnap = null;
+            if (jour && repas) {
+                docSnap = await userDb.collection("planning").doc("semaine").get();
+                if (docSnap.exists) {
+                    let data = docSnap.data();
+                    if (data[jour] && data[jour][repas] && data[jour][repas].recetteText) {
+                        // Display the saved recipe instantly
+                        switchView('results');
+                        resDiv.innerHTML = data[jour][repas].recetteText;
+                        return;
+                    }
+                }
+            }
+
+            const personnes = document.getElementById('personnes').value;
+            const moteur = moteurIAActif;
             switchView('results');
 
             const historique = await getHistoriquePrompt();
             const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
-            1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
-            const titleTemplate = `Voici la recette pour : ${nomDuPlat} 🍽️`;
+            IMPORTANT : Donne UNIQUEMENT la recette, sans séparateur, avec un émoji et le titre au début. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". Durées en chiffres. Pas de blabla.`;
 
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
-            window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
+            resDiv.innerHTML = ""; 
+            loader.style.display = "block"; 
+            
+            try {
+                const apiKey = await getApiKey(moteur);
+                if (!apiKey) { loader.style.display = "none"; showToast(`Clé API requise.`, "error"); return; }
+                
+                let texte = "";
+                if (moteur === 'gemini') {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                } else if (moteur === 'mistral') {
+                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
+                    const data = await rep.json(); texte = data.choices[0].message.content;
+                }
 
-            const cachedData = getCache(cacheKey);
-            if (cachedData) { resDiv.innerHTML = garantirBoutonRegenerer(cachedData); showToast("⚡ Recette chargée depuis le cache !", "success"); return; }
-            resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
-        }
+                loader.style.display = "none";
+                let safeTitre = nomDuPlat.replace(/'/g, "\\'");
+                
+                // Construct a simple view for this specific recipe
+                let contenuHtml = `<div class="recipe-card" open style="padding:15px; display:block;">
+                    <h3 style="margin-top:0;">🍽️ ${nomDuPlat}</h3>
+                    <div class="text-view">${enrichirTexteChrono(texte.trim().replace(/\n/g, '<br>'))}</div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
+                        <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
+                    </div>
+                </div>`;
+                
+                resDiv.innerHTML = contenuHtml;
+
+            } catch(e) {
+                loader.style.display = "none";
+                const { titre, detail } = messageErreurIA(e, moteur); 
+                showToast(`${titre} ${detail}`, "error", 5000); 
+            }
+        };
+
+        window.validerRecettePlanning = async function(btn, nomDuPlat, jour, repas) {
+            const card = btn.closest('.recipe-card');
+            // Remove the buttons before saving to not duplicate them when viewing
+            btn.parentElement.remove();
+            
+            // Add a small "Sauvegardé" badge or normal layout
+            let htmlToSave = card.outerHTML;
+            
+            try {
+                const docSnap = await userDb.collection("planning").doc("semaine").get();
+                let currentData = docSnap.exists ? docSnap.data() : {};
+                if(!currentData[jour]) currentData[jour] = {};
+                if(!currentData[jour][repas]) currentData[jour][repas] = { plat: nomDuPlat, done: false };
+                
+                currentData[jour][repas].recetteText = htmlToSave;
+                
+                await userDb.collection("planning").doc("semaine").set(currentData);
+                showToast("✅ Recette détaillée sauvegardée au planning !", "success");
+                chargerPlanning(); // Reload the planning in background
+            } catch(e) {
+                console.error(e);
+                showToast("Erreur lors de la sauvegarde.", "error");
+            }
+        };
 
         function lancerRecetteRapide() {
             const checked = memoireIngredients;
