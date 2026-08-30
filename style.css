@@ -375,3 +375,43 @@
 .courses-summary > div { display: flex; flex-direction: column; gap: 4px; }
 .courses-summary-label { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .courses-summary strong { font-size: 28px; line-height: 1; color: var(--primary); }
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 600px) {
+    /* Modals & Layouts */
+    .modal-content { max-width: 95vw !important; margin: 10px !important; max-height: 95vh !important; }
+    .multi-timer-widget { width: calc(100vw - 40px) !important; bottom: 70px !important; right: 20px !important; }
+    
+    /* Rows to columns for better stacking on small screens */
+    .row { flex-direction: column !important; gap: 10px !important; }
+    
+    /* Action Buttons stack */
+    .action-buttons-group { flex-direction: column !important; }
+    .action-buttons-group > button { width: 100% !important; margin-bottom: 5px !important; flex: unset !important; }
+    
+    /* Course inputs wrap */
+    .courses-input-container { flex-wrap: wrap !important; }
+    .courses-input-container > div { min-width: 100% !important; }
+    .courses-input-container > button { flex: 1 !important; margin-top: 5px !important; }
+
+    /* Adjust font sizes and paddings for small screens */
+    .btn-primary { padding: 14px 20px !important; font-size: 16px !important; margin-top: 10px !important; }
+    .view-content { padding: 15px !important; }
+    
+    /* Planning Grid */
+    .planning-grid { grid-template-columns: 1fr !important; }
+    
+    /* Fullscreen recipe card adjustments */
+    details.recipe-card.is-fullscreen .recipe-content { padding: 15px !important; }
+    details.recipe-card.is-fullscreen summary { padding: 15px !important; padding-right: 60px !important; font-size: 16px !important; }
+    details.recipe-card.is-fullscreen .btn-expand { top: 15px !important; right: 15px !important; padding: 8px 12px !important; font-size: 12px !important; }
+    
+    /* Bottom Nav adjustments */
+    .bottom-nav { flex-wrap: nowrap !important; }
+    .nav-item { padding: 5px !important; font-size: 10px !important; }
+    .nav-item i { font-size: 18px !important; }
+    
+    /* Settings Tabs */
+    .tab-buttons { flex-wrap: nowrap !important; justify-content: flex-start !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 15px !important; }
+    .tab-btn { padding: 8px 10px !important; font-size: 13px !important; flex-shrink: 0 !important; }
+}
