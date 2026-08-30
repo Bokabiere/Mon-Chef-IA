@@ -1268,7 +1268,13 @@ const firebaseConfig = {
         }
 
         function afficherPlanningHtml(planningObj) {
-            const contentDiv = document.getElementById('planningContent'); let html = `<div class="planning-grid">`;
+            const contentDiv = document.getElementById('planningContent'); 
+            let html = `
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button class="btn-primary" style="flex:2; padding: 12px; font-size: 14px;" onclick="ouvrirModalMultiPlanning()">🪄 Générer plusieurs repas</button>
+                <button class="btn-danger" style="flex:1; padding: 12px; font-size: 14px;" onclick="viderPlanning()">🗑️ Vider le planning</button>
+            </div>
+            <div class="planning-grid">`;
             const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
             
             const renderMeal = (jour, repas, mealData, label) => {
@@ -1304,11 +1310,7 @@ const firebaseConfig = {
                 html += renderMeal(jour, 'diner', dayData.diner, 'Dîner');
                 html += `</div>`;
             });
-            html += `</div>
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn-primary" style="flex:2; padding: 12px; font-size: 14px;" onclick="ouvrirModalMultiPlanning()">🪄 Générer plusieurs repas</button>
-                <button class="btn-danger" style="flex:1; padding: 12px; font-size: 14px;" onclick="viderPlanning()">🗑️ Vider le planning</button>
-            </div>`;
+            html += `</div>`;
             contentDiv.innerHTML = html;
         }
 
