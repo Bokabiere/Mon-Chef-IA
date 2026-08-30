@@ -695,7 +695,7 @@ const firebaseConfig = {
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
         
         function switchTab(tab) {
-            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabOptions', 'tabAdmin'];
+            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabEquipement', 'tabOptions', 'tabAdmin'];
             tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
                 if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
@@ -993,6 +993,9 @@ const firebaseConfig = {
             event.stopPropagation();
             userDb.collection("courses").doc(docId).delete().then(() => {
                 showToast("Article supprimé", "success");
+            }).catch(function(err) {
+                console.error("Erreur suppression course:", err);
+                showToast("Erreur lors de la suppression.", "error");
             });
         };
 
@@ -1059,7 +1062,7 @@ const firebaseConfig = {
                 
                 batch.commit().then(() => {
                     showToast(articles.length + " article(s) ajouté(s)", "success");
-                });
+                }).catch(function(err) { console.error("Erreur ajout vocal courses:", err); showToast("Erreur ajout vocal.", "error"); });
             };
 
             coursesRecognition.onerror = function(event) {
@@ -1135,7 +1138,7 @@ const firebaseConfig = {
                     batch.update(docRef, { order: index });
                 }
             });
-            batch.commit().then(() => console.log("Ordre courses sauvegardé"));
+            batch.commit().then(() => console.log("Ordre courses sauvegardé")).catch(function(err) { console.error("Erreur ordre courses:", err); });
         };
 
 
@@ -1394,7 +1397,7 @@ const firebaseConfig = {
                 
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1461,7 +1464,7 @@ const firebaseConfig = {
                 if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1498,7 +1501,7 @@ const firebaseConfig = {
                 if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1563,7 +1566,7 @@ const firebaseConfig = {
                 
                 let texte = "";
                 if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
                     const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
@@ -1822,7 +1825,7 @@ Règles de formatage ABSOLUES :
                     let texteReponse = "";
 
                     if (moteur === 'gemini') {
-                        const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                        const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
                             method: "POST", headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                         });
@@ -1996,7 +1999,7 @@ Règles de formatage ABSOLUES :
                 try {
                     const apiKey = await getApiKey('gemini');
                     if (!apiKey) { loader.style.display = "none"; showToast("Clé API Gemini requise pour la vision.", "error"); return; }
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: file.type || "image/jpeg", data: base64String } }] }] })
                     });
@@ -2400,7 +2403,7 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
         
         let texteReponse = "";
         if (moteur === 'gemini') {
-            const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+            const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
             });

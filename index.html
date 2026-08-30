@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Mon Chef IA 👨‍🍳</title>
     
     <!-- PWA Manifest -->
@@ -33,7 +33,7 @@
                 <div class="row">
                     <div>
                         <label>Jour</label>
-                        <select id="planningJour">
+                        <select id="planningJour" aria-label="Jour du planning">
                             <option value="Lundi">Lundi</option>
                             <option value="Mardi">Mardi</option>
                             <option value="Mercredi">Mercredi</option>
@@ -45,7 +45,7 @@
                     </div>
                     <div>
                         <label>Repas</label>
-                        <select id="planningRepas">
+                        <select id="planningRepas" aria-label="Repas du planning">
                             <option value="dejeuner">Déjeuner</option>
                             <option value="diner">Dîner</option>
                         </select>
@@ -56,7 +56,7 @@
             <div class="row" style="margin-bottom: 15px;">
                 <div>
                     <label>Humeur / Style</label>
-                    <select id="humeur">
+                    <select id="humeur" aria-label="Style de cuisine">
                         <option value="classique">👨‍🍳 Classique</option>
                         <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
                         <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
@@ -69,7 +69,7 @@
             <div class="row" style="margin-bottom: 20px;">
                 <div>
                     <label>Temps dispo.</label>
-                    <select id="temps">
+                    <select id="temps" aria-label="Temps disponible">
                         <option value="15 minutes max">⚡ - 15 min</option>
                         <option value="30 minutes environ" selected>⏱️ ~ 30 min</option>
                         <option value="1 heure max">⏳ Jusqu'à 1h</option>
@@ -78,7 +78,7 @@
                 </div>
                 <div>
                     <label>Personnes</label>
-                    <input type="number" id="personnes" value="2" min="1">
+                    <input type="number" id="personnes" value="2" min="1" aria-label="Nombre de personnes">
                 </div>
             </div>
             
@@ -347,7 +347,7 @@
                         <label>➕ Ajouter un ingrédient</label>
                         <div class="row" style="margin-bottom: 10px;">
                             <div>
-                                <select id="paramCat">
+                                <select id="paramCat" aria-label="Filtrer par categorie">
                                     <option value="Légumes">Légumes</option><option value="Fruits">Fruits</option>
                                     <option value="Protéines">Protéines</option><option value="Féculents">Féculents</option>
                                     <option value="Produits laitiers">Produits laitiers</option><option value="Épices">Épices</option>
@@ -412,7 +412,7 @@
 
                 <div id="tabOptions" style="display: none;">
                     <label>🧠 Intelligence Artificielle par défaut</label>
-                    <select id="selecteurIaGlobal" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
+                    <select id="selecteurIaGlobal" aria-label="Moteur IA" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
                         <option value="gemini">✨ Gemini (Google)</option>
                         <option value="mistral">🥐 Mistral AI (France)</option>
                     </select>
@@ -593,7 +593,7 @@
                 <div class="row" style="margin-bottom: 15px;">
                     <div>
                         <label>Humeur / Style</label>
-                        <select id="multiHumeur">
+                        <select id="multiHumeur" aria-label="Style de cuisine">
                             <option value="classique">👨‍🍳 Classique</option>
                             <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
                             <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
@@ -605,7 +605,7 @@
                 <div class="row" style="margin-bottom: 20px;">
                     <div>
                         <label>Temps dispo.</label>
-                        <select id="multiTemps">
+                        <select id="multiTemps" aria-label="Temps disponible">
                             <option value="15 minutes max">⚡ - 15 min</option>
                             <option value="30 minutes environ" selected>⏱️ ~ 30 min</option>
                             <option value="1 heure max">⏳ Jusqu'à 1h</option>
@@ -614,7 +614,7 @@
                     </div>
                     <div>
                         <label>Personnes</label>
-                        <input type="number" id="multiPersonnes" value="2" min="1">
+                        <input type="number" id="multiPersonnes" value="2" min="1" aria-label="Nombre de personnes">
                     </div>
                 </div>
                 
@@ -694,9 +694,20 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=7'></script>
+    <script src='app.js?v=9'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Enregistrement du Service Worker (PWA offline) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(reg) { console.log('✅ SW enregistré:', reg.scope); })
+                    .catch(function(err) { console.warn('⚠️ Échec SW:', err); });
+            });
+        }
+    </script>
 </body>
 </html>
