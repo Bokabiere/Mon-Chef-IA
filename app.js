@@ -1284,7 +1284,8 @@ const firebaseConfig = {
                         </div>
                         <div class="meal-name" style="text-decoration: ${textDecoration}; margin: 8px 0;">${mealData.plat}</div>
                         <div class="meal-actions">
-                            <button class="btn-action" style="background:#ff7675; padding: 4px; font-size: 11px; flex:0.3;" onclick="retirerRepas('${jour}', '${repas}')">🗑️</button>
+                            <button class="btn-action" style="background:#ff7675; padding: 4px; font-size: 11px; flex:0.3;" onclick="retirerRepas('${jour}', '${repas}')" title="Retirer">🗑️</button>
+                            <button class="btn-action" style="background:#6c5ce7; padding: 4px; font-size: 11px; flex:0.3;" onclick="relancerRepasPlanning('${jour}', '${repas}', '${safePlat}')" title="Autre plat">🎲</button>
                             <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}')">🍳 Cuisiner</button>
                         </div>
                     </div>`;
@@ -1351,6 +1352,43 @@ const firebaseConfig = {
             const historique = await getHistoriquePrompt();
             const prompt = `Génère UN SEUL plat pour le ${repas} de ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
             Réponds UNIQUEMENT avec le nom du plat (pas de recette, pas d'intro).`;
+
+            try {
+                const apiKey = await getApiKey(moteur);
+                if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
+                let texte = "";
+                if (moteur === 'gemini') {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                } else if (moteur === 'mistral') {
+                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
+                    const data = await rep.json(); texte = data.choices[0].message.content;
+                }
+
+                let nouveauPlat = texte.trim().replace(/[*#]/g, '');
+                
+                const docSnap = await userDb.collection("planning").doc("semaine").get();
+                let currentData = docSnap.exists ? docSnap.data() : {};
+                if(!currentData[jour]) currentData[jour] = {};
+                currentData[jour][repas] = { plat: nouveauPlat, done: false };
+                
+                await userDb.collection("planning").doc("semaine").set(currentData);
+                chargerPlanning();
+            } catch(e) { 
+                const { titre, detail } = messageErreurIA(e, moteur); 
+                showToast(`${titre} ${detail}`, "error", 5000); 
+                chargerPlanning(); 
+            }
+        };
+
+        window.relancerRepasPlanning = async function(jour, repas, platActuel) {
+            const checked = memoireIngredients;
+            const contentDiv = document.getElementById('planningContent');
+            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche d'une alternative pour ${jour} (${repas})...</p></div>`;
+            const moteur = moteurIAActif;
+
+            const historique = await getHistoriquePrompt();
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" pour son ${repas}. Propose UN SEUL nouveau plat différent en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
                 const apiKey = await getApiKey(moteur);
