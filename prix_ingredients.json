@@ -1,0 +1,954 @@
+{
+  "Tomate": {
+    "prix": 2.99,
+    "prix_min": 2.99,
+    "prix_max": 2.99,
+    "nb_releves": 1,
+    "produit_ref": "Tomates rondes",
+    "categorie": "Fruits et légumes"
+  },
+  "Carotte": {
+    "prix": 1.25,
+    "prix_min": 1.2,
+    "prix_max": 1.31,
+    "nb_releves": 23,
+    "produit_ref": "Petits Pois & Carottes",
+    "categorie": "Fruits et légumes"
+  },
+  "Courgette": {
+    "prix": 4.8,
+    "prix_min": 4.64,
+    "prix_max": 4.98,
+    "nb_releves": 15,
+    "produit_ref": "Courgettes à la Provençale 4/4",
+    "categorie": "Fruits et légumes"
+  },
+  "Aubergine": {
+    "prix": 2.41,
+    "prix_min": 2.34,
+    "prix_max": 2.58,
+    "nb_releves": 9,
+    "produit_ref": "Aubergines cuisinées à la Provençale",
+    "categorie": "Fruits et légumes"
+  },
+  "Oignon": {
+    "prix": 2.62,
+    "prix_min": 2.49,
+    "prix_max": 2.75,
+    "nb_releves": 2,
+    "produit_ref": "Oignons jaunes",
+    "categorie": "Fruits et légumes"
+  },
+  "Ail": {
+    "prix": 7.96,
+    "prix_min": 7.96,
+    "prix_max": 7.96,
+    "nb_releves": 1,
+    "produit_ref": "Ail Blanc Semoule",
+    "categorie": "Fruits et légumes"
+  },
+  "Poivron": {
+    "prix": 4.92,
+    "prix_min": 4.55,
+    "prix_max": 5.3,
+    "nb_releves": 2,
+    "produit_ref": "Cake Chorizo & Poivron rouge",
+    "categorie": "Plats composés"
+  },
+  "Concombre": {
+    "prix": 1.67,
+    "prix_min": 1.59,
+    "prix_max": 1.72,
+    "nb_releves": 7,
+    "produit_ref": "Concombres au fromage blanc",
+    "categorie": "Plats composés"
+  },
+  "Salade": {
+    "prix": 1.09,
+    "prix_min": 0.95,
+    "prix_max": 1.21,
+    "nb_releves": 29,
+    "produit_ref": "Bouquet de mache",
+    "categorie": "Fruits et légumes"
+  },
+  "Epinards": {
+    "prix": 1.17,
+    "prix_min": 0.93,
+    "prix_max": 1.35,
+    "nb_releves": 12,
+    "produit_ref": "Epinards hâchés",
+    "categorie": "Fruits et légumes"
+  },
+  "Champignons": {
+    "prix": 0.99,
+    "prix_min": 0.99,
+    "prix_max": 0.99,
+    "nb_releves": 3,
+    "produit_ref": "Champignon de Paris",
+    "categorie": "Fruits et légumes"
+  },
+  "Haricots verts": {
+    "prix": 1.13,
+    "prix_min": 1.13,
+    "prix_max": 1.13,
+    "nb_releves": 3,
+    "produit_ref": "Haricot verts",
+    "categorie": "Fruits et légumes"
+  },
+  "Petit pois": {
+    "prix": 1.3,
+    "prix_min": 1.3,
+    "prix_max": 1.3,
+    "nb_releves": 1,
+    "produit_ref": "Petits pois surgelés",
+    "categorie": "Fruits et légumes"
+  },
+  "Brocoli": {
+    "prix": 1.73,
+    "prix_min": 1.65,
+    "prix_max": 1.8,
+    "nb_releves": 30,
+    "produit_ref": "Brocolis fleurettes surgelés",
+    "categorie": "Fruits et légumes"
+  },
+  "Celeri": {
+    "prix": 2.13,
+    "prix_min": 2.13,
+    "prix_max": 2.14,
+    "nb_releves": 5,
+    "produit_ref": "CELERI MOUTARDE 300g",
+    "categorie": "Fruits et légumes"
+  },
+  "Poireau": {
+    "prix": 3.96,
+    "prix_min": 3.85,
+    "prix_max": 3.99,
+    "nb_releves": 6,
+    "produit_ref": "Risotto St Jacques fondue de poireaux",
+    "categorie": "Plats composés"
+  },
+  "Radis": {
+    "prix": 3.0,
+    "prix_min": 3.0,
+    "prix_max": 3.0,
+    "nb_releves": 3,
+    "produit_ref": "Radis",
+    "categorie": "Fruits et légumes"
+  },
+  "Betterave": {
+    "prix": 1.91,
+    "prix_min": 1.87,
+    "prix_max": 1.98,
+    "nb_releves": 6,
+    "produit_ref": "Menu fraîcheur betteraves rouges à la moutarde à l'ancienne",
+    "categorie": "Plats composés"
+  },
+  "Asperge": {
+    "prix": 1.53,
+    "prix_min": 1.45,
+    "prix_max": 1.55,
+    "nb_releves": 12,
+    "produit_ref": "Asperges Blanches Miniatures",
+    "categorie": "Fruits et légumes"
+  },
+  "Artichaut": {
+    "prix": 1.51,
+    "prix_min": 1.3,
+    "prix_max": 1.75,
+    "nb_releves": 6,
+    "produit_ref": "Fonds d'artichauts",
+    "categorie": "Fruits et légumes"
+  },
+  "Fenouil": {
+    "prix": 5.03,
+    "prix_min": 5.03,
+    "prix_max": 5.03,
+    "nb_releves": 2,
+    "produit_ref": "Thé Fenouil menthe poivrée",
+    "categorie": "Boissons"
+  },
+  "Navet": {
+    "prix": 4.5,
+    "prix_min": 4.5,
+    "prix_max": 4.5,
+    "nb_releves": 1,
+    "produit_ref": "Navettes a garnir",
+    "categorie": "Snacks sucrés"
+  },
+  "Avocat": {
+    "prix": 2.05,
+    "prix_min": 1.59,
+    "prix_max": 2.39,
+    "nb_releves": 5,
+    "produit_ref": "Avocats",
+    "categorie": "Fruits et légumes"
+  },
+  "Mais": {
+    "prix": 0.55,
+    "prix_min": 0.39,
+    "prix_max": 0.84,
+    "nb_releves": 65,
+    "produit_ref": "Maïs doux en grains sous vide",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pomme": {
+    "prix": 2.72,
+    "prix_min": 2.19,
+    "prix_max": 3.44,
+    "nb_releves": 54,
+    "produit_ref": "Gnocchi aux pommes de terre",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Poire": {
+    "prix": 2.42,
+    "prix_min": 2.35,
+    "prix_max": 2.5,
+    "nb_releves": 2,
+    "produit_ref": "Poire Williams",
+    "categorie": "Fruits et légumes"
+  },
+  "Banane": {
+    "prix": 2.57,
+    "prix_min": 2.47,
+    "prix_max": 2.64,
+    "nb_releves": 9,
+    "produit_ref": "Alpro Sojadrink Banane",
+    "categorie": "Boissons"
+  },
+  "Orange": {
+    "prix": 2.96,
+    "prix_min": 2.39,
+    "prix_max": 3.49,
+    "nb_releves": 4,
+    "produit_ref": "Orange à jus",
+    "categorie": "Alcoholic beverages"
+  },
+  "Citron": {
+    "prix": 0.83,
+    "prix_min": 0.82,
+    "prix_max": 0.84,
+    "nb_releves": 2,
+    "produit_ref": "Jus de citron jaune",
+    "categorie": "Boissons"
+  },
+  "Fraise": {
+    "prix": 1.74,
+    "prix_min": 1.65,
+    "prix_max": 2.0,
+    "nb_releves": 13,
+    "produit_ref": "Grany Fraise 🍓 & Framboise",
+    "categorie": "Snacks sucrés"
+  },
+  "Raisin": {
+    "prix": 3.98,
+    "prix_min": 3.98,
+    "prix_max": 3.98,
+    "nb_releves": 1,
+    "produit_ref": "Raisin noir sans pepins",
+    "categorie": "Fruits et légumes"
+  },
+  "Pasteque": {
+    "prix": 1.36,
+    "prix_min": 1.35,
+    "prix_max": 1.37,
+    "nb_releves": 3,
+    "produit_ref": "The Red Edition Goût pastèque",
+    "categorie": "Boissons"
+  },
+  "Melon": {
+    "prix": 1.89,
+    "prix_min": 1.89,
+    "prix_max": 1.89,
+    "nb_releves": 1,
+    "produit_ref": "Melon charentais jaune",
+    "categorie": "Fruits et légumes"
+  },
+  "Kiwi": {
+    "prix": 3.33,
+    "prix_min": 3.22,
+    "prix_max": 3.42,
+    "nb_releves": 6,
+    "produit_ref": "Sirop Kiwi & Banane",
+    "categorie": "Boissons"
+  },
+  "Mangue": {
+    "prix": 1.44,
+    "prix_min": 1.41,
+    "prix_max": 1.45,
+    "nb_releves": 12,
+    "produit_ref": "Pommes Mangues avec morceaux",
+    "categorie": "Fruits et légumes"
+  },
+  "Ananas": {
+    "prix": 3.29,
+    "prix_min": 3.29,
+    "prix_max": 3.29,
+    "nb_releves": 6,
+    "produit_ref": "Activia bifidus fruits 0% panache 125 g x 8 (citron/citron vertananas fraise peche)",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Peche": {
+    "prix": 3.29,
+    "prix_min": 2.92,
+    "prix_max": 3.41,
+    "nb_releves": 4,
+    "produit_ref": "Sirop Pêche blanche",
+    "categorie": "Boissons"
+  },
+  "Abricot": {
+    "prix": 2.65,
+    "prix_min": 2.62,
+    "prix_max": 2.68,
+    "nb_releves": 6,
+    "produit_ref": "Clafoutis aux Abricots",
+    "categorie": "Snacks sucrés"
+  },
+  "Cerise": {
+    "prix": 1.7,
+    "prix_min": 1.52,
+    "prix_max": 1.84,
+    "nb_releves": 7,
+    "produit_ref": "Pepsi Zéro sucres saveur cerise 1,5 L",
+    "categorie": "Boissons"
+  },
+  "Myrtille": {
+    "prix": 3.77,
+    "prix_min": 3.74,
+    "prix_max": 3.91,
+    "nb_releves": 9,
+    "produit_ref": "La Madeleine coeur myrtille",
+    "categorie": "Snacks sucrés"
+  },
+  "Framboise": {
+    "prix": 3.91,
+    "prix_min": 3.81,
+    "prix_max": 3.99,
+    "nb_releves": 14,
+    "produit_ref": "La madeleine cœur framboise",
+    "categorie": "Snacks sucrés"
+  },
+  "Poulet": {
+    "prix": 2.25,
+    "prix_min": 2.24,
+    "prix_max": 2.35,
+    "nb_releves": 8,
+    "produit_ref": "Blanc de Poulet Fumé au bois de hêtre",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Boeuf hache": {
+    "prix": 10.63,
+    "prix_min": 10.37,
+    "prix_max": 11.15,
+    "nb_releves": 3,
+    "produit_ref": "Boeuf Haché (85% de Maigre / 15% de Matières Grasses)",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Steak": {
+    "prix": 14.91,
+    "prix_min": 14.52,
+    "prix_max": 15.09,
+    "nb_releves": 8,
+    "produit_ref": "Steaks hachés Charolais Façon Bouchère",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Porc": {
+    "prix": 1.91,
+    "prix_min": 1.51,
+    "prix_max": 2.07,
+    "nb_releves": 26,
+    "produit_ref": "Chorizo Saint Azay fort Pur porc piment d'Espagne",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Agneau": {
+    "prix": 15.01,
+    "prix_min": 15.01,
+    "prix_max": 15.01,
+    "nb_releves": 1,
+    "produit_ref": "1/2 Gigot d'agneau à rotir",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Saumon": {
+    "prix": 5.18,
+    "prix_min": 5.07,
+    "prix_max": 5.34,
+    "nb_releves": 5,
+    "produit_ref": "Saumon Atlantique Fondue de poireaux - crème fraiche et estragon",
+    "categorie": "Plats composés"
+  },
+  "Thon": {
+    "prix": 2.03,
+    "prix_min": 1.9,
+    "prix_max": 2.15,
+    "nb_releves": 3,
+    "produit_ref": "Thon naturel albacore en tranche",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Cabillaud": {
+    "prix": 7.0,
+    "prix_min": 6.98,
+    "prix_max": 7.08,
+    "nb_releves": 5,
+    "produit_ref": "Cabillaud sauvage surgelé",
+    "categorie": "Plats composés"
+  },
+  "Crevettes": {
+    "prix": 3.9,
+    "prix_min": 3.48,
+    "prix_max": 4.09,
+    "nb_releves": 5,
+    "produit_ref": "Nouilles aux crevettes",
+    "categorie": "Plats composés"
+  },
+  "Moules": {
+    "prix": 3.53,
+    "prix_min": 2.99,
+    "prix_max": 3.82,
+    "nb_releves": 8,
+    "produit_ref": "Moules décoquillés cuites surgelées sachet",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Sardines": {
+    "prix": 1.41,
+    "prix_min": 1.14,
+    "prix_max": 1.62,
+    "nb_releves": 3,
+    "produit_ref": "Conserverie Parmentier sardines",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Oeufs": {
+    "prix": 1.53,
+    "prix_min": 1.01,
+    "prix_max": 2.05,
+    "nb_releves": 81,
+    "produit_ref": "10 oeufs frais",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Jambon": {
+    "prix": 1.49,
+    "prix_min": 1.49,
+    "prix_max": 1.49,
+    "nb_releves": 1,
+    "produit_ref": "Mon Jambon Blanc VPF 4tr",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Lardons": {
+    "prix": 2.23,
+    "prix_min": 2.13,
+    "prix_max": 2.41,
+    "nb_releves": 23,
+    "produit_ref": "HERTA Lardons Fumés 200g",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Saucisse": {
+    "prix": 2.7,
+    "prix_min": 2.48,
+    "prix_max": 2.88,
+    "nb_releves": 8,
+    "produit_ref": "Saucisse Grillée & Purée de Pomme de Terre",
+    "categorie": "Plats composés"
+  },
+  "Merguez": {
+    "prix": 5.72,
+    "prix_min": 5.72,
+    "prix_max": 5.72,
+    "nb_releves": 3,
+    "produit_ref": "2 hot dogs merguez",
+    "categorie": "Plats composés"
+  },
+  "Tofu": {
+    "prix": 2.53,
+    "prix_min": 2.43,
+    "prix_max": 2.58,
+    "nb_releves": 3,
+    "produit_ref": "Tofu nature à cuisiner",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pates": {
+    "prix": 1.85,
+    "prix_min": 1.82,
+    "prix_max": 1.9,
+    "nb_releves": 4,
+    "produit_ref": "Pâtes spaghetti n°5 1kg",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Riz blanc": {
+    "prix": 1.01,
+    "prix_min": 0.71,
+    "prix_max": 1.22,
+    "nb_releves": 177,
+    "produit_ref": "Riz Long",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pomme de terre": {
+    "prix": 2.33,
+    "prix_min": 1.29,
+    "prix_max": 3.49,
+    "nb_releves": 10,
+    "produit_ref": "pomme de terre vapeur sautees",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pain": {
+    "prix": 1.25,
+    "prix_min": 1.25,
+    "prix_max": 1.25,
+    "nb_releves": 1,
+    "produit_ref": "Pain de Campagne",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Quinoa": {
+    "prix": 3.14,
+    "prix_min": 2.9,
+    "prix_max": 3.66,
+    "nb_releves": 24,
+    "produit_ref": "Quinoa selection",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Lentilles": {
+    "prix": 1.33,
+    "prix_min": 0.71,
+    "prix_max": 1.71,
+    "nb_releves": 80,
+    "produit_ref": "Lentilles vertes",
+    "categorie": "Fruits et légumes"
+  },
+  "Pois chiches": {
+    "prix": 0.62,
+    "prix_min": 0.48,
+    "prix_max": 0.75,
+    "nb_releves": 14,
+    "produit_ref": "Pois chiches",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Haricots blancs": {
+    "prix": 0.99,
+    "prix_min": 0.91,
+    "prix_max": 1.06,
+    "nb_releves": 34,
+    "produit_ref": "Haricots Blancs",
+    "categorie": "Fruits et légumes"
+  },
+  "Farine": {
+    "prix": 0.61,
+    "prix_min": 0.44,
+    "prix_max": 0.74,
+    "nb_releves": 58,
+    "produit_ref": "Farine de blé Type 55",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Semoule": {
+    "prix": 0.95,
+    "prix_min": 0.9,
+    "prix_max": 1.0,
+    "nb_releves": 25,
+    "produit_ref": "Semoule de blé fine qualité supérieure",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Polenta": {
+    "prix": 1.64,
+    "prix_min": 1.44,
+    "prix_max": 2.01,
+    "nb_releves": 7,
+    "produit_ref": "Polenta",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Maizena": {
+    "prix": 2.65,
+    "prix_min": 2.47,
+    "prix_max": 2.71,
+    "nb_releves": 4,
+    "produit_ref": "Maizena Fleur de Maïs",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Lait": {
+    "prix": 1.48,
+    "prix_min": 1.25,
+    "prix_max": 1.79,
+    "nb_releves": 50,
+    "produit_ref": "Fromage blanc au lait demi-écrémé",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Fromage": {
+    "prix": 1.25,
+    "prix_min": 1.06,
+    "prix_max": 1.62,
+    "nb_releves": 173,
+    "produit_ref": "Emmental râpé",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Beurre": {
+    "prix": 1.42,
+    "prix_min": 1.34,
+    "prix_max": 1.52,
+    "nb_releves": 20,
+    "produit_ref": "Beurre doux",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Creme fraiche": {
+    "prix": 1.72,
+    "prix_min": 1.04,
+    "prix_max": 1.89,
+    "nb_releves": 112,
+    "produit_ref": "Crème fraîche épaisse 30%",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Yaourt": {
+    "prix": 1.58,
+    "prix_min": 1.58,
+    "prix_max": 1.58,
+    "nb_releves": 6,
+    "produit_ref": "Yaourt nature sucré Sucre de canne",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Mozzarella": {
+    "prix": 0.75,
+    "prix_min": 0.58,
+    "prix_max": 0.81,
+    "nb_releves": 36,
+    "produit_ref": "Mozzarella",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Parmesan": {
+    "prix": 6.84,
+    "prix_min": 6.81,
+    "prix_max": 6.95,
+    "nb_releves": 5,
+    "produit_ref": "Carpaccio Parmesan",
+    "categorie": "Plats composés"
+  },
+  "Camembert": {
+    "prix": 1.94,
+    "prix_min": 1.68,
+    "prix_max": 2.37,
+    "nb_releves": 44,
+    "produit_ref": "Camembert",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Comte": {
+    "prix": 2.74,
+    "prix_min": 2.09,
+    "prix_max": 2.99,
+    "nb_releves": 40,
+    "produit_ref": "Comté",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Roquefort": {
+    "prix": 2.09,
+    "prix_min": 1.7,
+    "prix_max": 2.16,
+    "nb_releves": 7,
+    "produit_ref": "Roquefort A.O.P. 32% Mat. Gr.",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Chevre": {
+    "prix": 2.69,
+    "prix_min": 2.29,
+    "prix_max": 2.95,
+    "nb_releves": 6,
+    "produit_ref": "Sainte-maure fromage de chèvre",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Creme liquide": {
+    "prix": 2.39,
+    "prix_min": 2.3,
+    "prix_max": 2.43,
+    "nb_releves": 3,
+    "produit_ref": "Crème liquide",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Lait de coco": {
+    "prix": 0.89,
+    "prix_min": 0.76,
+    "prix_max": 1.26,
+    "nb_releves": 8,
+    "produit_ref": "Lait de coco",
+    "categorie": "Boissons"
+  },
+  "Huile d'olive": {
+    "prix": 6.67,
+    "prix_min": 2.44,
+    "prix_max": 9.49,
+    "nb_releves": 36,
+    "produit_ref": "Huile d'olive vierge extra",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Huile": {
+    "prix": 1.69,
+    "prix_min": 1.39,
+    "prix_max": 2.12,
+    "nb_releves": 52,
+    "produit_ref": "Huile de tournesol",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Sauce tomate": {
+    "prix": 1.3,
+    "prix_min": 1.3,
+    "prix_max": 1.31,
+    "nb_releves": 2,
+    "produit_ref": "Coulis de tomates fraîches de Provence",
+    "categorie": "Fruits et légumes"
+  },
+  "Sauce soja": {
+    "prix": 2.11,
+    "prix_min": 2.0,
+    "prix_max": 2.39,
+    "nb_releves": 5,
+    "produit_ref": "Sauce soja sucrée",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Moutarde": {
+    "prix": 0.98,
+    "prix_min": 0.95,
+    "prix_max": 1.0,
+    "nb_releves": 7,
+    "produit_ref": "Moutarde de Dijon fine et forte",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Vinaigre": {
+    "prix": 2.49,
+    "prix_min": 2.43,
+    "prix_max": 2.59,
+    "nb_releves": 5,
+    "produit_ref": "Maille Vinaigrette Légère Vinaigre de Vin Rouge & Échalotes 36cl",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Sucre": {
+    "prix": 1.06,
+    "prix_min": 0.68,
+    "prix_max": 1.41,
+    "nb_releves": 63,
+    "produit_ref": "Sucre en poudre blanc",
+    "categorie": "Snacks sucrés"
+  },
+  "Sel": {
+    "prix": 2.78,
+    "prix_min": 2.78,
+    "prix_max": 2.78,
+    "nb_releves": 1,
+    "produit_ref": "Chips à l'ancienne au sel fin 30g",
+    "categorie": "Snacks salés"
+  },
+  "Mayonnaise": {
+    "prix": 2.58,
+    "prix_min": 2.49,
+    "prix_max": 2.71,
+    "nb_releves": 13,
+    "produit_ref": "Mayonnaise",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Ketchup": {
+    "prix": 1.13,
+    "prix_min": 1.09,
+    "prix_max": 1.14,
+    "nb_releves": 9,
+    "produit_ref": "Tomato ketchup",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Tabasco": {
+    "prix": 2.49,
+    "prix_min": 2.38,
+    "prix_max": 2.68,
+    "nb_releves": 5,
+    "produit_ref": "Tabasco rouge 60ml",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Curry": {
+    "prix": 1.77,
+    "prix_min": 1.62,
+    "prix_max": 1.93,
+    "nb_releves": 6,
+    "produit_ref": "Nouilles sautées Yakisoba Curry Japonais",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Cumin": {
+    "prix": 3.09,
+    "prix_min": 2.99,
+    "prix_max": 3.14,
+    "nb_releves": 3,
+    "produit_ref": "Tranchette de gouda Les Croisés Au cumin 16,8% MG",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Paprika": {
+    "prix": 1.48,
+    "prix_min": 1.46,
+    "prix_max": 1.49,
+    "nb_releves": 2,
+    "produit_ref": "Chips saveur paprika fumé",
+    "categorie": "Snacks salés"
+  },
+  "Herbes de Provence": {
+    "prix": 2.86,
+    "prix_min": 2.09,
+    "prix_max": 3.48,
+    "nb_releves": 7,
+    "produit_ref": "Salakis Herbes de Provence",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Laurier": {
+    "prix": 2.45,
+    "prix_min": 2.45,
+    "prix_max": 2.45,
+    "nb_releves": 1,
+    "produit_ref": "Berbère (Ail, cumin, piment doux, laurier)",
+    "categorie": "Snacks salés"
+  },
+  "Basilic": {
+    "prix": 2.64,
+    "prix_min": 2.27,
+    "prix_max": 3.19,
+    "nb_releves": 19,
+    "produit_ref": "Panzani sauce qfc tomates basilic 320g",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Persil": {
+    "prix": 2.69,
+    "prix_min": 2.54,
+    "prix_max": 3.19,
+    "nb_releves": 22,
+    "produit_ref": "Ravioli aux girolles poêlées & persil de la Drôme sachet",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Coriandre": {
+    "prix": 2.77,
+    "prix_min": 2.76,
+    "prix_max": 2.81,
+    "nb_releves": 4,
+    "produit_ref": "Houmous extra citron confit & coriandre",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Gingembre": {
+    "prix": 7.81,
+    "prix_min": 6.5,
+    "prix_max": 9.12,
+    "nb_releves": 6,
+    "produit_ref": "Gyoza Poulet Citronnelle Porc Gingembre",
+    "categorie": "Plats composés"
+  },
+  "Levure": {
+    "prix": 3.62,
+    "prix_min": 3.62,
+    "prix_max": 3.62,
+    "nb_releves": 1,
+    "produit_ref": "Levure chimique + Sucre vanillé",
+    "categorie": "Snacks sucrés"
+  },
+  "Chocolat": {
+    "prix": 5.01,
+    "prix_min": 2.55,
+    "prix_max": 5.62,
+    "nb_releves": 34,
+    "produit_ref": "Chocolat noir Pâtissier",
+    "categorie": "Snacks sucrés"
+  },
+  "Miel": {
+    "prix": 9.86,
+    "prix_min": 9.86,
+    "prix_max": 9.86,
+    "nb_releves": 1,
+    "produit_ref": "Miel d'Acacia",
+    "categorie": "Snacks sucrés"
+  },
+  "Confiture": {
+    "prix": 1.16,
+    "prix_min": 1.12,
+    "prix_max": 1.19,
+    "nb_releves": 2,
+    "produit_ref": "Confiture de fraises",
+    "categorie": "Snacks sucrés"
+  },
+  "Pesto": {
+    "prix": 2.26,
+    "prix_min": 2.0,
+    "prix_max": 2.6,
+    "nb_releves": 3,
+    "produit_ref": "PESTO alla GENOVESE",
+    "categorie": "Matières grasses et sauces"
+  },
+  "Épinards": {
+    "prix": 1.17,
+    "prix_min": 0.93,
+    "prix_max": 1.35,
+    "nb_releves": 12,
+    "produit_ref": "Epinards hâchés",
+    "categorie": "Fruits et légumes"
+  },
+  "Céleri": {
+    "prix": 2.13,
+    "prix_min": 2.13,
+    "prix_max": 2.14,
+    "nb_releves": 5,
+    "produit_ref": "CELERI MOUTARDE 300g",
+    "categorie": "Fruits et légumes"
+  },
+  "Maïs": {
+    "prix": 0.55,
+    "prix_min": 0.39,
+    "prix_max": 0.84,
+    "nb_releves": 65,
+    "produit_ref": "Maïs doux en grains sous vide",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pâtes": {
+    "prix": 1.85,
+    "prix_min": 1.82,
+    "prix_max": 1.9,
+    "nb_releves": 4,
+    "produit_ref": "Pâtes spaghetti n°5 1kg",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Pêche": {
+    "prix": 3.29,
+    "prix_min": 2.92,
+    "prix_max": 3.41,
+    "nb_releves": 4,
+    "produit_ref": "Sirop Pêche blanche",
+    "categorie": "Boissons"
+  },
+  "Boeuf haché": {
+    "prix": 10.63,
+    "prix_min": 10.37,
+    "prix_max": 11.15,
+    "nb_releves": 3,
+    "produit_ref": "Boeuf Haché (85% de Maigre / 15% de Matières Grasses)",
+    "categorie": "Poisson, viande, œufs"
+  },
+  "Crème fraîche": {
+    "prix": 1.72,
+    "prix_min": 1.04,
+    "prix_max": 1.89,
+    "nb_releves": 112,
+    "produit_ref": "Crème fraîche épaisse 30%",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Crème liquide": {
+    "prix": 2.39,
+    "prix_min": 2.3,
+    "prix_max": 2.43,
+    "nb_releves": 3,
+    "produit_ref": "Crème liquide",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Maïzena": {
+    "prix": 2.65,
+    "prix_min": 2.47,
+    "prix_max": 2.71,
+    "nb_releves": 4,
+    "produit_ref": "Maizena Fleur de Maïs",
+    "categorie": "Céréales et pommes de terre"
+  },
+  "Comté": {
+    "prix": 2.74,
+    "prix_min": 2.09,
+    "prix_max": 2.99,
+    "nb_releves": 40,
+    "produit_ref": "Comté",
+    "categorie": "Lait et produits laitiers"
+  },
+  "Chèvre": {
+    "prix": 2.69,
+    "prix_min": 2.29,
+    "prix_max": 2.95,
+    "nb_releves": 6,
+    "produit_ref": "Sainte-maure fromage de chèvre",
+    "categorie": "Lait et produits laitiers"
+  }
+}
