@@ -1829,7 +1829,21 @@ Règles de formatage ABSOLUES :
 
         let activeTimers = {};
         let timerIdCounter = 0;
+        let isTimerMuted = false;
         
+        function toggleMuteTimers() {
+            isTimerMuted = !isTimerMuted;
+            document.getElementById("btnMuteTimers").innerText = isTimerMuted ? "🔇" : "🔊";
+        }
+
+        function toggleFullscreenTimerWidget() {
+            let widget = document.getElementById("multiTimerWidget");
+            widget.classList.toggle("fullscreen-timer");
+            if (widget.classList.contains("fullscreen-timer") && widget.classList.contains("collapsed")) {
+                toggleTimerWidget();
+            }
+        }
+
         function requestNotificationPermission() {
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 Notification.requestPermission();
@@ -1865,15 +1879,16 @@ Règles de formatage ABSOLUES :
 
         function enrichirTexteChrono(contenu) {
             return contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, function(match, minutes, unite, offset, string) {
-                let start = Math.max(0, offset - 40);
+                let beforeStr = string.substring(0, offset);
+                let lastPunc = Math.max(beforeStr.lastIndexOf('.'), beforeStr.lastIndexOf('\n'), beforeStr.lastIndexOf(':'));
+                let start = lastPunc === -1 ? 0 : lastPunc + 1;
                 let before = string.substring(start, offset);
-                let matchBefore = before.match(/[^.?!:\n]+$/);
-                before = matchBefore ? matchBefore[0] : before;
 
-                let end = Math.min(string.length, offset + match.length + 40);
+                let afterStr = string.substring(offset + match.length);
+                let nextPuncRegex = /[.\n]/;
+                let nextPuncMatch = afterStr.match(nextPuncRegex);
+                let end = nextPuncMatch ? offset + match.length + nextPuncMatch.index : string.length;
                 let after = string.substring(offset + match.length, end);
-                let matchAfter = after.match(/^[^.?!:\n]+/);
-                after = matchAfter ? matchAfter[0] : after;
                 
                 let contexte = (before + " " + after).trim().replace(/\s+/g, ' ');
                 
@@ -1993,18 +2008,20 @@ Règles de formatage ABSOLUES :
         function declencherAlerteFinMinuteur(nom) {
             if (typeof confetti === "function") { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 }); }
             
-            try { 
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
-                const osc = audioCtx.createOscillator(); 
-                const gain = audioCtx.createGain(); 
-                osc.type = 'sine'; 
-                osc.frequency.value = 587.33; 
-                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
-                osc.connect(gain); 
-                gain.connect(audioCtx.destination); 
-                osc.start(); 
-                osc.stop(audioCtx.currentTime + 0.8); 
-            } catch(e) {}
+            if (!isTimerMuted) {
+                try { 
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+                    const osc = audioCtx.createOscillator(); 
+                    const gain = audioCtx.createGain(); 
+                    osc.type = 'sine'; 
+                    osc.frequency.value = 587.33; 
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+                    osc.connect(gain); 
+                    gain.connect(audioCtx.destination); 
+                    osc.start(); 
+                    osc.stop(audioCtx.currentTime + 0.8); 
+                } catch(e) {}
+            }
             
             if ("Notification" in window && Notification.permission === "granted") {
                 new Notification("⏳ C'est prêt !", {
@@ -2013,7 +2030,7 @@ Règles de formatage ABSOLUES :
                 });
             }
 
-            if ('speechSynthesis' in window) { 
+            if (!isTimerMuted && 'speechSynthesis' in window) { 
                 const utterance = new SpeechSynthesisUtterance(`Attention chef, le minuteur ${nom} est écoulé !`); 
                 utterance.lang = 'fr-FR'; 
                 window.speechSynthesis.speak(utterance); 

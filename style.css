@@ -205,6 +205,8 @@
         .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
         .multi-timer-widget { position: fixed; bottom: 80px; right: 20px; width: 300px; background: var(--card-bg, #ffffff); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 10000; display: none; flex-direction: column; overflow: hidden; border: 1px solid var(--border); transition: height 0.3s ease; }
         .multi-timer-widget.collapsed .multi-timer-body { display: none; }
+        .multi-timer-widget.fullscreen-timer { width: 100% !important; height: 100% !important; bottom: 0 !important; right: 0 !important; border-radius: 0 !important; z-index: 100000 !important; }
+        .multi-timer-widget.fullscreen-timer .multi-timer-body { max-height: none !important; height: calc(100% - 50px); }
         .multi-timer-header { background: var(--primary); color: white; padding: 12px 15px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .multi-timer-header button { background: none; border: none; color: white; cursor: pointer; font-size: 16px; }
         .multi-timer-body { padding: 15px; max-height: 400px; overflow-y: auto; background: var(--bg-color); }
