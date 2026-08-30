@@ -184,8 +184,15 @@
                 <div class="view-content">
                     <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">🛒 Ma Liste de Courses</h2>
                     
-                    <div class="courses-input-container" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                        <input type="text" id="courseInput" placeholder="Ajouter (ex: Lait)..." style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--bg-color); color: var(--text-main);" onkeypress="if(event.key === 'Enter') ajouterCourseManuelle()">
+                    <div class="courses-input-container" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start;">
+                        <div style="position: relative; flex: 1;">
+                            <input type="text" id="courseInput" placeholder="Ajouter (ex: Lait)..." autocomplete="off"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--bg-color); color: var(--text-main); box-sizing: border-box;"
+                                oninput="filtrerCourseAutocomplete(this.value)"
+                                onkeydown="navigerCourseAutocomplete(event)"
+                                onkeypress="if(event.key==='Enter') ajouterCourseManuelle()">
+                            <div id="courseAutocompleteResults" class="autocomplete-results"></div>
+                        </div>
                         <button class="btn-primary" style="padding: 10px 15px; border-radius: 8px; margin: 0; width: auto; flex: none;" onclick="ajouterCourseManuelle()">➕</button>
                         <button class="btn-vocal" id="btnMicCourses" style="padding: 10px 15px; border-radius: 8px; margin: 0; flex: none;" onclick="toggleVocalCourses()">🎙️</button>
                     </div>
