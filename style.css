@@ -158,7 +158,7 @@
         details.recipe-card { background: var(--card-bg); border-radius: 16px; margin-bottom: 22px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); overflow: hidden; position: relative; transition: all 0.4s ease; border: 1px solid var(--border); border-left: 6px solid var(--primary); }
         details.recipe-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.1); transform: translateY(-2px); }
         details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); border:none;}
-        details.recipe-card.is-fullscreen summary { max-width: 900px; margin: 20px auto 0 auto; background: var(--card-bg); border-radius: 16px 16px 0 0; box-sizing: border-box; border-left: 6px solid var(--primary); pointer-events: none; }
+        details.recipe-card.is-fullscreen summary { max-width: 900px; margin: 20px auto 0 auto; background: var(--card-bg); border-radius: 16px 16px 0 0; box-sizing: border-box; border-left: 6px solid var(--primary); pointer-events: none; padding-right: 130px; }
         details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto 20px auto; font-size: 18px; padding: 20px 30px 40px 30px; background: var(--card-bg); min-height: calc(100vh - 100px); border-radius: 0 0 16px 16px; box-sizing: border-box; border-left: 6px solid var(--primary); box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
         
         details.recipe-card.is-fullscreen .btn-expand {

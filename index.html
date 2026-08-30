@@ -124,6 +124,10 @@
                             <i style="font-size: 30px;">💖</i>
                             <span>Favoris</span>
                         </div>
+                        <div class="shortcut-card" onclick="document.getElementById('multiTimerWidget').style.display='flex'; if(document.getElementById('multiTimerWidget').classList.contains('collapsed')) toggleTimerWidget();">
+                            <i style="font-size: 30px;">⏱️</i>
+                            <span>Minuteur</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,6 +249,7 @@
                 <!-- Les chronos actifs apparaîtront ici -->
             </div>
             <div class="add-timer-section">
+                <p style="text-align: center; font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 0; margin-bottom: 10px;">➕ Ajouter un nouveau chrono</p>
                 <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off">
                 <div class="timer-inputs">
                     <input type="number" id="newTimerMin" placeholder="Min" min="0">

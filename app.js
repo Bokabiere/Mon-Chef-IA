@@ -1629,12 +1629,12 @@ Règles de formatage ABSOLUES :
                             const itemList = uniqueItems.map(item => `<li>${item} <button class="btn-course missing-add-btn" data-ingredient="${item.replace(/"/g, '&quot;')}" onclick="ajouterCourse(this, this.dataset.ingredient)">➕ Ajouter</button></li>`).join('');
                             contenu += `<div class="courses-box"><div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;"><b>🛒 Il vous manque :</b><button class="btn-course add-all-courses-btn" onclick="ajouterTousIngredientsManquants(this.closest('.courses-box'))">➕ Ajouter tout</button></div><ul style="padding-left: 20px; margin-top:10px;">${itemList}</ul></div>`;
                         }
-                        contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+                        contenu = enrichirTexteChrono(contenu);
                         let safeTitre = titre.replace(/'/g, "\\'"); let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
                         if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
                         let stepsArrayString = `['${rawSteps.join("','")}']`;
 
-                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
+                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
                     });
                     
                     resDiv.innerHTML = html;
@@ -1695,10 +1695,10 @@ Règles de formatage ABSOLUES :
                 let html = ""; let index = 0;
                 snapshot.forEach(doc => {
                     const item = doc.data(); let bloc = item.recette; let iSaut = bloc.indexOf('\n'); let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, ''); let dateStr = item.date ? item.date.toDate().toLocaleDateString() : ""; let note = item.note || 0;
-                    contenu = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+                    contenu = enrichirTexteChrono(contenu);
                     let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;')); let stepsArrayString = `['${rawSteps.join("','")}']`;
                     let starsHtml = `<div class="rating-stars" data-doc="${doc.id}">`; for (let n = 1; n <= 5; n++) { starsHtml += `<span class="star ${n <= note ? 'filled' : ''}" onclick="noterRecette('${doc.id}', ${n})">★</span>`; } starsHtml += `<span class="rating-label">${note > 0 ? 'Votre note' : 'Notez cette recette'}</span></div>`;
-                    html += `<details class="recipe-card" id="carnet-card-${index}"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${starsHtml}<div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="carnet-step-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('carnet-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('carnet-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
+                    html += `<details class="recipe-card" id="carnet-card-${index}"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${starsHtml}<div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="carnet-step-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('carnet-step-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('carnet-step-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
                     index++;
                 });
                 contentDiv.innerHTML = html;
@@ -1809,12 +1809,12 @@ Règles de formatage ABSOLUES :
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
             const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
             if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
-            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; let index = stepId.split('-').slice(2).join('-'); recipeSteps[index] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[index]); }
+            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; recipeSteps[stepId] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[stepId]); }
         }
-        function changeStep(recipeIndex, direction) {
-            let data = recipeSteps[recipeIndex]; data.current += direction;
+        function changeStep(stepId, direction) {
+            let data = recipeSteps[stepId]; data.current += direction;
             if (data.current < 0) data.current = 0; if (data.current >= data.steps.length) data.current = data.steps.length - 1; 
-            let containerId = recipeIndex.toString().includes('carnet') ? `carnet-step-${recipeIndex.split('-')[2]}` : `step-view-${recipeIndex}`; updateStepDisplayCustom(containerId, data);
+            updateStepDisplayCustom(stepId, data);
         }
         function updateStepDisplayCustom(containerId, data) {
             const container = document.getElementById(containerId); if(!container) return;
@@ -1859,6 +1859,34 @@ Règles de formatage ABSOLUES :
             document.getElementById("newTimerName").value = "";
             document.getElementById("newTimerMin").value = "";
             document.getElementById("newTimerSec").value = "";
+        }
+
+        function enrichirTexteChrono(contenu) {
+            return contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, function(match, minutes, unite, offset, string) {
+                let start = Math.max(0, offset - 40);
+                let before = string.substring(start, offset);
+                let matchBefore = before.match(/[^.?!:\n]+$/);
+                before = matchBefore ? matchBefore[0] : before;
+
+                let end = Math.min(string.length, offset + match.length + 40);
+                let after = string.substring(offset + match.length, end);
+                let matchAfter = after.match(/^[^.?!:\n]+/);
+                after = matchAfter ? matchAfter[0] : after;
+                
+                let contexte = (before + " " + after).trim().replace(/\s+/g, ' ');
+                
+                let nomTache = contexte;
+                if (nomTache.length > 35) {
+                    nomTache = nomTache.substring(0, 35) + "...";
+                }
+                
+                if (nomTache.length < 3) {
+                    nomTache = `Chrono ${minutes}m`;
+                }
+                
+                let escapedNom = nomTache.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return `<span class="timer-tag" onclick="startTimer(${minutes}, '${escapedNom}')">⏱️ ${match}</span>`;
+            });
         }
 
         function startTimer(minutes, nom = null) {
@@ -2105,7 +2133,7 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
         
         // Formater le nouveau contenu
         let contenuFormate = texteReponse.replace(/[*#]/g, '').trim();
-        contenuFormate = contenuFormate.replace(/(\d+)\s*(min|minute|minutes)/gi, `<span class="timer-tag" onclick="startTimer($1)">⏱️ $1 min</span>`);
+        contenuFormate = enrichirTexteChrono(contenuFormate);
         
         textDiv.innerHTML = contenuFormate.replace(/\n/g, '<br>');
         
