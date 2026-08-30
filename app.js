@@ -819,6 +819,7 @@ const firebaseConfig = {
         };
 
         window.ajouterCourseManuelle = async function() {
+            fermerCourseAutocomplete();
             const input = document.getElementById('courseInput');
             if(!input) return;
             const texte = input.value.trim();
@@ -852,6 +853,77 @@ const firebaseConfig = {
                 showToast("Erreur lors de l’ajout manuel.", "error");
             }
         };
+
+        // ── Autocomplétion liste de courses ─────────────────────────────────
+        let courseAutocompleteIndex = -1;
+
+        window.filtrerCourseAutocomplete = function(terme) {
+            const resDiv = document.getElementById('courseAutocompleteResults');
+            if (!resDiv) return;
+            terme = terme.trim();
+            if (!terme) { fermerCourseAutocomplete(); return; }
+            const termeLower = terme.toLowerCase();
+            const matches = new Map();
+            for (const cat in globalIngredientsList) {
+                if (Array.isArray(globalIngredientsList[cat])) {
+                    globalIngredientsList[cat].forEach(ing => {
+                        if (typeof ing === 'string' && ing.toLowerCase().includes(termeLower))
+                            if (!matches.has(ing)) matches.set(ing, getPrixIngredient(ing));
+                    });
+                }
+            }
+            for (const cle of Object.keys(ingredientPrices)) {
+                if (cle.toLowerCase().includes(termeLower) && !matches.has(cle))
+                    matches.set(cle, getPrixIngredient(cle));
+            }
+            if (matches.size === 0) { fermerCourseAutocomplete(); return; }
+            courseAutocompleteIndex = -1;
+            let html = ''; let i = 0;
+            for (const [nom, prix] of matches) {
+                if (i >= 8) break;
+                const prixHtml = prix ? ` <span style="font-size:11px;opacity:0.6;margin-left:4px;">${prix.prix.toFixed(2)}€</span>` : '';
+                const icone = iconesIngredients[nom] || '🛒';
+                html += `<div class="autocomplete-item" onmousedown="selectionnerCourseAutocomplete('${nom.replace(/'/g, "\\'")}')">${icone} <span style="font-weight:500;">${nom}</span>${prixHtml}</div>`;
+                i++;
+            }
+            resDiv.innerHTML = html;
+            resDiv.style.display = 'block';
+        };
+
+        window.navigerCourseAutocomplete = function(e) {
+            const resDiv = document.getElementById('courseAutocompleteResults');
+            const input = document.getElementById('courseInput');
+            if (!resDiv || resDiv.style.display === 'none') return;
+            const its = resDiv.querySelectorAll('.autocomplete-item');
+            if (!its.length) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); courseAutocompleteIndex = Math.min(courseAutocompleteIndex + 1, its.length - 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); courseAutocompleteIndex = Math.max(courseAutocompleteIndex - 1, -1); }
+            else if (e.key === 'Escape') { fermerCourseAutocomplete(); return; }
+            else if (e.key === 'Tab' && its.length > 0) { e.preventDefault(); its[0].dispatchEvent(new MouseEvent('mousedown')); return; }
+            else { return; }
+            its.forEach((el, idx) => { el.style.background = idx === courseAutocompleteIndex ? 'var(--primary)' : ''; el.style.color = idx === courseAutocompleteIndex ? '#fff' : ''; });
+            if (courseAutocompleteIndex >= 0) input.value = its[courseAutocompleteIndex].querySelector('span').textContent.trim();
+        };
+
+        window.selectionnerCourseAutocomplete = function(nom) {
+            const input = document.getElementById('courseInput');
+            if (input) { input.value = nom; }
+            fermerCourseAutocomplete();
+            ajouterCourseManuelle();
+        };
+
+        function fermerCourseAutocomplete() {
+            const resDiv = document.getElementById('courseAutocompleteResults');
+            if (resDiv) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; }
+            courseAutocompleteIndex = -1;
+        }
+
+        document.addEventListener('click', function(e) {
+            const inp = document.getElementById('courseInput');
+            const res = document.getElementById('courseAutocompleteResults');
+            if (inp && res && !inp.contains(e.target) && !res.contains(e.target)) fermerCourseAutocomplete();
+        });
+        // ────────────────────────────────────────────────────────────────────
 
         window.supprimerCourseDoc = function(event, docId) {
             event.stopPropagation();
