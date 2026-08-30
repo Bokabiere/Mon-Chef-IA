@@ -1469,16 +1469,18 @@ const firebaseConfig = {
 
                 loader.style.display = "none";
                 let safeTitre = nomDuPlat.replace(/'/g, "\\'");
+                let index = 'plan';
+                let contenu = enrichirTexteChrono(texte.trim());
+                let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+                if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
+                let stepsArrayString = `['${rawSteps.join("','")}']`;
                 
-                // Construct a simple view for this specific recipe
-                let contenuHtml = `<div class="recipe-card" open style="padding:15px; display:block;">
-                    <h3 style="margin-top:0;">🍽️ ${nomDuPlat}</h3>
-                    <div class="text-view">${enrichirTexteChrono(texte.trim().replace(/\n/g, '<br>'))}</div>
-                    <div style="margin-top: 15px; display: flex; gap: 10px;">
-                        <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
-                        <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
-                    </div>
-                </div>`;
+                // Construct a detailed view similar to normal recipes
+                let contenuHtml = `<details class="recipe-card" id="card-${index}" open><summary><div><span>🍽️ ${nomDuPlat}</span></div></summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div>
+                <div class="planning-validation-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
+                    <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
+                </div></div></details>`;
                 
                 resDiv.innerHTML = contenuHtml;
 
@@ -1491,8 +1493,10 @@ const firebaseConfig = {
 
         window.validerRecettePlanning = async function(btn, nomDuPlat, jour, repas) {
             const card = btn.closest('.recipe-card');
-            // Remove the buttons before saving to not duplicate them when viewing
-            btn.parentElement.remove();
+            
+            // Remove the validation buttons before saving
+            const validationDiv = card.querySelector('.planning-validation-buttons');
+            if (validationDiv) validationDiv.remove();
             
             // Add a small "Sauvegardé" badge or normal layout
             let htmlToSave = card.outerHTML;
