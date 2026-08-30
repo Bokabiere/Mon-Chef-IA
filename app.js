@@ -14,6 +14,7 @@ const firebaseConfig = {
         let memoireIngredients = [];
         let memoireAllergenes = [];
         let memoireRegimes = [];
+        let memoireEquipements = [];
         let moteurIAActif = "gemini";
         let unsubscribeCourses = null;
         let isAdminUser = false;
@@ -326,6 +327,32 @@ const firebaseConfig = {
             return `\nPRÉFÉRENCE ALIMENTAIRE PERMANENTE DE L'UTILISATEUR (à respecter dans toutes les recettes) : ${memoireRegimes.join(", ")}.`;
         }
 
+        function sauvegarderEquipements() {
+            memoireEquipements = Array.from(document.querySelectorAll('.chk-equipement:checked')).map(cb => cb.value);
+            const autreEquipement = document.getElementById('inputAutreEquipement').value.trim();
+            if(autreEquipement) {
+                const autres = autreEquipement.split(',').map(e => e.trim()).filter(e => e);
+                memoireEquipements = memoireEquipements.concat(autres);
+            }
+            syncCloud('equipements', memoireEquipements);
+            showToast("Équipements mis à jour 🍳", "success");
+        }
+
+        function chargerEquipementsUI() {
+            document.querySelectorAll('.chk-equipement').forEach(cb => {
+                cb.checked = memoireEquipements.includes(cb.value);
+            });
+            const standardEquipements = Array.from(document.querySelectorAll('.chk-equipement')).map(cb => cb.value);
+            const autres = memoireEquipements.filter(e => !standardEquipements.includes(e));
+            const inputAutre = document.getElementById('inputAutreEquipement');
+            if (inputAutre) inputAutre.value = autres.join(', ');
+        }
+
+        function getEquipementsPrompt() {
+            if (memoireEquipements.length === 0) return "";
+            return `\nMATÉRIEL ET ÉQUIPEMENT DISPONIBLE : ${memoireEquipements.join(", ")}. Tu DOIS proposer en priorité des recettes qui utilisent ce matériel (par exemple, si Cookeo est listé, propose des plats au Cookeo), mais tu peux occasionnellement proposer des plats avec du matériel standard (poêle, casserole).`;
+        }
+
         async function loadPrices() {
             try {
                 const response = await fetch('./prix_ingredients.json');
@@ -386,6 +413,7 @@ const firebaseConfig = {
                         memoireIngredients = userDoc.data().ingredients || [];
                         memoireAllergenes = userDoc.data().allergenes || [];
                         memoireRegimes = userDoc.data().regimes || [];
+                        memoireEquipements = userDoc.data().equipements || [];
                         moteurIAActif = userDoc.data().moteurIA || "gemini";
                         
                         const selectGlobal = document.getElementById('selecteurIaGlobal');
@@ -400,6 +428,7 @@ const firebaseConfig = {
                 afficherIngredientsGauche();
                 chargerAllergenesUI();
                 chargerRegimesUI();
+                chargerEquipementsUI();
 
                 document.getElementById('categoriesContainer').addEventListener('change', (e) => {
                     if (!e.target.classList.contains('chk-ingredient')) return;
@@ -1215,7 +1244,7 @@ const firebaseConfig = {
             const moteur = moteurIAActif;
 
             const historique = await getHistoriquePrompt();
-            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
+            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
             Format STRICT requis (un par ligne) :
             Lundi: [Plat]
             Mardi: [Plat]
@@ -1250,7 +1279,7 @@ const firebaseConfig = {
             contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
             const moteur = moteurIAActif;
 
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
+            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
                 const apiKey = await getApiKey(moteur);
@@ -1286,7 +1315,7 @@ const firebaseConfig = {
             switchView('results');
 
             const historique = await getHistoriquePrompt();
-            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
+            const prompt = `Cuisiner : "${nomDuPlat}". Recette détaillée pour ${personnes} pers. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
             1. Séparer avec '---RECETTE---'. 2. 1ère ligne = émoji + TITRE. 3. Ingrédients manquants ? Finir par : "COURSES: ingrédient1, ingrédient2". 4. Durées en chiffres (15 min). Pas de Markdown.`;
             const titleTemplate = `Voici la recette pour : ${nomDuPlat} 🍽️`;
 
@@ -1324,7 +1353,7 @@ const firebaseConfig = {
             switchView('results');
             
             const historique = await getHistoriquePrompt();
-            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${historique}
+            const prompt = `Génère OBLIGATOIREMENT 3 recettes distinctes et différentes pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments de base). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
 
 Règles de formatage ABSOLUES :
 1. Sépare chaque recette de manière stricte en écrivant exactement ---RECETTE--- entre elles. Ne mets AUCUN texte d'introduction ni de conclusion.

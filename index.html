@@ -276,6 +276,7 @@
                     <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
                     <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
+                    <button class="tab-btn" id="tabEquipementBtn" onclick="switchTab('equipement')">🍳 Équipement</button>
                     <button class="tab-btn" id="tabOptionsBtn" onclick="switchTab('options')">⚙️ Options</button>
                     <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
                 </div>
@@ -367,6 +368,48 @@
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="seDeconnecter()">
                         🚪 Se déconnecter
                     </button>
+                </div>
+
+                <div id="tabEquipement" style="display: none;">
+                    <label>🍳 Mon matériel de cuisine</label>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Sélectionnez vos équipements pour que l'IA adapte ses propositions (ex: Cookeo, Four...).</p>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Four" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">🌡️ Four</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Micro-ondes" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">♨️ Micro-ondes</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Cookeo" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">🍲 Cookeo (ou Multicuiseur)</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Thermomix" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">🤖 Thermomix (ou Robot cuiseur)</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Air Fryer" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">💨 Air Fryer</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Blender" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">🌪️ Blender / Mixeur</span>
+                        </label>
+                        <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" class="chk-equipement" value="Machine à pain" onchange="sauvegarderEquipements()">
+                            <span style="display: block; width: 100%;">🍞 Machine à pain</span>
+                        </label>
+                    </div>
+
+                    <div style="background: var(--bg-color); padding: 12px; border-radius: 8px; border: 1px dashed var(--border);">
+                        <label>➕ Autre équipement (séparé par des virgules)</label>
+                        <div style="display: flex; gap: 10px; margin-top: 5px;">
+                            <input type="text" id="inputAutreEquipement" placeholder="Ex: Appareil à raclette, Gaufrier..." onchange="sauvegarderEquipements()">
+                        </div>
+                    </div>
                 </div>
 
                 <div id="tabAllergene" style="display: none;">
