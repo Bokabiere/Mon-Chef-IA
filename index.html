@@ -91,6 +91,9 @@
                         <!-- VUE ACCUEIL (DASHBOARD) -->
             <div id="view-home" class="view-container view active">
                 <div class="view-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center;">
+                    <div style="position: absolute; top: 15px; right: 15px;">
+                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--primary);">ℹ️</button>
+                    </div>
                     
                     <div class="mascot-bubble" style="margin-top: 10px;">
                         <video src="Img/mascotte.webm" autoplay loop muted playsinline style="width: 120px; height: 120px;"></video>
@@ -534,6 +537,25 @@
                 
                 <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:0;"><i>Tapotez un article pour le mettre dans le caddie.</i></p>
                 <div id="coursesContent"><p style="text-align:center;">Chargement...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalOnboarding" class="modal-overlay" style="z-index: 3000;">
+        <div class="modal-content" style="max-width: 500px; text-align: left;">
+            <div class="modal-header">
+                <h3 class="gradient-text">👋 Bienvenue dans Chef IA !</h3>
+                <button class="btn-secondary" onclick="fermerOnboarding()">✖</button>
+            </div>
+            <div class="modal-body" style="line-height: 1.6; font-size: 16px;">
+                <p>Voici comment utiliser l'application :</p>
+                <ol style="padding-left: 20px;">
+                    <li style="margin-bottom: 10px;"><strong>🍅 Remplissez votre frigo :</strong> Dans <em>Ingrédients</em>, ajoutez ce que vous avez chez vous.</li>
+                    <li style="margin-bottom: 10px;"><strong>⚙️ Préparez votre cuisine :</strong> Allez dans <em>Paramètres</em> pour indiquer vos équipements (Cookeo, four...) et vos éventuelles allergies ou régimes.</li>
+                    <li style="margin-bottom: 10px;"><strong>✨ Lancez la magie :</strong> Cliquez sur <strong>CUISINER</strong> depuis l'accueil pour générer des recettes ou un planning sur-mesure !</li>
+                    <li style="margin-bottom: 10px;"><strong>🛒 Faites vos courses :</strong> Ajoutez les éléments manquants à votre liste de courses.</li>
+                </ol>
+                <button class="btn-primary" style="width: 100%; margin-top: 20px; font-size: 18px;" onclick="fermerOnboarding()">C'est parti ! 🚀</button>
             </div>
         </div>
     </div>

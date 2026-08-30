@@ -103,6 +103,10 @@ const firebaseConfig = {
                         if (tabAdminBtn) tabAdminBtn.style.display = isAdminUser ? "block" : "none";
 
                         chargerInterfaceBase();
+
+                        if (!localStorage.getItem('onboardingShown')) {
+                            setTimeout(() => { window.ouvrirOnboarding(); }, 500);
+                        }
                     } else {
                         document.getElementById('appContent').style.display = 'none';
                         document.getElementById('loginScreen').style.display = 'flex';
@@ -402,6 +406,15 @@ const firebaseConfig = {
             return null;
         }
 
+
+        window.ouvrirOnboarding = function() {
+            document.getElementById('modalOnboarding').style.display = 'flex';
+        }
+
+        window.fermerOnboarding = function() {
+            document.getElementById('modalOnboarding').style.display = 'none';
+            localStorage.setItem('onboardingShown', 'true');
+        }
 
         async function chargerInterfaceBase() {
             await loadPrices();
