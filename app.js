@@ -1249,70 +1249,108 @@ const firebaseConfig = {
             document.getElementById('modalPlanning').style.display = 'flex';
             const contentDiv = document.getElementById('planningContent'); contentDiv.innerHTML = "<p style='text-align:center;'>Recherche du menu...</p>";
             try {
-                const docSnap = await userDb.collection("planning").doc("semaine").get();
-                if (docSnap.exists) { afficherPlanningHtml(docSnap.data()); } else { genererNouveauPlanning(); }
+                let docSnap = await userDb.collection("planning").doc("semaine").get();
+                let data = docSnap.exists ? docSnap.data() : {};
+                
+                // Migration check
+                let needsUpdate = false;
+                const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+                jours.forEach(j => {
+                    if (data[j] && typeof data[j] === 'string') {
+                        data[j] = { dejeuner: null, diner: { plat: data[j], done: false } };
+                        needsUpdate = true;
+                    }
+                });
+                if (needsUpdate) await userDb.collection("planning").doc("semaine").set(data);
+                
+                afficherPlanningHtml(data);
             } catch (e) { contentDiv.innerHTML = "<p style='color:red;'>Erreur.</p>"; }
         }
 
         function afficherPlanningHtml(planningObj) {
             const contentDiv = document.getElementById('planningContent'); let html = `<div class="planning-grid">`;
             const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+            
+            const renderMeal = (jour, repas, mealData, label) => {
+                if (mealData && mealData.plat) {
+                    let safePlat = mealData.plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    let doneCheck = mealData.done ? 'checked' : '';
+                    let opacity = mealData.done ? '0.6' : '1';
+                    let textDecoration = mealData.done ? 'line-through' : 'none';
+                    return `<div class="meal-block filled" style="opacity: ${opacity};">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="meal-label">${label}</span>
+                            <input type="checkbox" ${doneCheck} onchange="toggleRepasDone('${jour}', '${repas}', this.checked)" style="width:16px; height:16px; accent-color: var(--primary);">
+                        </div>
+                        <div class="meal-name" style="text-decoration: ${textDecoration}; margin: 8px 0;">${mealData.plat}</div>
+                        <div class="meal-actions">
+                            <button class="btn-action" style="background:#ff7675; padding: 4px; font-size: 11px; flex:0.3;" onclick="retirerRepas('${jour}', '${repas}')">🗑️</button>
+                            <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}')">🍳 Cuisiner</button>
+                        </div>
+                    </div>`;
+                } else {
+                    return `<div class="meal-block empty" onclick="ouvrirModalCuisson(true, '${jour}', '${repas}')" style="cursor:pointer; transition: 0.2s;">
+                        <span class="meal-label">${label}</span>
+                        <div style="font-size:12px; color:var(--primary); font-weight:bold; margin-top:5px; text-align:center;">+ Ajouter</div>
+                    </div>`;
+                }
+            };
+
             jours.forEach(jour => {
-                html += `<div class="day-card"><div class="day-title">${jour}</div><div class="meal-block empty"><span class="meal-label">Déjeuner</span><div style="font-size:12px; color:var(--text-muted);">+ Choisir une recette</div></div>`;
-                if(planningObj[jour]) {
-                    let plat = planningObj[jour]; let safePlat = plat.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    html += `<div class="meal-block filled"><span class="meal-label">Dîner</span><div class="meal-name">${plat}</div><div class="meal-actions"><button class="btn-action" style="background:#6c5ce7; padding: 4px 8px; font-size: 11px; flex:1;" onclick="relancerJour('${jour}', '${safePlat}')">🎲 Autre</button><button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}')">🍳 Cuisiner</button></div></div>`;
-                } else { html += `<div class="meal-block empty"><span class="meal-label">Dîner</span><div style="font-size:12px; color:var(--text-muted);">+ Choisir une recette</div></div>`; }
+                let dayData = planningObj[jour] || {};
+                html += `<div class="day-card"><div class="day-title">${jour}</div>`;
+                html += renderMeal(jour, 'dejeuner', dayData.dejeuner, 'Déjeuner');
+                html += renderMeal(jour, 'diner', dayData.diner, 'Dîner');
                 html += `</div>`;
             });
-            html += `</div><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="genererNouveauPlanning()">🔄 Réinitialiser et générer une nouvelle semaine</button>`;
+            html += `</div><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="viderPlanning()">🗑️ Vider le planning</button>`;
             contentDiv.innerHTML = html;
         }
 
-        async function genererNouveauPlanning() {
-            const contentDiv = document.getElementById('planningContent');
+        window.toggleRepasDone = async function(jour, repas, isDone) {
+            try {
+                await userDb.collection("planning").doc("semaine").update({ [`${jour}.${repas}.done`]: isDone });
+                chargerPlanning();
+            } catch(e) { console.error(e); }
+        };
+
+        window.retirerRepas = async function(jour, repas) {
+            try {
+                await userDb.collection("planning").doc("semaine").update({ [`${jour}.${repas}`]: null });
+                chargerPlanning();
+            } catch(e) { console.error(e); }
+        };
+
+        window.viderPlanning = async function() {
+            if(!confirm("Voulez-vous vraiment vider tout votre planning ?")) return;
+            try {
+                await userDb.collection("planning").doc("semaine").set({});
+                chargerPlanning();
+            } catch(e) { console.error(e); }
+        };
+
+        window.genererRepasPlanning = async function() {
+            const jour = document.getElementById('planningJour').value;
+            const repas = document.getElementById('planningRepas').value;
+            
             const checked = memoireIngredients;
-            if (checked.length === 0) return contentDiv.innerHTML = "<p style='text-align:center; color:#d63031; padding: 20px;'>Cochez quelques ingrédients pour planifier.</p>";
-            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création du menu...</p></div>`;
+            if (checked.length === 0) {
+                showToast("Cochez au moins un ingrédient pour planifier.", "error");
+                chargerPlanning();
+                return;
+            }
+            const contentDiv = document.getElementById('planningContent');
+            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour} (${repas})...</p></div>`;
+            document.getElementById('modalPlanning').style.display = 'flex';
+            
+            const humeur = document.getElementById('humeur').value;
+            const personnes = document.getElementById('personnes').value;
+            const temps = document.getElementById('temps').value;
             const moteur = moteurIAActif;
 
             const historique = await getHistoriquePrompt();
-            const prompt = `Génère un menu simple pour 7 jours en utilisant en priorité absolue ces ingrédients possédés : ${checked.join(", ")}. (Ne tiens PAS compte des épices, du sel, du poivre, des huiles ou des condiments de base, pars du principe qu'ils sont toujours disponibles). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
-            Format STRICT requis (un par ligne) :
-            Lundi: [Plat]
-            Mardi: [Plat]
-            Mercredi: [Plat]
-            Jeudi: [Plat]
-            Vendredi: [Plat]
-            Samedi: [Plat]
-            Dimanche: [Plat]`;
-
-            try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { contentDiv.innerHTML = ""; showToast(`Clé API ${moteur} requise.`, "error"); return; }
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
-                }
-
-                let lignes = texte.split('\n').filter(l => l.includes(':')); let planningObj = {};
-                lignes.forEach(l => { let parts = l.split(':'); planningObj[parts[0].trim()] = parts[1].trim(); });
-                await userDb.collection("planning").doc("semaine").set(planningObj);
-                afficherPlanningHtml(planningObj);
-            } catch (e) { afficherErreurIA(contentDiv, e, moteur); }
-        }
-
-        async function relancerJour(jour, platActuel) {
-            const contentDiv = document.getElementById('planningContent');
-            const checked = memoireIngredients;
-            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Recherche pour ${jour}...</p></div>`;
-            const moteur = moteurIAActif;
-
-            const prompt = `L'utilisateur ne veut pas de "${platActuel}" ce ${jour}. Propose UN SEUL nouveau plat en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} Réponds UNIQUEMENT avec le nom du plat.`;
+            const prompt = `Génère UN SEUL plat pour le ${repas} de ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checked.join(", ")} (hors épices/condiments). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
+            Réponds UNIQUEMENT avec le nom du plat (pas de recette, pas d'intro).`;
 
             try {
                 const apiKey = await getApiKey(moteur);
@@ -1327,11 +1365,20 @@ const firebaseConfig = {
                 }
 
                 let nouveauPlat = texte.trim().replace(/[*#]/g, '');
-                await userDb.collection("planning").doc("semaine").update({ [jour]: nouveauPlat });
+                
                 const docSnap = await userDb.collection("planning").doc("semaine").get();
-                afficherPlanningHtml(docSnap.data());
-            } catch(e) { const { titre, detail } = messageErreurIA(e, moteur); showToast(`${titre} ${detail}`, "error", 5000); chargerPlanning(); }
-        }
+                let currentData = docSnap.exists ? docSnap.data() : {};
+                if(!currentData[jour]) currentData[jour] = {};
+                currentData[jour][repas] = { plat: nouveauPlat, done: false };
+                
+                await userDb.collection("planning").doc("semaine").set(currentData);
+                chargerPlanning();
+            } catch(e) { 
+                const { titre, detail } = messageErreurIA(e, moteur); 
+                showToast(`${titre} ${detail}`, "error", 5000); 
+                chargerPlanning(); 
+            }
+        };
 
         function garantirBoutonRegenerer(html) {
             if (html.includes('regenererRecette')) return html;
@@ -2184,8 +2231,29 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
 // Mais on peut juste appeler mettreAJourResumeIngredients apres le premier chargement.
 
 
-window.ouvrirModalCuisson = function() {
+window.modePlanningContext = false;
+window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas = 'diner') {
+    window.modePlanningContext = modePlanning;
     document.getElementById('modalCuisson').style.display = 'flex';
+    
+    const btnGenerer = document.getElementById('btnGenererRecettes');
+    const btnRapide = document.getElementById('btnRecetteRapide');
+    const planningOptions = document.getElementById('planningOptions');
+    
+    if(modePlanning) {
+        planningOptions.style.display = 'block';
+        document.getElementById('planningJour').value = jour;
+        document.getElementById('planningRepas').value = repas;
+        
+        btnGenerer.innerText = "✨ Générer pour ce repas";
+        btnGenerer.onclick = function() { fermerModalCuisson(); genererRepasPlanning(); };
+        btnRapide.style.display = 'none';
+    } else {
+        planningOptions.style.display = 'none';
+        btnGenerer.innerText = "✨ Inventer mes recettes";
+        btnGenerer.onclick = function() { fermerModalCuisson(); chercherRecettesIA(); };
+        btnRapide.style.display = 'block';
+    }
 };
 window.fermerModalCuisson = function() {
     document.getElementById('modalCuisson').style.display = 'none';
