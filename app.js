@@ -1304,7 +1304,11 @@ const firebaseConfig = {
                 html += renderMeal(jour, 'diner', dayData.diner, 'Dîner');
                 html += `</div>`;
             });
-            html += `</div><button class="btn-danger" style="margin-top:20px; width:100%; padding: 12px; font-size: 14px;" onclick="viderPlanning()">🗑️ Vider le planning</button>`;
+            html += `</div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-primary" style="flex:2; padding: 12px; font-size: 14px;" onclick="ouvrirModalMultiPlanning()">🪄 Générer plusieurs repas</button>
+                <button class="btn-danger" style="flex:1; padding: 12px; font-size: 14px;" onclick="viderPlanning()">🗑️ Vider le planning</button>
+            </div>`;
             contentDiv.innerHTML = html;
         }
 
@@ -1328,6 +1332,101 @@ const firebaseConfig = {
                 await userDb.collection("planning").doc("semaine").set({});
                 chargerPlanning();
             } catch(e) { console.error(e); }
+        };
+
+        window.ouvrirModalMultiPlanning = function() {
+            document.getElementById('modalMultiPlanning').style.display = 'flex';
+            const grid = document.getElementById('multiPlanningGrid');
+            const jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+            let html = '';
+            jours.forEach(j => {
+                html += `<div style="background:rgba(255, 107, 107, 0.05); padding:10px; border-radius:8px; border:1px solid var(--border);">
+                    <div style="font-weight:bold; margin-bottom:5px; color:var(--primary); font-size:14px;">${j}</div>
+                    <label style="display:block; font-size:13px; margin-bottom:5px; cursor:pointer;"><input type="checkbox" class="chk-multi-repas" data-jour="${j}" data-repas="dejeuner" style="accent-color:var(--primary);"> Midi</label>
+                    <label style="display:block; font-size:13px; cursor:pointer;"><input type="checkbox" class="chk-multi-repas" data-jour="${j}" data-repas="diner" style="accent-color:var(--primary);"> Soir</label>
+                </div>`;
+            });
+            grid.innerHTML = html;
+        };
+
+        window.fermerModalMultiPlanning = function() {
+            document.getElementById('modalMultiPlanning').style.display = 'none';
+        };
+
+        window.genererMultiRepasPlanning = async function() {
+            const checkboxes = document.querySelectorAll('.chk-multi-repas:checked');
+            if (checkboxes.length === 0) return showToast("Veuillez sélectionner au moins un repas.", "error");
+            
+            const checkedIngr = memoireIngredients;
+            if (checkedIngr.length === 0) {
+                showToast("Cochez au moins un ingrédient.", "error");
+                return;
+            }
+
+            const humeur = document.getElementById('multiHumeur').value;
+            const personnes = document.getElementById('multiPersonnes').value;
+            const temps = document.getElementById('multiTemps').value;
+            const moteur = moteurIAActif;
+
+            let cibles = [];
+            checkboxes.forEach(chk => cibles.push(`${chk.dataset.jour} ${chk.dataset.repas}`));
+            
+            fermerModalMultiPlanning();
+            const contentDiv = document.getElementById('planningContent');
+            contentDiv.innerHTML = `<div class="loader" style="display:block; margin-top:5vh;"><div class="loader-spinner"></div><p style="margin-top:20px;">Création de ${cibles.length} repas...</p></div>`;
+            
+            const historique = await getHistoriquePrompt();
+            const prompt = `Génère un menu pour EXACTEMENT ces repas : ${cibles.join(", ")}. 
+            Pour ${personnes} personnes. Temps imparti : ${temps}. Dispo : ${checkedIngr.join(", ")} (hors épices/condiments). Style : ${humeur}. ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique}
+            Format STRICT requis (un par ligne, RIEN D'AUTRE) :
+            [Jour] [dejeuner/diner]: [Nom du plat (sans recette)]
+            Exemple:
+            Lundi dejeuner: Salade niçoise
+            Lundi diner: Poulet rôti`;
+
+            try {
+                const apiKey = await getApiKey(moteur);
+                if (!apiKey) { showToast(`Clé API requise.`, "error"); chargerPlanning(); return; }
+                
+                let texte = "";
+                if (moteur === 'gemini') {
+                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                } else if (moteur === 'mistral') {
+                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
+                    const data = await rep.json(); texte = data.choices[0].message.content;
+                }
+
+                let lignes = texte.split('\n').filter(l => l.includes(':')); 
+                
+                const docSnap = await userDb.collection("planning").doc("semaine").get();
+                let currentData = docSnap.exists ? docSnap.data() : {};
+                
+                lignes.forEach(l => { 
+                    let parts = l.split(':'); 
+                    if(parts.length >= 2) {
+                        let key = parts[0].trim().toLowerCase(); 
+                        let plat = parts.slice(1).join(':').trim().replace(/[*#]/g, '');
+                        
+                        let matchedJour = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"].find(j => key.includes(j));
+                        if(matchedJour) matchedJour = matchedJour.charAt(0).toUpperCase() + matchedJour.slice(1);
+                        
+                        let matchedRepas = key.includes("dejeuner") || key.includes("déjeuner") || key.includes("midi") ? "dejeuner" : (key.includes("diner") || key.includes("dîner") || key.includes("soir") ? "diner" : null);
+                        
+                        if (matchedJour && matchedRepas) {
+                            if(!currentData[matchedJour]) currentData[matchedJour] = {};
+                            currentData[matchedJour][matchedRepas] = { plat: plat, done: false };
+                        }
+                    }
+                });
+                
+                await userDb.collection("planning").doc("semaine").set(currentData);
+                chargerPlanning();
+            } catch(e) { 
+                const { titre, detail } = messageErreurIA(e, moteur); 
+                showToast(`${titre} ${detail}`, "error", 5000); 
+                chargerPlanning(); 
+            }
         };
 
         window.genererRepasPlanning = async function() {

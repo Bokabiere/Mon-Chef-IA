@@ -577,6 +577,51 @@
         </div>
     </div>
 
+    <div id="modalMultiPlanning" class="modal-overlay" style="z-index: 6000;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>🪄 Générer plusieurs repas</h3>
+                <button class="btn-secondary" onclick="fermerModalMultiPlanning()">✖</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-top:0; margin-bottom:15px; color:var(--text-muted); font-size:14px;">Cochez les repas que vous souhaitez générer :</p>
+                <div id="multiPlanningGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                    <!-- JS will populate this -->
+                </div>
+                
+                <div class="row" style="margin-bottom: 15px;">
+                    <div>
+                        <label>Humeur / Style</label>
+                        <select id="multiHumeur">
+                            <option value="classique">👨‍🍳 Classique</option>
+                            <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
+                            <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
+                            <option value="anti-gaspi, utilise en priorité les produits périssables">♻️ Mode Anti-Gaspi</option>
+                            <option value="gastronomique, original, digne d'un chef">🌟 Mode Gastronomique</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row" style="margin-bottom: 20px;">
+                    <div>
+                        <label>Temps dispo.</label>
+                        <select id="multiTemps">
+                            <option value="15 minutes max">⚡ - 15 min</option>
+                            <option value="30 minutes environ" selected>⏱️ ~ 30 min</option>
+                            <option value="1 heure max">⏳ Jusqu'à 1h</option>
+                            <option value="plat mijoté">🍲 + d'une heure</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Personnes</label>
+                        <input type="number" id="multiPersonnes" value="2" min="1">
+                    </div>
+                </div>
+                
+                <button class="btn-primary" style="width:100%;" onclick="genererMultiRepasPlanning()">✨ Générer la sélection</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalCourses" class="modal-overlay">
         <div class="modal-content" id="modalCoursesContent">
             <div class="modal-header" style="background: var(--bg-color);">
@@ -646,7 +691,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src='app.js?v=5'></script>
+    <script src='app.js?v=6'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
