@@ -331,7 +331,7 @@ const firebaseConfig = {
                 const response = await fetch('./prix_ingredients.json');
                 if (response.ok) {
                     ingredientPrices = await response.json();
-                    console.log(`✅ ${Object.keys(ingredientPrices).length} prix chargés avec succès`);
+                    console.log(`✅ ${Object.keys(ingredientPrices).length} prix Leclerc chargés`);
                 } else {
                     console.warn('⚠️ Fichier prix_ingredients.json non trouvé');
                 }
@@ -339,6 +339,42 @@ const firebaseConfig = {
                 console.warn('⚠️ Erreur lors du chargement des prix:', e.message);
             }
         }
+
+        /**
+         * Retourne les données de prix pour un ingrédient donné.
+         * Recherche dans l'ordre :
+         *   1. Correspondance exacte (insensible à la casse)
+         *   2. La clé du JSON est contenue dans le nom de l'ingrédient
+         *   3. Le nom de l'ingrédient est contenu dans la clé du JSON
+         * Gère à la fois l'ancien format (valeur = nombre) et le nouveau (valeur = objet avec .prix)
+         * @param {string} nom - Nom de l'ingrédient tel qu'il apparaît dans l'app
+         * @returns {{ prix: number, prix_min: number, prix_max: number, produit_ref: string }|null}
+         */
+        function getPrixIngredient(nom) {
+            if (!nom || Object.keys(ingredientPrices).length === 0) return null;
+            const nomLower = nom.toLowerCase().trim();
+
+            // 1. Correspondance exacte (insensible à la casse)
+            for (const [cle, val] of Object.entries(ingredientPrices)) {
+                if (cle.toLowerCase() === nomLower) {
+                    return typeof val === 'object' ? val : { prix: val, prix_min: val, prix_max: val, produit_ref: cle };
+                }
+            }
+            // 2. La clé du JSON est contenue dans le nom de l'ingrédient
+            for (const [cle, val] of Object.entries(ingredientPrices)) {
+                if (nomLower.includes(cle.toLowerCase())) {
+                    return typeof val === 'object' ? val : { prix: val, prix_min: val, prix_max: val, produit_ref: cle };
+                }
+            }
+            // 3. Le nom de l'ingrédient est contenu dans la clé du JSON
+            for (const [cle, val] of Object.entries(ingredientPrices)) {
+                if (cle.toLowerCase().includes(nomLower)) {
+                    return typeof val === 'object' ? val : { prix: val, prix_min: val, prix_max: val, produit_ref: cle };
+                }
+            }
+            return null;
+        }
+
 
         async function chargerInterfaceBase() {
             await loadPrices();
@@ -551,7 +587,10 @@ const firebaseConfig = {
                     const tag = document.createElement('div');
                     tag.className = 'ingredient-tag' + (isChecked ? ' active' : '');
                     
-                    const priceHtml = ingredientPrices[ing] ? ` <span style="font-size:11px; opacity:0.7; margin-left:6px;">${ingredientPrices[ing].prix.toFixed(2)}€</span>` : '';
+                    const priceData = getPrixIngredient(ing);
+                    const priceHtml = priceData
+                        ? ` <span style="font-size:11px; opacity:0.7; margin-left:6px;" title="Réf: ${(priceData.produit_ref||'').substring(0,50)} (Leclerc)">${priceData.prix.toFixed(2)}€</span>`
+                        : '';
                     
                     if (cat === 'Mes Ajouts') {
                         let safeIng = ing.replace(/'/g, "\\\'");
@@ -988,8 +1027,11 @@ const firebaseConfig = {
                 
                 docs.forEach(item => {
                     const isChecked = item.checked === true;
-                    const price = ingredientPrices[item.ingredient]?.prix || 0;
-                    const priceHtml = price > 0 ? `<div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${price.toFixed(2)}€</div>` : '';
+                    const priceData = getPrixIngredient(item.ingredient);
+                    const price = priceData?.prix || 0;
+                    const priceHtml = price > 0
+                        ? `<div style="font-size:12px; color:var(--text-muted); margin-top:2px;" title="Réf Leclerc: ${(priceData.produit_ref||'').substring(0,60)}">${price.toFixed(2)}€</div>`
+                        : '';
                     
                     let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" draggable="true" data-id="${item.id}" data-order="${item.order || 0}" onclick="checkerCourse('${item.id}', ${isChecked})">
                                         <div class="course-content">
