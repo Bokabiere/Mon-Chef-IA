@@ -11,30 +11,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Autorisé uniquement si l'utilisateur est authentifié via Firebase Auth
-    // (donc via un jeton Google vérifié par les serveurs Google/Firebase,
-    // et non plus par le code JS de la page) ET que son email correspond.
-    function estProprietaire() {
+    function estAdmin() {
       return request.auth != null && request.auth.token.email == "bokabiere@gmail.com";
     }
 
-    match /carnet/{document=**} {
-      allow read, write: if estProprietaire();
+    match /utilisateurs/{userId} {
+      // Un utilisateur connecté (y compris un visiteur anonyme de démo) 
+      // peut lire et écrire uniquement ses propres données.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // L'admin peut tout lire et écrire
+      allow read, write: if estAdmin();
+      
+      // Règles pour toutes les sous-collections de cet utilisateur (carnet, courses, planning, userData)
+      match /{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if estAdmin();
+      }
     }
 
-    match /courses/{document=**} {
-      allow read, write: if estProprietaire();
-    }
-
-    match /userdata/{document=**} {
-      allow read, write: if estProprietaire();
-    }
-
-    // La liste d'ingrédients peut être lue par le propriétaire ; elle n'est
-    // écrite qu'une fois automatiquement au premier lancement.
     match /config/{document=**} {
-      allow read: if estProprietaire();
-      allow write: if estProprietaire();
+      // Tout utilisateur authentifié (même démo) doit pouvoir lire les ingrédients et clés API
+      allow read: if request.auth != null;
+      // Seul l'admin peut les modifier (ajouter des ingrédients etc.)
+      allow write: if estAdmin();
     }
 
     // Tout le reste est refusé par défaut.

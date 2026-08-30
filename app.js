@@ -15,10 +15,11 @@ const firebaseConfig = {
         let memoireAllergenes = [];
         let memoireRegimes = [];
         let memoireEquipements = [];
-        let moteurIAActif = "gemini";
+        let moteurIAActif = "mistral";
         let unsubscribeCourses = null;
         let isAdminUser = false;
         let ingredientPrices = {}; // Dictionnaire des prix des ingrédients
+        let clesApiPubliques = { gemini: null, mistral: null };
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -63,6 +64,17 @@ const firebaseConfig = {
             }
         }
 
+        window.connexionDemo = async function() {
+            document.getElementById('loginError').style.display = 'none';
+            try {
+                await firebase.auth().signInAnonymously();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loginError').innerText = "Impossible de lancer le mode Démo (Assurez-vous qu'il est activé dans Firebase).";
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
         firebase.auth().onAuthStateChanged(async function(user) {
             if (user) {
                 const userRef = db.collection("utilisateurs").doc(user.uid);
@@ -73,20 +85,20 @@ const firebaseConfig = {
 
                     if (!docSnap.exists) {
                         userData = {
-                            email: user.email,
-                            nom: user.displayName || "Utilisateur",
-                            statut: isAdminUser ? "valide" : "en_attente",
-                            role: isAdminUser ? "admin" : "membre",
+                            email: user.email || "demo@anonymous.local",
+                            nom: user.displayName || (user.isAnonymous ? "Visiteur Démo" : "Utilisateur"),
+                            statut: (isAdminUser || user.isAnonymous) ? "valide" : "en_attente",
+                            role: isAdminUser ? "admin" : (user.isAnonymous ? "demo" : "membre"),
                             dateInscription: firebase.firestore.FieldValue.serverTimestamp()
                         };
                         await userRef.set(userData);
                     } else {
                         userData = docSnap.data();
-                        // Si vous êtes l'admin mais que le statut n'était pas 'valide', on force
-                        if (isAdminUser && userData.statut !== "valide") {
+                        // Validation forcée pour l'admin et pour l'anonyme
+                        if ((isAdminUser || user.isAnonymous) && userData.statut !== "valide") {
                             userData.statut = "valide";
-                            userData.role = "admin";
-                            await userRef.update({ statut: "valide", role: "admin" });
+                            userData.role = isAdminUser ? "admin" : "demo";
+                            await userRef.update({ statut: "valide", role: userData.role });
                         }
                     }
 
@@ -213,6 +225,11 @@ const firebaseConfig = {
         async function getApiKey(provider = 'gemini') {
             let keyName = provider + '_api_key';
             let key = localStorage.getItem(keyName);
+            
+            if (!key && clesApiPubliques[provider]) {
+                return clesApiPubliques[provider];
+            }
+            
             if (!key) {
                 let nomF = provider === 'mistral' ? 'Mistral AI' : 'Gemini';
                 key = await showPrompt(`🔒 Sécurité : Veuillez coller votre clé API ${nomF}.`, "Collez votre clé ici...");
@@ -427,7 +444,7 @@ const firebaseConfig = {
                         memoireAllergenes = userDoc.data().allergenes || [];
                         memoireRegimes = userDoc.data().regimes || [];
                         memoireEquipements = userDoc.data().equipements || [];
-                        moteurIAActif = userDoc.data().moteurIA || "gemini";
+                        moteurIAActif = userDoc.data().moteurIA || "mistral";
                         
                         const selectGlobal = document.getElementById('selecteurIaGlobal');
                         if(selectGlobal) selectGlobal.value = moteurIAActif;
@@ -437,6 +454,14 @@ const firebaseConfig = {
                 let docRef = db.collection("config").doc("ingredients");
                 let docSnap = await docRef.get();
                 if (docSnap.exists) { globalIngredientsList = docSnap.data(); }
+                
+                let apiKeysRef = db.collection("config").doc("api_keys");
+                let apiKeysSnap = await apiKeysRef.get();
+                if (apiKeysSnap.exists) { 
+                    const data = apiKeysSnap.data();
+                    clesApiPubliques.gemini = data.gemini || null;
+                    clesApiPubliques.mistral = data.mistral || null;
+                }
                 
                 afficherIngredientsGauche();
                 chargerAllergenesUI();
@@ -457,11 +482,6 @@ const firebaseConfig = {
 
         
         window.updateButtonLabel = function() {
-            const btn = document.getElementById('btnCuisinerFrigo');
-            if(btn) {
-                const n = memoireIngredients.length;
-                btn.innerText = n > 0 ? `✨ Cuisiner avec ces ingrédients (${n})` : "✨ Cuisiner avec ces ingrédients";
-            }
             const oldBtn = document.getElementById('btnGenererRecettes');
             if(oldBtn) {
                 const n = memoireIngredients.length;
