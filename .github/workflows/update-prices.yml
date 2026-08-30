@@ -1,0 +1,38 @@
+name: Update Leclerc Prices
+
+on:
+  schedule:
+    # Tourne tous les lundis à 03:00 (UTC)
+    - cron: '0 3 * * 1'
+  workflow_dispatch: # Permet de lancer manuellement depuis l'interface GitHub
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl pyarrow
+          
+      - name: Run Prix.py (Download Leclerc data)
+        run: python Prix/Prix.py
+        
+      - name: Run extract_prices.py (Generate JSON)
+        run: python extract_prices.py
+        
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Prix/prix_leclerc_france_groupé.xlsx prix_ingredients.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update prix Leclerc" && git push)
