@@ -4,9 +4,11 @@ const firebaseConfig = {
           projectId: "mon-chef-ia-80143",
           storageBucket: "mon-chef-ia-80143.firebasestorage.app",
           messagingSenderId: "395042994130",
-          appId: "1:395042994130:web:c1cec40bcbaf61b0bfba0b"
+          appId: "1:395042994130:web:c1cec40bcbaf61b0bfba0b",
+          measurementId: "G-1HZ9XC2SR9"
         };
         firebase.initializeApp(firebaseConfig);
+        const analytics = firebase.analytics();
         const db = firebase.firestore();
         
         let userDb = null;
