@@ -1859,6 +1859,8 @@ Règles de formatage ABSOLUES :
             document.getElementById("newTimerName").value = "";
             document.getElementById("newTimerMin").value = "";
             document.getElementById("newTimerSec").value = "";
+            document.getElementById("addTimerForm").style.display = 'none';
+            document.getElementById("btnShowAddTimer").style.display = 'block';
         }
 
         function enrichirTexteChrono(contenu) {
@@ -1876,9 +1878,6 @@ Règles de formatage ABSOLUES :
                 let contexte = (before + " " + after).trim().replace(/\s+/g, ' ');
                 
                 let nomTache = contexte;
-                if (nomTache.length > 35) {
-                    nomTache = nomTache.substring(0, 35) + "...";
-                }
                 
                 if (nomTache.length < 3) {
                     nomTache = `Chrono ${minutes}m`;
@@ -1902,6 +1901,7 @@ Règles de formatage ABSOLUES :
                 id: id,
                 name: nom,
                 remaining: timeInSeconds,
+                paused: false,
                 interval: setInterval(() => tickTimer(id), 1000)
             };
             
@@ -1919,7 +1919,7 @@ Règles de formatage ABSOLUES :
 
         function tickTimer(id) {
             let timer = activeTimers[id];
-            if (!timer) return;
+            if (!timer || timer.paused) return;
             
             timer.remaining--;
             
@@ -1949,6 +1949,13 @@ Règles de formatage ABSOLUES :
             }
         }
 
+        function togglePauseTimer(id) {
+            if (activeTimers[id]) {
+                activeTimers[id].paused = !activeTimers[id].paused;
+                renderTimersList();
+            }
+        }
+
         function renderTimersList() {
             let listEl = document.getElementById("timersList");
             listEl.innerHTML = "";
@@ -1964,9 +1971,10 @@ Règles de formatage ABSOLUES :
                 item.innerHTML = `
                     <div class="timer-info">
                         <span class="timer-name">${timer.name}</span>
-                        <span class="timer-time" id="timeDisplay_${id}">${timeStr}</span>
+                        <span class="timer-time" id="timeDisplay_${id}">${timeStr}${timer.paused ? ' (Pause)' : ''}</span>
                     </div>
                     <div class="timer-controls">
+                        ${timer.remaining > 0 ? `<button class="btn-pause" onclick="togglePauseTimer('${id}')">${timer.paused ? '▶' : '⏸'}</button>` : ''}
                         <button class="btn-stop" onclick="removeTimer('${id}')">X</button>
                     </div>
                 `;

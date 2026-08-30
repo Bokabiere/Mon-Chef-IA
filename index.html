@@ -249,19 +249,21 @@
                 <!-- Les chronos actifs apparaîtront ici -->
             </div>
             <div class="add-timer-section">
-                <p style="text-align: center; font-size: 13px; color: var(--text-muted); font-weight: 600; margin-top: 0; margin-bottom: 10px;">➕ Ajouter un nouveau chrono</p>
-                <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off">
-                <div class="timer-inputs">
-                    <input type="number" id="newTimerMin" placeholder="Min" min="0">
-                    <span style="font-weight: bold; color: var(--text-main);">:</span>
-                    <input type="number" id="newTimerSec" placeholder="Sec" min="0" max="59">
+                <button onclick="document.getElementById('addTimerForm').style.display='flex'; this.style.display='none'" id="btnShowAddTimer" style="background: none; border: 1px dashed var(--border); width: 100%; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; color: var(--text-muted);">➕ Ajouter un nouveau chrono</button>
+                <div id="addTimerForm" style="display: none; flex-direction: column; gap: 10px;">
+                    <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off">
+                    <div class="timer-inputs">
+                        <input type="number" id="newTimerMin" placeholder="Min" min="0">
+                        <span style="font-weight: bold; color: var(--text-main);">:</span>
+                        <input type="number" id="newTimerSec" placeholder="Sec" min="0" max="59">
+                    </div>
+                    <div class="timer-quick-add">
+                        <button type="button" onclick="addQuickTimer(1)">+1m</button>
+                        <button type="button" onclick="addQuickTimer(5)">+5m</button>
+                        <button type="button" onclick="addQuickTimer(10)">+10m</button>
+                    </div>
+                    <button class="btn-primary" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="addManualTimer()">Lancer</button>
                 </div>
-                <div class="timer-quick-add">
-                    <button type="button" onclick="addQuickTimer(1)">+1m</button>
-                    <button type="button" onclick="addQuickTimer(5)">+5m</button>
-                    <button type="button" onclick="addQuickTimer(10)">+10m</button>
-                </div>
-                <button class="btn-primary" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="addManualTimer()">Lancer</button>
             </div>
         </div>
     </div>
