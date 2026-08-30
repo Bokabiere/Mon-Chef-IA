@@ -235,9 +235,30 @@
         </nav>
     </div> 
 
-    <div id="floatingTimer" class="floating-timer">
-        <span id="timeDisplay">00:00</span>
-        <button onclick="stopTimer()">X</button>
+    <div id="multiTimerWidget" class="multi-timer-widget collapsed">
+        <div class="multi-timer-header" onclick="toggleTimerWidget()">
+            <span>⏱️ Chronos (<span id="activeTimersCount">0</span>)</span>
+            <button class="btn-toggle-timer" id="btnToggleTimerWidget">▲</button>
+        </div>
+        <div class="multi-timer-body">
+            <div id="timersList" class="timers-list">
+                <!-- Les chronos actifs apparaîtront ici -->
+            </div>
+            <div class="add-timer-section">
+                <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off">
+                <div class="timer-inputs">
+                    <input type="number" id="newTimerMin" placeholder="Min" min="0">
+                    <span style="font-weight: bold; color: var(--text-main);">:</span>
+                    <input type="number" id="newTimerSec" placeholder="Sec" min="0" max="59">
+                </div>
+                <div class="timer-quick-add">
+                    <button type="button" onclick="addQuickTimer(1)">+1m</button>
+                    <button type="button" onclick="addQuickTimer(5)">+5m</button>
+                    <button type="button" onclick="addQuickTimer(10)">+10m</button>
+                </div>
+                <button class="btn-primary" style="width: 100%; margin-top: 10px; padding: 10px;" onclick="addManualTimer()">Lancer</button>
+            </div>
+        </div>
     </div>
 
     <div id="modalIAScanner" class="modal-overlay">

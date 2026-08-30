@@ -1804,7 +1804,7 @@ Règles de formatage ABSOLUES :
             } catch(e) { isScanning = false; }
         }
 
-        function toggleExpand(cardId, btn) { const card = document.getElementById(cardId); card.classList.toggle('is-fullscreen'); btn.innerHTML = card.classList.contains('is-fullscreen') ? ">< Réduire" : "⛶ Agrandir"; }
+        function toggleExpand(cardId, btn) { const card = document.getElementById(cardId); card.classList.toggle('is-fullscreen'); btn.innerHTML = card.classList.contains('is-fullscreen') ? "✖ Fermer" : "⛶ Agrandir"; }
         let recipeSteps = {};
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
             const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
@@ -1827,21 +1827,161 @@ Règles de formatage ABSOLUES :
             try { await userDb.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
         }
 
-        let timerInterval;
-        function startTimer(minutes) {
-            clearInterval(timerInterval); let timeInSeconds = parseInt(minutes) * 60; const timerUI = document.getElementById('floatingTimer'); const timeDisplay = document.getElementById('timeDisplay');
-            timerUI.style.display = 'flex';
-            timerInterval = setInterval(() => {
-                let m = Math.floor(timeInSeconds / 60); let s = timeInSeconds % 60; timeDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-                if (timeInSeconds <= 0) { clearInterval(timerInterval); timeDisplay.innerText = "🔔 Fin !"; declencherAlerteFinMinuteur(); }
-                timeInSeconds--;
-            }, 1000);
+        let activeTimers = {};
+        let timerIdCounter = 0;
+        
+        function requestNotificationPermission() {
+            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
         }
-        function stopTimer() { clearInterval(timerInterval); document.getElementById('floatingTimer').style.display = 'none'; }
-        function declencherAlerteFinMinuteur() {
+
+        function toggleTimerWidget() {
+            document.getElementById("multiTimerWidget").classList.toggle("collapsed");
+            let btn = document.getElementById("btnToggleTimerWidget");
+            if(document.getElementById("multiTimerWidget").classList.contains("collapsed")){
+                btn.innerText = "▲";
+            } else {
+                btn.innerText = "▼";
+            }
+        }
+
+        function addQuickTimer(minutes) {
+            startTimer(minutes, `Minuteur ${minutes}m`);
+        }
+
+        function addManualTimer() {
+            let name = document.getElementById("newTimerName").value || "Chronomètre";
+            let m = parseInt(document.getElementById("newTimerMin").value) || 0;
+            let s = parseInt(document.getElementById("newTimerSec").value) || 0;
+            if (m === 0 && s === 0) return;
+            startTimer(m + (s/60), name);
+            document.getElementById("newTimerName").value = "";
+            document.getElementById("newTimerMin").value = "";
+            document.getElementById("newTimerSec").value = "";
+        }
+
+        function startTimer(minutes, nom = null) {
+            requestNotificationPermission();
+            let timeInSeconds = Math.round(parseFloat(minutes) * 60);
+            if (timeInSeconds <= 0) return;
+            
+            if (!nom) nom = `Chrono ${Math.floor(minutes)}m`;
+
+            let id = "timer_" + (++timerIdCounter);
+            
+            let timerObj = {
+                id: id,
+                name: nom,
+                remaining: timeInSeconds,
+                interval: setInterval(() => tickTimer(id), 1000)
+            };
+            
+            activeTimers[id] = timerObj;
+            
+            const widget = document.getElementById('multiTimerWidget');
+            widget.style.display = 'flex';
+            if (widget.classList.contains("collapsed")) {
+                toggleTimerWidget();
+            }
+            
+            renderTimersList();
+            updateTimersCount();
+        }
+
+        function tickTimer(id) {
+            let timer = activeTimers[id];
+            if (!timer) return;
+            
+            timer.remaining--;
+            
+            let el = document.getElementById(`timeDisplay_${id}`);
+            if (el) {
+                let m = Math.floor(timer.remaining / 60);
+                let s = timer.remaining % 60;
+                el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+
+            if (timer.remaining <= 0) {
+                clearInterval(timer.interval);
+                if (el) {
+                    el.innerText = "0:00";
+                    document.getElementById(`timerItem_${id}`).classList.add("timer-finished");
+                }
+                declencherAlerteFinMinuteur(timer.name);
+            }
+        }
+
+        function removeTimer(id) {
+            if (activeTimers[id]) {
+                clearInterval(activeTimers[id].interval);
+                delete activeTimers[id];
+                renderTimersList();
+                updateTimersCount();
+            }
+        }
+
+        function renderTimersList() {
+            let listEl = document.getElementById("timersList");
+            listEl.innerHTML = "";
+            for (let id in activeTimers) {
+                let timer = activeTimers[id];
+                let m = Math.floor(timer.remaining / 60);
+                let s = timer.remaining % 60;
+                let timeStr = timer.remaining > 0 ? `${m}:${s < 10 ? '0' : ''}${s}` : "0:00";
+                
+                let item = document.createElement("div");
+                item.className = "timer-item" + (timer.remaining <= 0 ? " timer-finished" : "");
+                item.id = `timerItem_${id}`;
+                item.innerHTML = `
+                    <div class="timer-info">
+                        <span class="timer-name">${timer.name}</span>
+                        <span class="timer-time" id="timeDisplay_${id}">${timeStr}</span>
+                    </div>
+                    <div class="timer-controls">
+                        <button class="btn-stop" onclick="removeTimer('${id}')">X</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            }
+            
+            if (Object.keys(activeTimers).length === 0) {
+                document.getElementById('multiTimerWidget').style.display = 'none';
+            }
+        }
+        
+        function updateTimersCount() {
+            document.getElementById("activeTimersCount").innerText = Object.keys(activeTimers).length;
+        }
+
+        function declencherAlerteFinMinuteur(nom) {
             if (typeof confetti === "function") { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 }); }
-            try { const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.value = 587.33; gain.gain.setValueAtTime(0.5, audioCtx.currentTime); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.8); } catch(e) {}
-            if ('speechSynthesis' in window) { const utterance = new SpeechSynthesisUtterance("Attention chef, le minuteur est écoulé ! Votre cuisson est prête !"); utterance.lang = 'fr-FR'; window.speechSynthesis.speak(utterance); }
+            
+            try { 
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+                const osc = audioCtx.createOscillator(); 
+                const gain = audioCtx.createGain(); 
+                osc.type = 'sine'; 
+                osc.frequency.value = 587.33; 
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+                osc.connect(gain); 
+                gain.connect(audioCtx.destination); 
+                osc.start(); 
+                osc.stop(audioCtx.currentTime + 0.8); 
+            } catch(e) {}
+            
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("⏳ C'est prêt !", {
+                    body: `Votre minuteur "${nom}" est terminé !`,
+                    icon: "Icone.png"
+                });
+            }
+
+            if ('speechSynthesis' in window) { 
+                const utterance = new SpeechSynthesisUtterance(`Attention chef, le minuteur ${nom} est écoulé !`); 
+                utterance.lang = 'fr-FR'; 
+                window.speechSynthesis.speak(utterance); 
+            }
         }
 
         // --- NAVIGATION MOBILE (BOTTOM NAV) ---

@@ -158,7 +158,25 @@
         details.recipe-card { background: var(--card-bg); border-radius: 16px; margin-bottom: 22px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); overflow: hidden; position: relative; transition: all 0.4s ease; border: 1px solid var(--border); border-left: 6px solid var(--primary); }
         details.recipe-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.1); transform: translateY(-2px); }
         details.recipe-card.is-fullscreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 3000; border-radius: 0; margin: 0; overflow-y: auto; background: var(--bg-color); border:none;}
-        details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto; font-size: 18px; padding: 20px; background: var(--card-bg); min-height: 100vh;}
+        details.recipe-card.is-fullscreen summary { max-width: 900px; margin: 20px auto 0 auto; background: var(--card-bg); border-radius: 16px 16px 0 0; box-sizing: border-box; border-left: 6px solid var(--primary); pointer-events: none; }
+        details.recipe-card.is-fullscreen .recipe-content { max-width: 900px; margin: 0 auto 20px auto; font-size: 18px; padding: 20px 30px 40px 30px; background: var(--card-bg); min-height: calc(100vh - 100px); border-radius: 0 0 16px 16px; box-sizing: border-box; border-left: 6px solid var(--primary); box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        
+        details.recipe-card.is-fullscreen .btn-expand {
+            position: fixed;
+            top: 35px;
+            right: max(15px, calc(50vw - 425px));
+            background: var(--text-main);
+            color: var(--card-bg);
+            z-index: 3100;
+            border-radius: 30px;
+            padding: 10px 20px;
+            font-size: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.25);
+        }
+        details.recipe-card.is-fullscreen .btn-expand:hover {
+            background: var(--primary);
+            color: white;
+        }
         
         details.recipe-card summary { font-size: 18px; font-weight: 700; padding: 24px 24px 18px 24px; cursor: pointer; list-style: none; border-bottom: 1px solid transparent; display: flex; align-items: center; justify-content: space-between; transition: color 0.3s; position: relative; overflow: hidden; }
         details.recipe-card[open] summary { border-bottom-color: var(--border); color: var(--primary); }
@@ -185,8 +203,27 @@
         .recipe-status-missing { background: rgba(255, 186, 59, 0.12); color: #b7791f; border: 1px solid rgba(255, 186, 59, 0.3); }
 
         .timer-tag { background: #ffeaa7; color: #d63031; padding: 2px 8px; border-radius: 6px; font-weight: bold; cursor: pointer; border: 1px solid #fdcb6e; transition: 0.2s; display: inline-block; }
-        .floating-timer { position: fixed; bottom: 20px; right: 20px; background: #2d3436; color: white; padding: 15px 25px; border-radius: 50px; font-size: 24px; font-weight: bold; box-shadow: 0 10px 25px rgba(0,0,0,0.3); display: none; z-index: 10000; align-items: center; gap: 15px; }
-        .floating-timer button { background: #ff7675; border: none; color: white; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; }
+        .multi-timer-widget { position: fixed; bottom: 80px; right: 20px; width: 300px; background: var(--card-bg, #ffffff); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 10000; display: none; flex-direction: column; overflow: hidden; border: 1px solid var(--border); transition: height 0.3s ease; }
+        .multi-timer-widget.collapsed .multi-timer-body { display: none; }
+        .multi-timer-header { background: var(--primary); color: white; padding: 12px 15px; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .multi-timer-header button { background: none; border: none; color: white; cursor: pointer; font-size: 16px; }
+        .multi-timer-body { padding: 15px; max-height: 400px; overflow-y: auto; background: var(--bg-color); }
+        .timers-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .timer-item { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .timer-info { display: flex; flex-direction: column; }
+        .timer-name { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+        .timer-time { font-size: 20px; font-weight: bold; color: var(--text-main); font-variant-numeric: tabular-nums; }
+        .timer-controls button { background: var(--bg-color); border: 1px solid var(--border); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; margin-left: 5px; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-main); }
+        .timer-controls button.btn-stop { background: #ff7675; color: white; border: none; }
+        .add-timer-section { border-top: 1px dashed var(--border); padding-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .add-timer-section input[type="text"], .add-timer-section input[type="number"] { padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text-main); font-family: inherit; }
+        .timer-inputs { display: flex; align-items: center; gap: 5px; }
+        .timer-inputs input { width: 60px; text-align: center; }
+        .timer-quick-add { display: flex; gap: 5px; justify-content: space-between; }
+        .timer-quick-add button { flex: 1; padding: 5px; background: var(--bg-color); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; color: var(--text-main); }
+        .timer-quick-add button:hover { background: var(--border); }
+        .timer-finished { animation: flashTimer 1s infinite alternate; }
+        @keyframes flashTimer { from { background-color: #ff7675; color: white; } to { background-color: #d63031; color: white; } }
 
         .pas-a-pas-container { display: none; background: var(--bg-color); border: 2px solid var(--primary); padding: 20px; border-radius: 15px; text-align: center; margin-top: 15px;}
         .step-text { font-size: 18px; font-weight: 600; margin: 20px 0; min-height: 100px; display: flex; align-items: center; justify-content: center;}
