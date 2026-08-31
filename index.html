@@ -10,7 +10,7 @@
     <meta property="og:title" content="Mon Chef IA 👨‍🍳">
     <meta property="og:description" content="Générez des recettes sur-mesure avec l'IA à partir de votre frigo.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="Icone.png">
+    <meta property="og:image" content="https://bokabiere.github.io/Mon-Chef-IA/Icone.png">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -23,13 +23,13 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <link rel='stylesheet' href='style.css?v=2'>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
 <body>
 
     
         <!-- MODALE CUISSON -->
-    <div id="modalCuisson" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalCuissonTitle">
+    <div id="modalCuisson" class="modal-overlay" style="z-index: var(--z-modal-priority);" role="dialog" aria-modal="true" aria-labelledby="modalCuissonTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
@@ -277,7 +277,7 @@
     </main>
 
     <div id="multiTimerWidget" class="multi-timer-widget collapsed">
-        <div class="multi-timer-header" onclick="if(event.target.tagName !== 'BUTTON') toggleTimerWidget()">
+        <div class="multi-timer-header" onclick="if(event.target.tagName !== 'BUTTON') toggleTimerWidget()" role="button" tabindex="0" onkeydown="if((event.key==='Enter'||event.key===' ') && event.target===this){event.preventDefault(); toggleTimerWidget();}">
             <span>⏱️ Chronos (<span id="activeTimersCount">0</span>)</span>
             <div style="display:flex; gap: 8px;">
                 <button id="btnMuteTimers" onclick="toggleMuteTimers()" title="Son activé/désactivé">🔊</button>
@@ -390,37 +390,37 @@
                 <div id="tabTheme" style="display: none;">
                     <label>Choisissez votre ambiance de cuisine</label>
                     
-                    <div class="theme-option" onclick="setTheme('default')" id="theme-default">
+                    <button type="button" class="theme-option" onclick="setTheme('default')" id="theme-default">
                         <span style="font-weight: 600;">🍅 Classique (Le Chef)</span>
                         <div class="color-preview">
                             <div class="color-dot" style="background:#FF6B6B"></div>
                             <div class="color-dot" style="background:#f4f7f6"></div>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="theme-option" onclick="setTheme('bistrot')" id="theme-bistrot">
+                    <button type="button" class="theme-option" onclick="setTheme('bistrot')" id="theme-bistrot">
                         <span style="font-weight: 600;">☕ Bistrot Gourmand</span>
                         <div class="color-preview">
                             <div class="color-dot" style="background:#c0392b"></div>
                             <div class="color-dot" style="background:#fdf6e3"></div>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="theme-option" onclick="setTheme('dark')" id="theme-dark">
+                    <button type="button" class="theme-option" onclick="setTheme('dark')" id="theme-dark">
                         <span style="font-weight: 600;">🌙 Mode Sombre</span>
                         <div class="color-preview">
                             <div class="color-dot" style="background:#0984e3"></div>
                             <div class="color-dot" style="background:#121212"></div>
                         </div>
-                    </div>
+                    </button>
 
-                    <div class="theme-option" onclick="setTheme('zelda')" id="theme-zelda">
+                    <button type="button" class="theme-option" onclick="setTheme('zelda')" id="theme-zelda">
                         <span style="font-weight: 600;">🗡️ Royaume d'Hyrule</span>
                         <div class="color-preview">
                             <div class="color-dot" style="background:#0a7e8c"></div>
                             <div class="color-dot" style="background:#f4ecd8"></div>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 <div id="tabOptions" style="display: none;">
@@ -593,7 +593,7 @@
         </div>
     </div>
 
-    <div id="modalMultiPlanning" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalMultiPlanningTitle">
+    <div id="modalMultiPlanning" class="modal-overlay" style="z-index: var(--z-modal-priority);" role="dialog" aria-modal="true" aria-labelledby="modalMultiPlanningTitle">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
@@ -661,7 +661,7 @@
         </div>
     </div>
 
-    <div id="modalOnboarding" class="modal-overlay" style="z-index: 3000;" role="dialog" aria-modal="true" aria-labelledby="modalOnboardingTitle">
+    <div id="modalOnboarding" class="modal-overlay" style="z-index: var(--z-fullscreen);" role="dialog" aria-modal="true" aria-labelledby="modalOnboardingTitle">
         <div class="modal-content" style="max-width: 500px; text-align: left;">
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
