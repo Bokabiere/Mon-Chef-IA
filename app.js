@@ -2926,31 +2926,47 @@ window.fermerModalCuisson = function() {
 };
 
 // --- SERVICE WORKER REGISTRATION FOR PWA ---
+window.swRegistrationChefIA = null;
+
+function afficherBanniereMiseAJourDisponible() {
+    const toast = document.getElementById('majDisponibleToast');
+    if (!toast) { window.location.reload(); return; } // filet de sécurité si le HTML n'est pas à jour
+    toast.innerHTML = `<span>✨ Nouvelle version disponible</span><button type="button" onclick="window.location.reload()">Actualiser</button>`;
+    toast.classList.add('visible');
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
       .then((registration) => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        window.swRegistrationChefIA = registration;
 
         // Vérifie activement l'existence d'une nouvelle version dès l'ouverture de l'app,
-        // au lieu d'attendre la vérification automatique (différée) du navigateur.
+        // au lieu d'attendre la vérification automatique (différée) du navigateur — totalement
+        // silencieux pour l'utilisateur tant qu'aucune mise à jour n'est trouvée.
         registration.update();
 
-        // Revérifie aussi quand l'app repasse au premier plan (retour depuis un autre onglet/app).
+        // Revérifie aussi quand l'app repasse au premier plan (retour depuis un autre onglet/app),
+        // et périodiquement tant que l'app reste ouverte (toutes les 30 min).
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') registration.update();
         });
+        setInterval(() => registration.update(), 30 * 60 * 1000);
       }, (err) => {
         console.log('ServiceWorker registration failed: ', err);
       });
 
     // Dès qu'un nouveau Service Worker prend le contrôle de la page (mise à jour installée),
-    // on recharge automatiquement pour afficher la dernière version — sans action de l'utilisateur.
-    let dejaRechargeApresMaj = false;
+    // on prévient l'utilisateur avec une petite bannière plutôt que de recharger de force :
+    // s'il est en train de saisir quelque chose, on ne veut pas lui faire perdre sa saisie.
+    // Il suffit d'un tap pour passer à la nouvelle version ; sinon, elle s'appliquera
+    // automatiquement à sa prochaine ouverture de l'app.
+    let bannièreDéjàAffichée = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (dejaRechargeApresMaj) return;
-        dejaRechargeApresMaj = true;
-        window.location.reload();
+        if (bannièreDéjàAffichée) return;
+        bannièreDéjàAffichée = true;
+        afficherBanniereMiseAJourDisponible();
     });
   });
 }

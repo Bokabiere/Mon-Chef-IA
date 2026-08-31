@@ -278,6 +278,7 @@
 
     <div id="timerAriaLive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
     <div id="timerUndoToast" class="timer-undo-toast" role="status"></div>
+    <div id="majDisponibleToast" class="timer-undo-toast" role="status" aria-live="polite"></div>
     <div id="multiTimerWidget" class="multi-timer-widget collapsed">
         <div class="multi-timer-header" onclick="if(event.target.tagName !== 'BUTTON') toggleTimerWidget()" role="button" tabindex="0" onkeydown="if((event.key==='Enter'||event.key===' ') && event.target===this){event.preventDefault(); toggleTimerWidget();}">
             <span>⏱️ Chronos (<span id="activeTimersCount">0</span>)</span>
@@ -755,7 +756,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=14'></script>
+    <script src='app.js?v=15'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
