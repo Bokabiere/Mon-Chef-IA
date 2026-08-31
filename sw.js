@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chef-ia-v6';
+const CACHE_NAME = 'chef-ia-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,9 @@ const ASSETS = [
   './app.js',
   './manifest.json',
   './Icone.png',
-  './Icone-192.png'
+  './Icone-192.png',
+  './Icone-192-maskable.png',
+  './Icone-512-maskable.png'
 ];
 
 self.addEventListener('install', (e) => {

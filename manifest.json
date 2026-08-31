@@ -8,19 +8,35 @@
   "orientation": "portrait",
   "background_color": "#f4f7f6",
   "theme_color": "#FF6B6B",
-  "categories": ["food", "lifestyle", "utilities"],
+  "categories": [
+    "food",
+    "lifestyle",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "Icone-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "Icone-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "Icone.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "Icone-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -29,14 +45,24 @@
       "short_name": "Cuisiner",
       "description": "Générer une recette",
       "url": "./index.html",
-      "icons": [{ "src": "Icone-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "Icone-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Mes Ingrédients",
       "short_name": "Frigo",
       "description": "Gérer mon frigo",
       "url": "./index.html#ingredients",
-      "icons": [{ "src": "Icone-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "Icone-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

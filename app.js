@@ -2088,8 +2088,10 @@ Règles de formatage ABSOLUES :
             document.getElementById('modalBarcode').style.display = 'flex'; document.getElementById('barcode-status').innerText = "Caméra en cours...";
             html5QrcodeScanner = new Html5Qrcode("barcode-scanner-container");
             html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 200 } }, onScanSuccess, () => {}).catch(err => { document.getElementById('barcode-status').innerText = "Erreur : " + err; });
+            pushOverlayHistory('modalBarcode', fermerBarcodeScannerReel);
         }
-        function fermerBarcodeScanner() { document.getElementById('modalBarcode').style.display = 'none'; if (html5QrcodeScanner) html5QrcodeScanner.stop().catch(err => {}); }
+        function fermerBarcodeScannerReel() { document.getElementById('modalBarcode').style.display = 'none'; if (html5QrcodeScanner) html5QrcodeScanner.stop().catch(err => {}); }
+        function fermerBarcodeScanner() { closeOverlayOrBack('modalBarcode', fermerBarcodeScannerReel); }
         let isScanning = false;
         async function onScanSuccess(decodedText) {
             if (isScanning) return; isScanning = true; document.getElementById('barcode-status').innerText = "Recherche Open Food Facts... ⏳";
@@ -2102,7 +2104,21 @@ Règles de formatage ABSOLUES :
             } catch(e) { isScanning = false; }
         }
 
-        function toggleExpand(cardId, btn) { const card = document.getElementById(cardId); card.classList.toggle('is-fullscreen'); btn.innerHTML = card.classList.contains('is-fullscreen') ? "✖ Fermer" : "⛶ Agrandir"; }
+        function toggleExpand(cardId, btn) {
+            const card = document.getElementById(cardId);
+            const overlayName = 'recipe-fullscreen-' + cardId;
+            const revert = function() {
+                card.classList.remove('is-fullscreen');
+                btn.innerHTML = "⛶ Agrandir";
+            };
+            if (!card.classList.contains('is-fullscreen')) {
+                card.classList.add('is-fullscreen');
+                btn.innerHTML = "✖ Fermer";
+                pushOverlayHistory(overlayName, revert);
+            } else {
+                closeOverlayOrBack(overlayName, revert);
+            }
+        }
         let recipeSteps = {};
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
             const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
@@ -2664,7 +2680,28 @@ Règles de formatage ABSOLUES :
             }
         });
         // --- NAVIGATION MOBILE (BOTTOM NAV) ---
+        // --- GESTION ANDROID : bouton/geste "retour" ferme les fenêtres ouvertes (modales, plein écran)
+        // avant de changer de vue, au lieu de quitter l'appli. Chaque overlay pousse une entrée
+        // d'historique à l'ouverture ; le bouton retour la consomme et referme l'overlay du dessus.
+        window.overlayBackStack = [];
+        function pushOverlayHistory(name, closeFn) {
+            window.overlayBackStack.push({ name: name, closeFn: closeFn });
+            try { history.pushState({ androidOverlay: name }, ''); } catch (e) {}
+        }
+        function closeOverlayOrBack(name, fallbackCloseFn) {
+            const top = window.overlayBackStack[window.overlayBackStack.length - 1];
+            if (top && top.name === name) {
+                history.back(); // déclenche popstate -> dépile -> exécute fallbackCloseFn
+            } else {
+                fallbackCloseFn();
+            }
+        }
         window.addEventListener('popstate', function(event) {
+            if (window.overlayBackStack.length > 0) {
+                const top = window.overlayBackStack.pop();
+                try { top.closeFn(); } catch (e) { console.error(e); }
+                return;
+            }
             if (event.state && event.state.view) {
                 switchView(event.state.view, false);
             } else {
@@ -2814,6 +2851,7 @@ window.modePlanningContext = false;
 window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas = 'diner') {
     window.modePlanningContext = modePlanning;
     document.getElementById('modalCuisson').style.display = 'flex';
+    pushOverlayHistory('modalCuisson', fermerModalCuissonReel);
 
     document.getElementById('humeur').value = prefsCuisineDefaut.humeur;
     document.getElementById('temps').value = prefsCuisineDefaut.temps;
@@ -2838,8 +2876,11 @@ window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas
         btnRapide.style.display = 'block';
     }
 };
-window.fermerModalCuisson = function() {
+function fermerModalCuissonReel() {
     document.getElementById('modalCuisson').style.display = 'none';
+}
+window.fermerModalCuisson = function() {
+    closeOverlayOrBack('modalCuisson', fermerModalCuissonReel);
 };
 
 // --- SERVICE WORKER REGISTRATION FOR PWA ---
