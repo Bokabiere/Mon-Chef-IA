@@ -1582,7 +1582,7 @@ const firebaseConfig = {
                 let stepsArrayString = `['${rawSteps.join("','")}']`;
                 
                 // Construct a detailed view similar to normal recipes
-                let contenuHtml = `<details class="recipe-card" id="card-${index}" open><summary><div><span>🍽️ ${nomDuPlat}</span></div></summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div>
+                let contenuHtml = `<details class="recipe-card" id="card-${index}" open><summary><div><span>🍽️ ${nomDuPlat}</span><div class="recipe-mini-meta" style="margin-top: 5px;">👥 ${personnes} pers.</div></div></summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div>
                 <div class="planning-validation-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
                     <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
                     <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
@@ -1659,12 +1659,12 @@ Règles de formatage ABSOLUES :
 4. Indique toutes les durées en chiffres (ex: 15 min). Pas de blabla inutile avant ou après les recettes.`;
             const titleTemplate = "J'ai trouvé {N} idées pour vous ! (Fraîches)";
 
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
+            const requestContext = { prompt, titleTemplate, cacheKey, moteur, personnes };
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             const cachedData = getCache(cacheKey);
             if (cachedData) { resDiv.innerHTML = garantirBoutonRegenerer(cachedData); showToast("⚡ Recettes chargées depuis le cache !", "success"); return; }
-            resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey);
+            resDiv.innerHTML = ""; loader.style.display = "block"; executerRequeteIA(prompt, titleTemplate, cacheKey, 2, personnes);
         }
 
         function normalizeRecipeResponse(text) {
@@ -1808,11 +1808,11 @@ Règles de formatage ABSOLUES :
                 .filter(validateRecipeAgainstRestrictions);
         }
 
-        async function executerRequeteIA(prompt, titleTemplate, cacheKey = null, retries = 2) {
+        async function executerRequeteIA(prompt, titleTemplate, cacheKey = null, retries = 2, personnes = null) {
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             const moteur = moteurIAActif;
             
-            const requestContext = { prompt, titleTemplate, cacheKey, moteur };
+            const requestContext = { prompt, titleTemplate, cacheKey, moteur, personnes };
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             let lastError = null;
@@ -1870,9 +1870,11 @@ Règles de formatage ABSOLUES :
                         let missingItems = state.missingItems.length ? state.missingItems : parseMissingIngredientsFromText(contenu);
                         if (missingItems.length === 0) missingItems = parseMissingIngredientsFromText(bloc);
                         const missingBadge = buildMissingIngredientsBadge(missingItems);
+                        
+                        const nbPersonnesText = personnes ? ` • 👥 ${personnes} pers.` : "";
                         const recipeMeta = missingItems.length
-                            ? `<div class="recipe-mini-meta">${missingItems.length} ingrédient${missingItems.length > 1 ? 's' : ''} à compléter</div>`
-                            : `<div class="recipe-mini-meta recipe-mini-meta-ready">Recette prête</div>`;
+                            ? `<div class="recipe-mini-meta">${missingItems.length} ingrédient${missingItems.length > 1 ? 's' : ''} à compléter${nbPersonnesText}</div>`
+                            : `<div class="recipe-mini-meta recipe-mini-meta-ready">Recette prête${nbPersonnesText}</div>`;
 
                         let coursesMatch = contenu.match(/COURSES\s*:\s*(.*)/i) || contenu.match(/(?:IL VOUS MANQUE|MANQUE|À ACHETER|A ACHETER)[^\n]*[:\-]?\s*(.*)/i);
                         if (coursesMatch) {
@@ -1946,7 +1948,7 @@ Règles de formatage ABSOLUES :
 
             const baseCacheKey = cacheKey ? cacheKey.split('_v')[0] : null; const nouveauCacheKey = baseCacheKey ? `${baseCacheKey}_v${Date.now()}` : null;
             
-            try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey); } 
+            try { await executerRequeteIA(promptRegen, titleTemplate, nouveauCacheKey, 2, context.personnes); } 
             catch (e) { afficherErreurIA(resDiv, e, context.moteur); loader.style.display = "none"; }
             if (loaderText) loaderText.innerText = "Le Chef élabore vos menus...";
         }
