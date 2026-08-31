@@ -2100,14 +2100,6 @@ Règles de formatage ABSOLUES :
             document.getElementById("btnMuteTimers").innerText = isTimerMuted ? "🔇" : "🔊";
         }
 
-        function toggleFullscreenTimerWidget() {
-            let widget = document.getElementById("multiTimerWidget");
-            widget.classList.toggle("fullscreen-timer");
-            if (widget.classList.contains("fullscreen-timer") && widget.classList.contains("collapsed")) {
-                toggleTimerWidget();
-            }
-        }
-
         function requestNotificationPermission() {
             if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
                 Notification.requestPermission();

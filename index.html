@@ -32,6 +32,7 @@
     <div id="modalCuisson" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalCuissonTitle">
         <div class="modal-content">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalCuissonTitle" class="gradient-text">🍳 En cuisine !</h3>
                 <button class="btn-secondary" style="padding: 5px 10px; margin: 0;" onclick="fermerModalCuisson()">✖</button>
             </div>
@@ -105,7 +106,7 @@
         <div class="mascot-bubble">
             <video src="Img/Recette.webm" autoplay loop muted playsinline></video>
         </div>
-        <h1 class="gradient-text" style="font-size: 36px; margin-bottom: 5px;">Mon Chef IA</h1>
+        <h1 class="gradient-text" style="font-size: var(--text-4xl); margin-bottom: 5px;">Mon Chef IA</h1>
         <p id="loginMessage" style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
         
         <div id="g_id_onload"
@@ -128,39 +129,39 @@
             <div id="view-home" class="view-container view active">
                 <div class="view-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center;">
                     <div style="position: absolute; top: 15px; right: 15px;">
-                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--primary);" aria-label="Aide et informations">ℹ️</button>
+                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: var(--text-3xl); cursor: pointer; color: var(--primary);" aria-label="Aide et informations">ℹ️</button>
                     </div>
                     
                     <div class="mascot-bubble" style="margin-top: 10px;">
                         <video src="Img/mascotte.webm" autoplay loop muted playsinline style="width: 120px; height: 120px;"></video>
                     </div>
-                    <h1 class="gradient-text" style="font-size: 32px; margin-bottom: 25px;">Chef IA</h1>
+                    <h1 class="gradient-text" style="font-size: var(--text-4xl); margin-bottom: 25px;">Chef IA</h1>
                     
                     <!-- GROS BOUTON CENTRAL -->
-                    <button class="btn-primary" style="font-size: 24px; padding: 20px 40px; border-radius: 30px; margin-bottom: 30px; width: 100%; max-width: 300px; box-shadow: 0 8px 20px rgba(255,107,107,0.4);" onclick="ouvrirModalCuisson()">
+                    <button class="btn-primary" style="font-size: var(--text-2xl); padding: 20px 40px; border-radius: 30px; margin-bottom: 30px; width: 100%; max-width: 300px; box-shadow: 0 8px 20px rgba(255,107,107,0.4);" onclick="ouvrirModalCuisson()">
                         ✨ CUISINER ✨
                     </button>
                     
                     <!-- GRILLE DE RACCOURCIS -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%;">
                         <button class="shortcut-card" onclick="switchView('ingredients')">
-                            <i style="font-size: 30px;">🍅</i>
+                            <i style="font-size: var(--text-4xl);">🍅</i>
                             <span>Mes Ingrédients</span>
                         </button>
                         <button class="shortcut-card" onclick="chargerPlanning()">
-                            <i style="font-size: 30px;">📅</i>
+                            <i style="font-size: var(--text-4xl);">📅</i>
                             <span>Planning</span>
                         </button>
                         <button class="shortcut-card" onclick="switchView('cart')">
-                            <i style="font-size: 30px;">🛒</i>
+                            <i style="font-size: var(--text-4xl);">🛒</i>
                             <span>Courses</span>
                         </button>
                         <button class="shortcut-card" onclick="switchView('favorites')">
-                            <i style="font-size: 30px;">💖</i>
+                            <i style="font-size: var(--text-4xl);">💖</i>
                             <span>Favoris</span>
                         </button>
                         <button class="shortcut-card" onclick="document.getElementById('multiTimerWidget').style.display='flex'; if(document.getElementById('multiTimerWidget').classList.contains('collapsed')) toggleTimerWidget();">
-                            <i style="font-size: 30px;">⏱️</i>
+                            <i style="font-size: var(--text-4xl);">⏱️</i>
                             <span>Minuteur</span>
                         </button>
                     </div>
@@ -170,7 +171,7 @@
             <!-- VUE INGREDIENTS -->
             <div id="view-ingredients" class="view-container view">
                 <div class="view-content">
-                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">🍅 Mon Frigo</h2>
+                    <h2 class="gradient-text" style="font-size: var(--text-2xl); text-align: center; margin-bottom: 20px;">🍅 Mon Frigo</h2>
                     
                     <div class="action-buttons-group">
                         <button class="btn-vocal" id="btnMic" onclick="toggleVocal()" style="flex:1;">🎙️ Dicter</button>
@@ -190,7 +191,7 @@
                         <button class="btn-secondary" onclick="decocherTout();" style="margin: 0; padding: 5px 10px;">🔄 Tout décocher</button>
                     </div>
                     
-                    <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: 14px;">Chargement du frigo... ⏳</i></div>
+                    <div class="categories" id="categoriesContainer"><i style="color:var(--text-muted); font-size: var(--text-sm);">Chargement du frigo... ⏳</i></div>
                     
                 </div>
             </div> <!-- fin view-generator -->
@@ -216,7 +217,7 @@
             <!-- VUE FAVORIS -->
             <div id="view-favorites" class="view-container view">
                 <div class="view-content">
-                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">💖 Mes Favoris</h2>
+                    <h2 class="gradient-text" style="font-size: var(--text-2xl); text-align: center; margin-bottom: 20px;">💖 Mes Favoris</h2>
                     <div id="carnetRecettesList"></div> <!-- On y injectera le contenu de la modal carnet -->
                 </div>
             </div>
@@ -224,12 +225,12 @@
             <!-- VUE COURSES -->
             <div id="view-cart" class="view-container view">
                 <div class="view-content">
-                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">🛒 Ma Liste de Courses</h2>
+                    <h2 class="gradient-text" style="font-size: var(--text-2xl); text-align: center; margin-bottom: 20px;">🛒 Ma Liste de Courses</h2>
                     
                     <div class="courses-input-container" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-start;">
                         <div style="position: relative; flex: 1;">
                             <input type="text" id="courseInput" placeholder="Ajouter (ex: Lait)..." autocomplete="off"
-                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--bg-color); color: var(--text-main); box-sizing: border-box;"
+                                style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: var(--text-base); background: var(--bg-color); color: var(--text-main); box-sizing: border-box;"
                                 aria-label="Ajouter un article à la liste de courses"
                                 oninput="filtrerCourseAutocomplete(this.value)"
                                 onkeydown="navigerCourseAutocomplete(event)"
@@ -247,7 +248,7 @@
             <!-- VUE PARAMETRES -->
             <div id="view-settings" class="view-container view">
                 <div class="view-content">
-                    <h2 class="gradient-text" style="font-size: 24px; text-align: center; margin-bottom: 20px;">⚙️ Paramètres</h2>
+                    <h2 class="gradient-text" style="font-size: var(--text-2xl); text-align: center; margin-bottom: 20px;">⚙️ Paramètres</h2>
                     <button id="btnInstallPwa" class="btn-primary" style="display: none; margin-bottom: 20px;">📱 Installer l'Application</button>
                     <div id="parametresContent"></div> <!-- On y injectera le contenu de la modal parametres -->
                 </div>
@@ -310,6 +311,7 @@
     <div id="modalIAScanner" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalIAScannerTitle">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalIAScannerTitle">📸 Résultats du Scan IA</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalIAScanner').style.display='none'">✖ Annuler</button>
             </div>
@@ -324,6 +326,7 @@
     <div id="modalBarcode" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalBarcodeTitle">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalBarcodeTitle">🛒 Scan Code-barres</h3>
                 <button class="btn-secondary" onclick="fermerBarcodeScanner()">✖ Fermer</button>
             </div>
@@ -337,6 +340,7 @@
     <div id="modalParametres" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalParametresTitle">
         <div class="modal-content">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalParametresTitle">⚙️ Configuration</h3>
                 <button class="btn-secondary" onclick="fermerParametres()">✖ Fermer</button>
             </div>
@@ -442,7 +446,7 @@
 
                 <div id="tabEquipement" style="display: none;">
                     <label>🍳 Mon matériel de cuisine</label>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Sélectionnez vos équipements pour que l'IA adapte ses propositions (ex: Cookeo, Four...).</p>
+                    <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Sélectionnez vos équipements pour que l'IA adapte ses propositions (ex: Cookeo, Four...).</p>
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" class="chk-equipement" value="Four" onchange="sauvegarderEquipements()">
@@ -484,7 +488,7 @@
 
                 <div id="tabAllergene" style="display: none;">
                     <label>⚠️ Mes restrictions & allergènes à éviter</label>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments. Défini une seule fois, appliqué à chaque recette généré.</p>
+                    <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments. Défini une seule fois, appliqué à chaque recette généré.</p>
                     
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
@@ -524,7 +528,7 @@
                     <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
 
                     <label>🍽️ Mon régime alimentaire</label>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Sélectionnez votre régime : il sera respecté automatiquement dans toutes vos recettes, sans avoir à le repréciser.</p>
+                    <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Sélectionnez votre régime : il sera respecté automatiquement dans toutes vos recettes, sans avoir à le repréciser.</p>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" class="chk-regime" value="Végétarien (aucune viande ni poisson)" onchange="sauvegarderRegimes()">
@@ -570,6 +574,7 @@
     <div id="modalCarnet" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCarnetTitle">
         <div class="modal-content">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalCarnetTitle">📖 Mon Carnet de Recettes</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalCarnet').style.display='none'">✖ Fermer</button>
             </div>
@@ -580,6 +585,7 @@
     <div id="modalPlanning" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPlanningTitle">
         <div class="modal-content" style="max-width: 850px;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalPlanningTitle">📅 Planning de la Semaine</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalPlanning').style.display='none'">✖ Fermer</button>
             </div>
@@ -590,11 +596,12 @@
     <div id="modalMultiPlanning" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalMultiPlanningTitle">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalMultiPlanningTitle">🪄 Générer plusieurs repas</h3>
                 <button class="btn-secondary" onclick="fermerModalMultiPlanning()">✖</button>
             </div>
             <div class="modal-body">
-                <p style="margin-top:0; margin-bottom:15px; color:var(--text-muted); font-size:14px;">Cochez les repas que vous souhaitez générer :</p>
+                <p style="margin-top:0; margin-bottom:15px; color:var(--text-muted); font-size: var(--text-sm);">Cochez les repas que vous souhaitez générer :</p>
                 <div id="multiPlanningGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px;">
                     <!-- JS will populate this -->
                 </div>
@@ -635,6 +642,7 @@
     <div id="modalCourses" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCoursesTitle">
         <div class="modal-content" id="modalCoursesContent">
             <div class="modal-header" style="background: var(--bg-color);">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalCoursesTitle" style="color:var(--primary);">🛒 Ma Liste</h3>
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-secondary" id="btnShoppingMode" onclick="toggleShoppingMode()">🔍 Plein écran</button>
@@ -647,7 +655,7 @@
                     <button class="btn-primary" style="margin-top:0; padding: 10px 20px; width: auto;" onclick="ajouterCourseManuelle()">➕</button>
                 </div>
                 
-                <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:0;"><i>Tapotez un article pour le mettre dans le caddie.</i></p>
+                <p style="font-size: var(--text-xs); color:var(--text-muted); text-align:center; margin-top:0;"><i>Tapotez un article pour le mettre dans le caddie.</i></p>
                 <div id="coursesContent"><p style="text-align:center;">Chargement...</p></div>
             </div>
         </div>
@@ -656,10 +664,11 @@
     <div id="modalOnboarding" class="modal-overlay" style="z-index: 3000;" role="dialog" aria-modal="true" aria-labelledby="modalOnboardingTitle">
         <div class="modal-content" style="max-width: 500px; text-align: left;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalOnboardingTitle" class="gradient-text">👋 Bienvenue dans Chef IA !</h3>
                 <button class="btn-secondary" onclick="fermerOnboarding()">✖</button>
             </div>
-            <div class="modal-body" style="line-height: 1.6; font-size: 16px;">
+            <div class="modal-body" style="line-height: 1.6; font-size: var(--text-base);">
                 <p>Voici comment utiliser l'application :</p>
                 <ol style="padding-left: 20px;">
                     <li style="margin-bottom: 10px;"><strong>🍅 Remplissez votre frigo :</strong> Dans <em>Ingrédients</em>, ajoutez ce que vous avez chez vous.</li>
@@ -668,7 +677,7 @@
                     <li style="margin-bottom: 10px;"><strong>🛒 Faites vos courses :</strong> Ajoutez les éléments manquants à votre liste de courses. <em>(Les prix affichés sont à titre indicatif et proviennent de l'initiative Open Prices).</em></li>
                     <li style="margin-bottom: 10px;"><strong>📱 Installer l'application :</strong> Gardez-la toujours sous la main ! Sur Android, allez dans <em>Paramètres</em> et cliquez sur le bouton <strong>Installer</strong>. Sur iPhone (Safari), touchez <strong>Partager</strong> puis <strong>Sur l'écran d'accueil</strong>.</li>
                 </ol>
-                <button class="btn-primary" style="width: 100%; margin-top: 20px; font-size: 18px;" onclick="fermerOnboarding()">C'est parti ! 🚀</button>
+                <button class="btn-primary" style="width: 100%; margin-top: 20px; font-size: var(--text-lg);" onclick="fermerOnboarding()">C'est parti ! 🚀</button>
             </div>
         </div>
     </div>
@@ -676,11 +685,12 @@
     <div id="modalApiKeys" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalApiKeysTitle">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
                 <h3 id="modalApiKeysTitle">🔑 Gestion des Clés API</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalApiKeys').style.display='none'">✖ Fermer</button>
             </div>
             <div class="modal-body">
-                <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 20px;">
+                <p style="font-size: var(--text-sm); color: var(--text-muted); margin-top: 0; margin-bottom: 20px;">
                     Renseignez vos clés API pour connecter Mon Chef IA aux différents moteurs d'intelligence artificielle.
                 </p>
 
