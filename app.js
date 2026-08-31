@@ -293,6 +293,48 @@ const firebaseConfig = {
             showToast("Cache nettoyé avec succès !", "success");
         }
 
+        async function verifierMiseAJour() {
+            if (!('serviceWorker' in navigator)) {
+                showToast("Mises à jour non disponibles sur ce navigateur", "error");
+                return;
+            }
+
+            const btn = document.getElementById('btnVerifierMaj');
+            const texteOriginal = btn ? btn.innerText : null;
+            if (btn) { btn.disabled = true; btn.innerText = "🔄 Vérification en cours…"; }
+            showToast("Vérification de la dernière version…", "info");
+
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (!registration) {
+                    showToast("Aucune version hors-ligne installée à mettre à jour", "info");
+                    if (btn) { btn.disabled = false; btn.innerText = texteOriginal; }
+                    return;
+                }
+
+                let miseAJourTrouvee = false;
+                const onUpdateFound = () => { miseAJourTrouvee = true; };
+                registration.addEventListener('updatefound', onUpdateFound);
+
+                await registration.update();
+
+                // Laisse le temps au navigateur de télécharger/installer une éventuelle nouvelle version.
+                // Si une mise à jour est trouvée, la page se recharge automatiquement (voir le listener
+                // 'controllerchange' déjà en place plus bas) — sinon on prévient que tout est déjà à jour.
+                setTimeout(() => {
+                    registration.removeEventListener('updatefound', onUpdateFound);
+                    if (btn) { btn.disabled = false; btn.innerText = texteOriginal; }
+                    if (!miseAJourTrouvee) {
+                        showToast("Vous êtes déjà sur la dernière version ✅", "success");
+                    }
+                }, 3000);
+            } catch (e) {
+                console.error("Erreur vérification mise à jour :", e);
+                showToast("Impossible de vérifier les mises à jour", "error");
+                if (btn) { btn.disabled = false; btn.innerText = texteOriginal; }
+            }
+        }
+
         function sauvegarderAllergenes() {
             memoireAllergenes = Array.from(document.querySelectorAll('.chk-allergene:checked')).map(cb => cb.value);
             syncCloud('allergenes', memoireAllergenes);
