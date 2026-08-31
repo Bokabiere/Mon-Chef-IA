@@ -2,13 +2,22 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mon Chef IA 👨‍🍳</title>
-    
+
+    <!-- SEO & Open Graph -->
+    <meta name="description" content="Mon Chef IA — Générez des recettes personnalisées à partir de vos ingrédients grâce à l'intelligence artificielle.">
+    <meta property="og:title" content="Mon Chef IA 👨‍🍳">
+    <meta property="og:description" content="Générez des recettes sur-mesure avec l'IA à partir de votre frigo.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="Icone.png">
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="Icone.ico" type="image/x-icon">
     <link rel="apple-touch-icon" href="Icone.png">
     <meta name="theme-color" content="#FF6B6B" id="metaThemeColor">
+
 
     <!-- Script pour les Confettis -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -20,10 +29,10 @@
 
     
         <!-- MODALE CUISSON -->
-    <div id="modalCuisson" class="modal-overlay" style="z-index: 6000;">
+    <div id="modalCuisson" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalCuissonTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="gradient-text">🍳 En cuisine !</h3>
+                <h3 id="modalCuissonTitle" class="gradient-text">🍳 En cuisine !</h3>
                 <button class="btn-secondary" style="padding: 5px 10px; margin: 0;" onclick="fermerModalCuisson()">✖</button>
             </div>
             <div class="modal-body">
@@ -111,7 +120,7 @@
         <button id="btnLogoutPending" class="btn-secondary" style="margin-top: 20px; display: none;" onclick="seDeconnecter()">Se déconnecter</button>
     </div>
 
-    <div id="appContent">
+    <main id="appContent" aria-label="Application Mon Chef IA">
         <div class="app-container">
             
             <!-- VUE GENERATEUR -->
@@ -119,7 +128,7 @@
             <div id="view-home" class="view-container view active">
                 <div class="view-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center;">
                     <div style="position: absolute; top: 15px; right: 15px;">
-                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--primary);">ℹ️</button>
+                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: var(--primary);" aria-label="Aide et informations">ℹ️</button>
                     </div>
                     
                     <div class="mascot-bubble" style="margin-top: 10px;">
@@ -134,26 +143,26 @@
                     
                     <!-- GRILLE DE RACCOURCIS -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%;">
-                        <div class="shortcut-card" onclick="switchView('ingredients')">
+                        <button class="shortcut-card" onclick="switchView('ingredients')">
                             <i style="font-size: 30px;">🍅</i>
                             <span>Mes Ingrédients</span>
-                        </div>
-                        <div class="shortcut-card" onclick="chargerPlanning()">
+                        </button>
+                        <button class="shortcut-card" onclick="chargerPlanning()">
                             <i style="font-size: 30px;">📅</i>
                             <span>Planning</span>
-                        </div>
-                        <div class="shortcut-card" onclick="switchView('cart')">
+                        </button>
+                        <button class="shortcut-card" onclick="switchView('cart')">
                             <i style="font-size: 30px;">🛒</i>
                             <span>Courses</span>
-                        </div>
-                        <div class="shortcut-card" onclick="switchView('favorites')">
+                        </button>
+                        <button class="shortcut-card" onclick="switchView('favorites')">
                             <i style="font-size: 30px;">💖</i>
                             <span>Favoris</span>
-                        </div>
-                        <div class="shortcut-card" onclick="document.getElementById('multiTimerWidget').style.display='flex'; if(document.getElementById('multiTimerWidget').classList.contains('collapsed')) toggleTimerWidget();">
+                        </button>
+                        <button class="shortcut-card" onclick="document.getElementById('multiTimerWidget').style.display='flex'; if(document.getElementById('multiTimerWidget').classList.contains('collapsed')) toggleTimerWidget();">
                             <i style="font-size: 30px;">⏱️</i>
                             <span>Minuteur</span>
-                        </div>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -172,7 +181,7 @@
 
                     <div class="search-container" style="margin-top: 15px;">
                         <span class="search-icon">🔍</span>
-                        <input type="text" id="ingredientSearch" placeholder="Rechercher un ingrédient..." oninput="filtrerIngredients(this.value)" autocomplete="off">
+                        <input type="text" id="ingredientSearch" placeholder="Rechercher un ingrédient..." oninput="filtrerIngredients(this.value)" autocomplete="off" aria-label="Rechercher un ingrédient">
                         <div id="autocompleteResults" class="autocomplete-results"></div>
                     </div>
                     
@@ -200,7 +209,7 @@
                         </div>
                         <p id="loaderText" style="margin-top:20px; font-weight:600; color:var(--text-muted);">Le Chef élabore vos menus...</p>
                     </div>
-                    <div id="resultatDiv"><h3 style="color:var(--text-muted); text-align:center; margin-top:20vh; font-weight:400; opacity:0.6;">Sélectionnez vos ingrédients et lancez la magie ! ✨</h3></div>
+                    <div id="resultatDiv" role="status" aria-live="polite"><h3 style="color:var(--text-muted); text-align:center; margin-top:20vh; font-weight:400; opacity:0.6;">Sélectionnez vos ingrédients et lancez la magie ! ✨</h3></div>
                 </div> <!-- fin view-content results -->
             </div> <!-- fin view-results -->
 
@@ -221,6 +230,7 @@
                         <div style="position: relative; flex: 1;">
                             <input type="text" id="courseInput" placeholder="Ajouter (ex: Lait)..." autocomplete="off"
                                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--bg-color); color: var(--text-main); box-sizing: border-box;"
+                                aria-label="Ajouter un article à la liste de courses"
                                 oninput="filtrerCourseAutocomplete(this.value)"
                                 onkeydown="navigerCourseAutocomplete(event)"
                                 onkeypress="if(event.key==='Enter') ajouterCourseManuelle()">
@@ -263,14 +273,13 @@
                 <i>⚙️</i><span>Paramètres</span>
             </button>
         </nav>
-    </div> 
+    </main>
 
     <div id="multiTimerWidget" class="multi-timer-widget collapsed">
         <div class="multi-timer-header" onclick="if(event.target.tagName !== 'BUTTON') toggleTimerWidget()">
             <span>⏱️ Chronos (<span id="activeTimersCount">0</span>)</span>
             <div style="display:flex; gap: 8px;">
                 <button id="btnMuteTimers" onclick="toggleMuteTimers()" title="Son activé/désactivé">🔊</button>
-                <button onclick="toggleFullscreenTimerWidget()" title="Plein écran">⛶</button>
                 <button class="btn-toggle-timer" id="btnToggleTimerWidget" onclick="toggleTimerWidget()">▲</button>
             </div>
         </div>
@@ -281,11 +290,11 @@
             <div class="add-timer-section">
                 <button onclick="document.getElementById('addTimerForm').style.display='flex'; this.style.display='none'" id="btnShowAddTimer" style="background: none; border: 1px dashed var(--border); width: 100%; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; color: var(--text-muted);">➕ Ajouter un nouveau chrono</button>
                 <div id="addTimerForm" style="display: none; flex-direction: column; gap: 10px;">
-                    <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off">
+                    <input type="text" id="newTimerName" placeholder="Nom (ex: Pâtes)" autocomplete="off" aria-label="Nom du minuteur">
                     <div class="timer-inputs">
-                        <input type="number" id="newTimerMin" placeholder="Min" min="0">
+                        <input type="number" id="newTimerMin" placeholder="Min" min="0" aria-label="Minutes">
                         <span style="font-weight: bold; color: var(--text-main);">:</span>
-                        <input type="number" id="newTimerSec" placeholder="Sec" min="0" max="59">
+                        <input type="number" id="newTimerSec" placeholder="Sec" min="0" max="59" aria-label="Secondes">
                     </div>
                     <div class="timer-quick-add">
                         <button type="button" onclick="addQuickTimer(1)">+1m</button>
@@ -298,10 +307,10 @@
         </div>
     </div>
 
-    <div id="modalIAScanner" class="modal-overlay">
+    <div id="modalIAScanner" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalIAScannerTitle">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h3>📸 Résultats du Scan IA</h3>
+                <h3 id="modalIAScannerTitle">📸 Résultats du Scan IA</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalIAScanner').style.display='none'">✖ Annuler</button>
             </div>
             <div class="modal-body">
@@ -312,10 +321,10 @@
         </div>
     </div>
 
-    <div id="modalBarcode" class="modal-overlay">
+    <div id="modalBarcode" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalBarcodeTitle">
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h3>🛒 Scan Code-barres</h3>
+                <h3 id="modalBarcodeTitle">🛒 Scan Code-barres</h3>
                 <button class="btn-secondary" onclick="fermerBarcodeScanner()">✖ Fermer</button>
             </div>
             <div class="modal-body" style="text-align: center;">
@@ -325,10 +334,10 @@
         </div>
     </div>
 
-    <div id="modalParametres" class="modal-overlay">
+    <div id="modalParametres" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalParametresTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚙️ Configuration</h3>
+                <h3 id="modalParametresTitle">⚙️ Configuration</h3>
                 <button class="btn-secondary" onclick="fermerParametres()">✖ Fermer</button>
             </div>
             <div class="modal-body">
@@ -558,30 +567,30 @@
         </div>
     </div>
 
-    <div id="modalCarnet" class="modal-overlay">
+    <div id="modalCarnet" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCarnetTitle">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📖 Mon Carnet de Recettes</h3>
+                <h3 id="modalCarnetTitle">📖 Mon Carnet de Recettes</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalCarnet').style.display='none'">✖ Fermer</button>
             </div>
             <div class="modal-body" id="carnetContent"></div>
         </div>
     </div>
 
-    <div id="modalPlanning" class="modal-overlay">
+    <div id="modalPlanning" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPlanningTitle">
         <div class="modal-content" style="max-width: 850px;">
             <div class="modal-header">
-                <h3>📅 Planning de la Semaine</h3>
+                <h3 id="modalPlanningTitle">📅 Planning de la Semaine</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalPlanning').style.display='none'">✖ Fermer</button>
             </div>
             <div class="modal-body" id="planningContent"></div>
         </div>
     </div>
 
-    <div id="modalMultiPlanning" class="modal-overlay" style="z-index: 6000;">
+    <div id="modalMultiPlanning" class="modal-overlay" style="z-index: 6000;" role="dialog" aria-modal="true" aria-labelledby="modalMultiPlanningTitle">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h3>🪄 Générer plusieurs repas</h3>
+                <h3 id="modalMultiPlanningTitle">🪄 Générer plusieurs repas</h3>
                 <button class="btn-secondary" onclick="fermerModalMultiPlanning()">✖</button>
             </div>
             <div class="modal-body">
@@ -623,10 +632,10 @@
         </div>
     </div>
 
-    <div id="modalCourses" class="modal-overlay">
+    <div id="modalCourses" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCoursesTitle">
         <div class="modal-content" id="modalCoursesContent">
             <div class="modal-header" style="background: var(--bg-color);">
-                <h3 style="color:var(--primary);">🛒 Ma Liste</h3>
+                <h3 id="modalCoursesTitle" style="color:var(--primary);">🛒 Ma Liste</h3>
                 <div style="display: flex; gap: 8px;">
                     <button class="btn-secondary" id="btnShoppingMode" onclick="toggleShoppingMode()">🔍 Plein écran</button>
                     <button class="btn-secondary" onclick="document.getElementById('modalCourses').style.display='none'">✖ Fermer</button>
@@ -644,10 +653,10 @@
         </div>
     </div>
 
-    <div id="modalOnboarding" class="modal-overlay" style="z-index: 3000;">
+    <div id="modalOnboarding" class="modal-overlay" style="z-index: 3000;" role="dialog" aria-modal="true" aria-labelledby="modalOnboardingTitle">
         <div class="modal-content" style="max-width: 500px; text-align: left;">
             <div class="modal-header">
-                <h3 class="gradient-text">👋 Bienvenue dans Chef IA !</h3>
+                <h3 id="modalOnboardingTitle" class="gradient-text">👋 Bienvenue dans Chef IA !</h3>
                 <button class="btn-secondary" onclick="fermerOnboarding()">✖</button>
             </div>
             <div class="modal-body" style="line-height: 1.6; font-size: 16px;">
@@ -664,10 +673,10 @@
         </div>
     </div>
 
-    <div id="modalApiKeys" class="modal-overlay">
+    <div id="modalApiKeys" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalApiKeysTitle">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>🔑 Gestion des Clés API</h3>
+                <h3 id="modalApiKeysTitle">🔑 Gestion des Clés API</h3>
                 <button class="btn-secondary" onclick="document.getElementById('modalApiKeys').style.display='none'">✖ Fermer</button>
             </div>
             <div class="modal-body">
