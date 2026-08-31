@@ -11,14 +11,14 @@
   "categories": ["food", "lifestyle", "utilities"],
   "icons": [
     {
-      "src": "Icone.png",
-      "sizes": "512x512",
+      "src": "Icone-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
       "src": "Icone.png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
@@ -29,15 +29,14 @@
       "short_name": "Cuisiner",
       "description": "Générer une recette",
       "url": "./index.html",
-      "icons": [{ "src": "Icone.png", "sizes": "192x192" }]
+      "icons": [{ "src": "Icone-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Mes Ingrédients",
       "short_name": "Frigo",
       "description": "Gérer mon frigo",
       "url": "./index.html#ingredients",
-      "icons": [{ "src": "Icone.png", "sizes": "192x192" }]
+      "icons": [{ "src": "Icone-192.png", "sizes": "192x192" }]
     }
   ]
 }
-
