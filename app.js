@@ -2848,8 +2848,26 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then((registration) => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+        // Vérifie activement l'existence d'une nouvelle version dès l'ouverture de l'app,
+        // au lieu d'attendre la vérification automatique (différée) du navigateur.
+        registration.update();
+
+        // Revérifie aussi quand l'app repasse au premier plan (retour depuis un autre onglet/app).
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') registration.update();
+        });
       }, (err) => {
         console.log('ServiceWorker registration failed: ', err);
       });
+
+    // Dès qu'un nouveau Service Worker prend le contrôle de la page (mise à jour installée),
+    // on recharge automatiquement pour afficher la dernière version — sans action de l'utilisateur.
+    let dejaRechargeApresMaj = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (dejaRechargeApresMaj) return;
+        dejaRechargeApresMaj = true;
+        window.location.reload();
+    });
   });
 }
