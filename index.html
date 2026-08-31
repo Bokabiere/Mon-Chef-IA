@@ -34,7 +34,7 @@
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
                 <h3 id="modalCuissonTitle" class="gradient-text">🍳 En cuisine !</h3>
-                <button class="btn-secondary" style="padding: 5px 10px; margin: 0;" onclick="fermerModalCuisson()">✖</button>
+                <button class="btn-secondary" style="padding: 5px 10px; margin: 0;" onclick="fermerModalCuisson()" aria-label="Fermer">✖</button>
             </div>
             <div class="modal-body">
             
@@ -94,13 +94,13 @@
             
             </div>
             <div style="padding: 20px; border-top: 1px solid var(--border);">
-                <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-bottom:10px; border: 2px solid var(--accent); color: var(--accent); font-weight:700; padding: 10px;" onclick="lancerRecetteRapide(); fermerModalCuisson();">⚡ Soir de flemme (15 min max)</button>
+                <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-bottom:10px; padding: 10px;" onclick="lancerRecetteRapide(); fermerModalCuisson();">⚡ Soir de flemme (15 min max)</button>
             <button class="btn-primary" id="btnGenererRecettes" style="width:100%;" onclick="fermerModalCuisson(); chercherRecettesIA();">✨ Inventer mes recettes</button>
             </div>
         </div>
     </div>
 
-    <div id="toastContainer" class="toast-container"></div>
+    <div id="toastContainer" class="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <div id="loginScreen">
         <div class="mascot-bubble">
@@ -258,7 +258,7 @@
 
         <!-- BOTTOM NAVIGATION -->
         <nav class="bottom-nav">
-            <button class="nav-item active" onclick="switchView('home')" id="nav-btn-home">
+            <button class="nav-item active" onclick="switchView('home')" id="nav-btn-home" aria-current="page">
                 <i>🏠</i><span>Accueil</span>
             </button>
             <button class="nav-item" onclick="switchView('ingredients')" id="nav-btn-ingredients">
@@ -348,18 +348,18 @@
                 <button class="btn-secondary" onclick="fermerParametres()">✖ Fermer</button>
             </div>
             <div class="modal-body">
-                <div class="tab-buttons">
-                    <button class="tab-btn active" id="tabIngBtn" onclick="switchTab('ing')">🍅 Ingrédients</button>
-                    <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')">📖 Carnet</button>
-                    <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
-                    <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
-                    <button class="tab-btn" id="tabEquipementBtn" onclick="switchTab('equipement')">🍳 Équipement</button>
-                    <button class="tab-btn" id="tabPrefsBtn" onclick="switchTab('prefs')">🍽️ Recettes</button>
-                    <button class="tab-btn" id="tabOptionsBtn" onclick="switchTab('options')">⚙️ Options</button>
-                    <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
+                <div class="tab-buttons" role="tablist">
+                    <button class="tab-btn active" id="tabIngBtn" onclick="switchTab('ing')" role="tab" aria-selected="true" aria-controls="tabIng">🍅 Ingrédients</button>
+                    <button class="tab-btn" id="tabCarnetBtn" onclick="switchTab('carnet')" role="tab" aria-selected="false" aria-controls="tabCarnet">📖 Carnet</button>
+                    <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')" role="tab" aria-selected="false" aria-controls="tabTheme">🎨 Apparence</button>
+                    <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')" role="tab" aria-selected="false" aria-controls="tabAllergene">⚠️ Allergènes</button>
+                    <button class="tab-btn" id="tabEquipementBtn" onclick="switchTab('equipement')" role="tab" aria-selected="false" aria-controls="tabEquipement">🍳 Équipement</button>
+                    <button class="tab-btn" id="tabPrefsBtn" onclick="switchTab('prefs')" role="tab" aria-selected="false" aria-controls="tabPrefs">🍽️ Recettes</button>
+                    <button class="tab-btn" id="tabOptionsBtn" onclick="switchTab('options')" role="tab" aria-selected="false" aria-controls="tabOptions">⚙️ Options</button>
+                    <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);" role="tab" aria-selected="false" aria-controls="tabAdmin">👥 Admin</button>
                 </div>
 
-                <div id="tabIng">
+                <div id="tabIng" role="tabpanel" aria-labelledby="tabIngBtn" tabindex="0">
                     <div style="background: var(--bg-color); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--border);">
                         <label>➕ Ajouter un ingrédient</label>
                         <div class="row" style="margin-bottom: 10px;">
@@ -384,14 +384,14 @@
                     </div>
                 </div>
 
-                <div id="tabCarnet" style="display: none;">
+                <div id="tabCarnet" style="display: none;" role="tabpanel" aria-labelledby="tabCarnetBtn" tabindex="0">
                     <label>🗑️ Supprimer des recettes sauvegardées</label>
                     <div id="listManageCarnet" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
                         <p style="text-align:center; padding: 20px;">Chargement...</p>
                     </div>
                 </div>
 
-                <div id="tabTheme" style="display: none;">
+                <div id="tabTheme" style="display: none;" role="tabpanel" aria-labelledby="tabThemeBtn" tabindex="0">
                     <label>Choisissez votre ambiance de cuisine</label>
                     
                     <button type="button" class="theme-option" onclick="setTheme('default')" id="theme-default">
@@ -427,7 +427,7 @@
                     </button>
                 </div>
 
-                <div id="tabPrefs" style="display: none;">
+                <div id="tabPrefs" style="display: none;" role="tabpanel" aria-labelledby="tabPrefsBtn" tabindex="0">
                     <label>🍽️ Valeurs par défaut de "En cuisine !"</label>
                     <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Ces réglages sont utilisés par défaut à chaque ouverture de la fenêtre de génération de recettes.</p>
 
@@ -461,7 +461,7 @@
                     </div>
                 </div>
 
-                <div id="tabOptions" style="display: none;">
+                <div id="tabOptions" style="display: none;" role="tabpanel" aria-labelledby="tabOptionsBtn" tabindex="0">
                     <label>🧠 Intelligence Artificielle par défaut</label>
                     <select id="selecteurIaGlobal" aria-label="Moteur IA" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
                         <option value="gemini">✨ Gemini (Google)</option>
@@ -486,8 +486,9 @@
                     </button>
                 </div>
 
-                <div id="tabEquipement" style="display: none;">
-                    <label>🍳 Mon matériel de cuisine</label>
+                <div id="tabEquipement" style="display: none;" role="tabpanel" aria-labelledby="tabEquipementBtn" tabindex="0">
+                    <fieldset style="border:none; padding:0; margin:0;">
+                    <legend style="font-weight:bold; padding:0; margin-bottom:4px;">🍳 Mon matériel de cuisine</legend>
                     <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Sélectionnez vos équipements pour que l'IA adapte ses propositions (ex: Cookeo, Four...).</p>
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
@@ -519,6 +520,7 @@
                             <span style="display: block; width: 100%;">🍞 Machine à pain</span>
                         </label>
                     </div>
+                    </fieldset>
 
                     <div style="background: var(--bg-color); padding: 12px; border-radius: 8px; border: 1px dashed var(--border);">
                         <label>➕ Autre équipement (séparé par des virgules)</label>
@@ -528,8 +530,9 @@
                     </div>
                 </div>
 
-                <div id="tabAllergene" style="display: none;">
-                    <label>⚠️ Mes restrictions & allergènes à éviter</label>
+                <div id="tabAllergene" style="display: none;" role="tabpanel" aria-labelledby="tabAllergeneBtn" tabindex="0">
+                    <fieldset style="border:none; padding:0; margin:0;">
+                    <legend style="font-weight:bold; padding:0; margin-bottom:4px;">⚠️ Mes restrictions & allergènes à éviter</legend>
                     <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Le Chef IA adaptera automatiquement toutes ses recettes pour exclure ces éléments. Défini une seule fois, appliqué à chaque recette généré.</p>
                     
                     <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
@@ -558,6 +561,7 @@
                             <span style="display: block; width: 100%;">🦐 Crustacés & Mollusques</span>
                         </label>
                     </div>
+                    </fieldset>
 
                     <div style="background: var(--bg-color); padding: 12px; border-radius: 8px; border: 1px dashed var(--border);">
                         <label>➕ Autre allergène ou intolérance</label>
@@ -569,7 +573,8 @@
 
                     <hr style="margin: 20px 0; border: none; border-top: 1px dashed var(--border);">
 
-                    <label>🍽️ Mon régime alimentaire</label>
+                    <fieldset style="border:none; padding:0; margin:0;">
+                    <legend style="font-weight:bold; padding:0; margin-bottom:4px;">🍽️ Mon régime alimentaire</legend>
                     <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Sélectionnez votre régime : il sera respecté automatiquement dans toutes vos recettes, sans avoir à le repréciser.</p>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <label class="ingredient-item" style="display: flex; align-items: center; gap: 10px;">
@@ -601,9 +606,10 @@
                             <span style="display: block; width: 100%;">🌶️ Peu épicé</span>
                         </label>
                     </div>
+                    </fieldset>
                 </div>
 
-                <div id="tabAdmin" style="display: none;">
+                <div id="tabAdmin" style="display: none;" role="tabpanel" aria-labelledby="tabAdminBtn" tabindex="0">
                     <label>👥 Gestion des accès utilisateurs en attente</label>
                     <div id="listeDemandesAcces" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px;">
                         <p style="text-align:center; padding: 20px;">Chargement...</p>
@@ -640,7 +646,7 @@
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
                 <h3 id="modalMultiPlanningTitle">🪄 Générer plusieurs repas</h3>
-                <button class="btn-secondary" onclick="fermerModalMultiPlanning()">✖</button>
+                <button class="btn-secondary" onclick="fermerModalMultiPlanning()" aria-label="Fermer">✖</button>
             </div>
             <div class="modal-body">
                 <p style="margin-top:0; margin-bottom:15px; color:var(--text-muted); font-size: var(--text-sm);">Cochez les repas que vous souhaitez générer :</p>
@@ -708,7 +714,7 @@
             <div class="modal-header">
                 <div class="bottom-sheet-handle"></div>
                 <h3 id="modalOnboardingTitle" class="gradient-text">👋 Bienvenue dans Chef IA !</h3>
-                <button class="btn-secondary" onclick="fermerOnboarding()">✖</button>
+                <button class="btn-secondary" onclick="fermerOnboarding()" aria-label="Fermer">✖</button>
             </div>
             <div class="modal-body" style="line-height: 1.6; font-size: var(--text-base);">
                 <p>Voici comment utiliser l'application :</p>

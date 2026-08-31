@@ -197,12 +197,16 @@ const firebaseConfig = {
 
         function showConfirm(message, { danger = false, texteOk = 'Confirmer', texteAnnuler = 'Annuler' } = {}) {
             return new Promise((resolve) => {
+                const previouslyFocused = document.activeElement;
                 const overlay = document.createElement('div');
                 overlay.className = 'confirm-overlay';
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+                overlay.setAttribute('aria-label', message);
                 overlay.innerHTML = `<div class="confirm-box"><p>${message}</p><div class="confirm-actions"><button class="btn-cancel">${texteAnnuler}</button><button class="btn-ok ${danger ? 'danger' : ''}">${texteOk}</button></div></div>`;
                 document.body.appendChild(overlay);
-                requestAnimationFrame(() => overlay.classList.add('show'));
-                const fermer = (result) => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); resolve(result); };
+                requestAnimationFrame(() => { overlay.classList.add('show'); overlay.querySelector('.btn-cancel').focus(); });
+                const fermer = (result) => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus(); resolve(result); };
                 overlay.querySelector('.btn-cancel').onclick = () => fermer(false);
                 overlay.querySelector('.btn-ok').onclick = () => fermer(true);
                 overlay.onclick = (e) => { if (e.target === overlay) fermer(false); };
@@ -211,14 +215,18 @@ const firebaseConfig = {
 
         function showPrompt(message, placeholder = '') {
             return new Promise((resolve) => {
+                const previouslyFocused = document.activeElement;
                 const overlay = document.createElement('div');
                 overlay.className = 'confirm-overlay';
+                overlay.setAttribute('role', 'dialog');
+                overlay.setAttribute('aria-modal', 'true');
+                overlay.setAttribute('aria-label', message);
                 overlay.innerHTML = `<div class="confirm-box"><p>${message}</p><input type="text" class="prompt-input" placeholder="${placeholder}"><div class="confirm-actions"><button class="btn-cancel">Annuler</button><button class="btn-ok">Valider</button></div></div>`;
                 document.body.appendChild(overlay);
                 requestAnimationFrame(() => overlay.classList.add('show'));
                 const input = overlay.querySelector('.prompt-input');
                 input.focus();
-                const fermer = (result) => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); resolve(result); };
+                const fermer = (result) => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus(); resolve(result); };
                 overlay.querySelector('.btn-cancel').onclick = () => fermer(null);
                 overlay.querySelector('.btn-ok').onclick = () => fermer(input.value.trim() || null);
                 input.addEventListener('keydown', (e) => { if (e.key === 'Enter') fermer(input.value.trim() || null); });
@@ -665,8 +673,8 @@ const firebaseConfig = {
                 memoireIngredients.push(nom);
                 syncCloud('ingredients', memoireIngredients);
                 updateButtonLabel();
-                afficherIngredientsGauche();
             }
+            afficherIngredientsGauche(nom);
             document.getElementById('ingredientSearch').value = "";
             document.getElementById('autocompleteResults').style.display = 'none';
         };
@@ -679,7 +687,7 @@ const firebaseConfig = {
         };
 
 
-                function afficherIngredientsGauche() {
+                function afficherIngredientsGauche(highlightName) {
             const container = document.getElementById('categoriesContainer');
             if(!container) return;
             // On mémorise les états ouverts
@@ -723,6 +731,7 @@ const firebaseConfig = {
                     const icone = iconesIngredients[ing] || "🍽️";
                     const tag = document.createElement('div');
                     tag.className = 'ingredient-tag' + (isChecked ? ' active' : '');
+                    tag.dataset.ingredientName = ing;
                     
                     const priceData = getPrixIngredient(ing);
                     const priceHtml = priceData
@@ -744,6 +753,15 @@ const firebaseConfig = {
 
                 details.appendChild(contentDiv);
                 container.appendChild(details);
+            }
+
+            if (highlightName) {
+                const cible = container.querySelector(`[data-ingredient-name="${CSS.escape(highlightName)}"]`);
+                if (cible) {
+                    cible.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cible.classList.add('just-selected');
+                    setTimeout(() => cible.classList.remove('just-selected'), 1600);
+                }
             }
         }
 
@@ -771,11 +789,11 @@ const firebaseConfig = {
             const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabEquipement', 'tabPrefs', 'tabOptions', 'tabAdmin'];
             tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
-                if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
+                if(btn) { btn.classList.remove('active'); btn.setAttribute('aria-selected', 'false'); } if(content) content.style.display = 'none';
             });
             const activeBtn = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn');
             const activeContent = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
-            if(activeBtn) activeBtn.classList.add('active'); if(activeContent) activeContent.style.display = 'block';
+            if(activeBtn) { activeBtn.classList.add('active'); activeBtn.setAttribute('aria-selected', 'true'); } if(activeContent) activeContent.style.display = 'block';
             
             if(tab === 'ing') chargerListeManageIng(); 
             if(tab === 'carnet') chargerListeManageCarnet(); 
@@ -894,7 +912,7 @@ const firebaseConfig = {
                 syncCloud('ingredients', memoireIngredients); updateButtonLabel(); afficherIngredientsGauche();
                 if(count > 0) showToast(count + " ingrédient(s) ajouté(s)", "success");
             };
-            recognition.onerror = function() { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter"; };
+            recognition.onerror = function(event) { btn.classList.remove('listening'); btn.innerText = "🎙️ Dicter"; let msg; if (event.error === 'not-allowed' || event.error === 'permission-denied') { msg = "Micro refusé : autorisez l'accès au micro dans les paramètres du navigateur."; } else if (event.error === 'no-speech') { msg = "Aucune parole détectée, réessayez."; } else { msg = "Erreur de dictée vocale : " + event.error; } showToast(msg, 'error'); };
             recognition.start();
         }
 
@@ -1221,7 +1239,7 @@ const firebaseConfig = {
             if(unsubscribeCourses) unsubscribeCourses();
             
             unsubscribeCourses = userDb.collection("courses").onSnapshot((snapshot) => {
-                if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
+                if(snapshot.empty) return contentDiv.innerHTML = "<p style='text-align:center; padding: 20px; margin-top:15vh; color:var(--text-muted);'>Votre liste est vide. 🎉</p>";
                 
                 let docs = [];
                 snapshot.forEach(doc => docs.push({ id: doc.id, ...doc.data() }));
@@ -1292,7 +1310,7 @@ const firebaseConfig = {
 
                 let finalHtml = summaryHtml + (htmlAcheter ? `<div id="courses-active-list">${htmlAcheter}</div>` : "");
                 if (hasCaddie) { finalHtml += `<div class="caddie-divider">🛒 Dans le caddie</div><div id="courses-caddie-list">${htmlCaddie}</div>`; finalHtml += `<button class="btn-danger" style="width:100%; margin-top:15px; padding:15px; font-size:14px; font-weight:bold;" onclick="viderCaddie()">🗑️ Jeter les articles du caddie</button>`; }
-                if(!htmlAcheter && !hasCaddie) { finalHtml = summaryHtml + "<p style='text-align:center; padding: 20px; color:var(--text-muted);'>Votre liste est vide. 🎉</p>"; }
+                if(!htmlAcheter && !hasCaddie) { finalHtml = summaryHtml + "<p style='text-align:center; padding: 20px; margin-top:15vh; color:var(--text-muted);'>Votre liste est vide. 🎉</p>"; }
                 if(!htmlAcheter && hasCaddie) { finalHtml = summaryHtml + "<p style='text-align:center; padding: 20px; color:var(--primary); font-weight:bold;'>Tout est dans le caddie ! 🎯</p>" + finalHtml.replace(summaryHtml, ''); }
                 contentDiv.innerHTML = finalHtml;
                 
@@ -1656,7 +1674,7 @@ const firebaseConfig = {
                 let stepsArrayString = `['${rawSteps.join("','")}']`;
                 
                 // Construct a detailed view similar to normal recipes
-                let contenuHtml = `<details class="recipe-card" id="card-${index}" open><summary><div><span>🍽️ ${nomDuPlat}</span><div class="recipe-mini-meta" style="margin-top: 5px;">👥 ${personnes} pers.</div></div></summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div>
+                let contenuHtml = `<details class="recipe-card" id="card-${index}" open><summary><div><span>🍽️ ${nomDuPlat}</span><div class="recipe-mini-meta" style="margin-top: 5px;">👥 ${personnes} pers.</div></div></summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})" aria-pressed="false">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)" aria-label="Étape précédente">⬅️ Précédent</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)" aria-label="Étape suivante">➡️ Suivant</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button></div>
                 <div class="planning-validation-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
                     <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
                     <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
@@ -1928,7 +1946,7 @@ Règles de formatage ABSOLUES :
 
                     const blocsAFaire = blocs.slice(0, 3);
                     let mainTitle = titleTemplate.replace('{N}', blocsAFaire.length);
-                    let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
+                    let html = `<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:48px; margin-bottom:10px;"><h3 style="margin:0;">${mainTitle}</h3><button class="btn-top" onclick="regenererRecette(this)">🔄 Une autre recette</button></div>`;
                     
                     const blocsTriees = blocsAFaire
                         .map((bloc, index) => ({ bloc, index, state: getRecipeStateFromText(bloc) }))
@@ -1974,7 +1992,7 @@ Règles de formatage ABSOLUES :
                         if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
                         let stepsArrayString = `['${rawSteps.join("','")}']`;
 
-                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
+                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})" aria-pressed="false">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)" aria-label="Étape précédente">⬅️ Précédent</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)" aria-label="Étape suivante">➡️ Suivant</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
                     });
                     
                     resDiv.innerHTML = html;
@@ -2031,14 +2049,14 @@ Règles de formatage ABSOLUES :
             const contentDiv = document.getElementById('carnetRecettesList'); contentDiv.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
             try {
                 const snapshot = await userDb.collection("carnet").orderBy("date", "desc").get();
-                if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center;">Votre carnet est vide !</h3>`;
+                if (snapshot.empty) return contentDiv.innerHTML = `<h3 style="text-align:center; margin-top:15vh; color:var(--text-muted); font-weight:400; opacity:0.8;">Votre carnet est vide !</h3>`;
                 let html = ""; let index = 0;
                 snapshot.forEach(doc => {
                     const item = doc.data(); let bloc = item.recette; let iSaut = bloc.indexOf('\n'); let titre = bloc.substring(0, iSaut).trim().replace(/[*#]/g, ''); let contenu = bloc.substring(iSaut).trim().replace(/[*#]/g, ''); let dateStr = item.date ? item.date.toDate().toLocaleDateString() : ""; let note = item.note || 0;
                     contenu = enrichirTexteChrono(contenu);
                     let rawSteps = contenu.split('\n').filter(line => line.trim().length > 15).map(line => line.replace(/'/g, "\\'").replace(/"/g, '&quot;')); let stepsArrayString = `['${rawSteps.join("','")}']`;
                     let starsHtml = `<div class="rating-stars" data-doc="${doc.id}">`; for (let n = 1; n <= 5; n++) { starsHtml += `<span class="star ${n <= note ? 'filled' : ''}" onclick="noterRecette('${doc.id}', ${n})">★</span>`; } starsHtml += `<span class="rating-label">${note > 0 ? 'Votre note' : 'Notez cette recette'}</span></div>`;
-                    html += `<details class="recipe-card" id="carnet-card-${index}"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${starsHtml}<div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})">👀 Mode Pas-à-pas</button></div><div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="carnet-step-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('carnet-step-${index}', -1)">⬅️</button><button class="btn-step" onclick="changeStep('carnet-step-${index}', 1)">➡️</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
+                    html += `<details class="recipe-card" id="carnet-card-${index}"><summary>${titre} <span style="font-size:12px; color:var(--text-muted); margin-left:10px;">(${dateStr})</span></summary><div class="recipe-content">${starsHtml}<div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'carnet-text-${index}', 'carnet-step-${index}', ${stepsArrayString})" aria-pressed="false">👀 Mode Pas-à-pas</button></div><div id="carnet-text-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="carnet-step-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('carnet-step-${index}', -1)" aria-label="Étape précédente">⬅️ Précédent</button><button class="btn-step" onclick="changeStep('carnet-step-${index}', 1)" aria-label="Étape suivante">➡️ Suivant</button></div></div><div class="recipe-actions"><button class="btn-action btn-expand" onclick="toggleExpand('carnet-card-${index}', this)">⛶ Agrandir</button></div></div></details>`;
                     index++;
                 });
                 contentDiv.innerHTML = html;
@@ -2164,8 +2182,8 @@ Règles de formatage ABSOLUES :
         let recipeSteps = {};
         function togglePasAPas(btnToggle, textId, stepId, stepsArray) {
             const textView = document.getElementById(textId); const stepView = document.getElementById(stepId);
-            if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; } 
-            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; recipeSteps[stepId] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[stepId]); }
+            if (textView.style.display === "none") { textView.style.display = "block"; stepView.style.display = "none"; btnToggle.innerText = "👀 Mode Pas-à-pas"; btnToggle.setAttribute('aria-pressed', 'false'); }
+            else { textView.style.display = "none"; stepView.style.display = "block"; btnToggle.innerText = "📄 Vue complète"; btnToggle.setAttribute('aria-pressed', 'true'); recipeSteps[stepId] = { current: 0, steps: stepsArray }; updateStepDisplayCustom(stepId, recipeSteps[stepId]); }
         }
         function changeStep(stepId, direction) {
             let data = recipeSteps[stepId]; data.current += direction;
@@ -2758,7 +2776,7 @@ Règles de formatage ABSOLUES :
             // Masquer toutes les vues
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             // Désactiver tous les boutons de la navbar
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(b => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
             
             // Activer la vue correspondante
             const targetView = document.getElementById('view-' + viewId);
@@ -2766,7 +2784,7 @@ Règles de formatage ABSOLUES :
             
             // Activer le bouton de la navbar
             const targetBtn = document.getElementById('nav-btn-' + viewId);
-            if (targetBtn) targetBtn.classList.add('active');
+            if (targetBtn) { targetBtn.classList.add('active'); targetBtn.setAttribute('aria-current', 'page'); }
 
             // Logique spécifique aux vues pour charger leur contenu depuis les modales/fonctions existantes
             if (viewId === 'favorites') {
@@ -2970,3 +2988,44 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+
+// ============================================================
+// ACCESSIBILITÉ — gestion générique des modales
+// (focus à l'ouverture/fermeture, fond masqué aux lecteurs d'écran,
+//  fermeture au clavier avec la touche Echap)
+// ============================================================
+(function initModalAccessibility() {
+    const appContent = document.getElementById('appContent');
+    const overlays = document.querySelectorAll('.modal-overlay');
+    let dernierElementFocus = null;
+
+    function elementsFocusables(container) {
+        return container.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    }
+
+    overlays.forEach(overlay => {
+        const observer = new MutationObserver(() => {
+            const estOuverte = getComputedStyle(overlay).display !== 'none';
+            if (estOuverte) {
+                dernierElementFocus = document.activeElement;
+                if (appContent) { appContent.setAttribute('aria-hidden', 'true'); try { appContent.inert = true; } catch (e) {} }
+                const focusables = elementsFocusables(overlay);
+                if (focusables.length) focusables[0].focus();
+            } else {
+                if (appContent) { appContent.removeAttribute('aria-hidden'); try { appContent.inert = false; } catch (e) {} }
+                if (dernierElementFocus && typeof dernierElementFocus.focus === 'function') dernierElementFocus.focus();
+            }
+        });
+        observer.observe(overlay, { attributes: true, attributeFilter: ['style'] });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const boutonAnnulerOuvert = document.querySelector('.confirm-overlay.show .btn-cancel');
+        if (boutonAnnulerOuvert) { boutonAnnulerOuvert.click(); return; }
+        if (window.overlayBackStack && window.overlayBackStack.length > 0) { history.back(); return; }
+        const modaleOuverte = Array.from(document.querySelectorAll('.modal-overlay')).find(o => getComputedStyle(o).display !== 'none');
+        if (modaleOuverte) modaleOuverte.style.display = 'none';
+    });
+})();
