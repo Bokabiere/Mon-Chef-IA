@@ -17,6 +17,7 @@ const firebaseConfig = {
         let memoireAllergenes = [];
         let memoireRegimes = [];
         let memoireEquipements = [];
+        let prefsCuisineDefaut = { humeur: "classique", temps: "30 minutes environ", personnes: 2 };
         let moteurIAActif = "mistral";
         let unsubscribeCourses = null;
         let isAdminUser = false;
@@ -52,6 +53,7 @@ const firebaseConfig = {
             const savedTheme = localStorage.getItem('chef_ia_theme') || 'default';
             setTheme(savedTheme);
             chargerAllergenesUI();
+            restoreTimersFromStorage();
         };
 
         async function handleCredentialResponse(response) {
@@ -371,6 +373,30 @@ const firebaseConfig = {
             if (inputAutre) inputAutre.value = autres.join(', ');
         }
 
+        function sauvegarderPrefsCuisine() {
+            const selHumeur = document.getElementById('paramHumeurDefaut');
+            const selTemps = document.getElementById('paramTempsDefaut');
+            const inputPersonnes = document.getElementById('paramPersonnesDefaut');
+            if (!selHumeur || !selTemps || !inputPersonnes) return;
+
+            let personnes = parseInt(inputPersonnes.value, 10);
+            if (!personnes || personnes < 1) personnes = 1;
+            inputPersonnes.value = personnes;
+
+            prefsCuisineDefaut = { humeur: selHumeur.value, temps: selTemps.value, personnes: personnes };
+            syncCloud('prefsCuisine', prefsCuisineDefaut);
+            showToast("Préférences de recettes mises à jour 🍽️", "success");
+        }
+
+        function chargerPrefsCuisineUI() {
+            const selHumeur = document.getElementById('paramHumeurDefaut');
+            const selTemps = document.getElementById('paramTempsDefaut');
+            const inputPersonnes = document.getElementById('paramPersonnesDefaut');
+            if (selHumeur) selHumeur.value = prefsCuisineDefaut.humeur;
+            if (selTemps) selTemps.value = prefsCuisineDefaut.temps;
+            if (inputPersonnes) inputPersonnes.value = prefsCuisineDefaut.personnes;
+        }
+
         function getEquipementsPrompt() {
             if (memoireEquipements.length === 0) return "";
             return `\nMATÉRIEL ET ÉQUIPEMENT DISPONIBLE : ${memoireEquipements.join(", ")}. Tu DOIS proposer en priorité des recettes qui utilisent ce matériel (par exemple, si Cookeo est listé, propose des plats au Cookeo), mais tu peux occasionnellement proposer des plats avec du matériel standard (poêle, casserole).`;
@@ -447,6 +473,10 @@ const firebaseConfig = {
                         memoireRegimes = userDoc.data().regimes || [];
                         memoireEquipements = userDoc.data().equipements || [];
                         moteurIAActif = userDoc.data().moteurIA || "mistral";
+                        const prefsCuisineSauvegardees = userDoc.data().prefsCuisine;
+                        if (prefsCuisineSauvegardees) {
+                            prefsCuisineDefaut = Object.assign({}, prefsCuisineDefaut, prefsCuisineSauvegardees);
+                        }
                         
                         const selectGlobal = document.getElementById('selecteurIaGlobal');
                         if(selectGlobal) selectGlobal.value = moteurIAActif;
@@ -469,6 +499,7 @@ const firebaseConfig = {
                 chargerAllergenesUI();
                 chargerRegimesUI();
                 chargerEquipementsUI();
+                chargerPrefsCuisineUI();
 
                 document.getElementById('categoriesContainer').addEventListener('change', (e) => {
                     if (!e.target.classList.contains('chk-ingredient')) return;
@@ -695,7 +726,7 @@ const firebaseConfig = {
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
         
         function switchTab(tab) {
-            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabEquipement', 'tabOptions', 'tabAdmin'];
+            const tabs = ['tabIng', 'tabCarnet', 'tabTheme', 'tabAllergene', 'tabEquipement', 'tabPrefs', 'tabOptions', 'tabAdmin'];
             tabs.forEach(t => {
                 const btn = document.getElementById(t + 'Btn'); const content = document.getElementById(t);
                 if(btn) btn.classList.remove('active'); if(content) content.style.display = 'none';
@@ -707,6 +738,7 @@ const firebaseConfig = {
             if(tab === 'ing') chargerListeManageIng(); 
             if(tab === 'carnet') chargerListeManageCarnet(); 
             if(tab === 'allergene') { chargerAllergenesUI(); chargerRegimesUI(); }
+            if(tab === 'prefs') chargerPrefsCuisineUI();
             if(tab === 'admin' && isAdminUser) chargerDemandesAcces();
         }
 
@@ -2093,13 +2125,35 @@ Règles de formatage ABSOLUES :
             try { await userDb.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
         }
 
+        // ============================================================
+        // GESTION DES MINUTEURS (MULTI-TIMER)
+        // ============================================================
         let activeTimers = {};
         let timerIdCounter = 0;
         let isTimerMuted = false;
-        
+        let globalTimerInterval = null;
+        let alertLoopInterval = null;
+        let titleFlickerInterval = null;
+        let titleFlickerState = false;
+        let originalDocTitle = document.title;
+        let sharedAudioCtx = null;
+        let wakeLockSentinel = null;
+        let detectedTimersRegistry = {};
+        let detectedTimersRegistryCounter = 0;
+        const TIMERS_STORAGE_KEY = 'chefIA_activeTimers_v1';
+        const WIDGET_COLLAPSE_KEY = 'chefIA_timerWidgetCollapsed';
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, function(c) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+            });
+        }
+
         function toggleMuteTimers() {
             isTimerMuted = !isTimerMuted;
-            document.getElementById("btnMuteTimers").innerText = isTimerMuted ? "🔇" : "🔊";
+            let btn = document.getElementById("btnMuteTimers");
+            btn.innerText = isTimerMuted ? "🔇" : "🔊";
+            btn.setAttribute('aria-label', isTimerMuted ? "Réactiver le son des minuteurs" : "Couper le son des minuteurs");
         }
 
         function requestNotificationPermission() {
@@ -2109,13 +2163,13 @@ Règles de formatage ABSOLUES :
         }
 
         function toggleTimerWidget() {
-            document.getElementById("multiTimerWidget").classList.toggle("collapsed");
+            let widget = document.getElementById("multiTimerWidget");
+            widget.classList.toggle("collapsed");
             let btn = document.getElementById("btnToggleTimerWidget");
-            if(document.getElementById("multiTimerWidget").classList.contains("collapsed")){
-                btn.innerText = "▲";
-            } else {
-                btn.innerText = "▼";
-            }
+            let collapsed = widget.classList.contains("collapsed");
+            btn.innerText = collapsed ? "▲" : "▼";
+            btn.setAttribute('aria-label', collapsed ? "Afficher les minuteurs" : "Masquer les minuteurs");
+            try { localStorage.setItem(WIDGET_COLLAPSE_KEY, collapsed ? "1" : "0"); } catch (e) {}
         }
 
         function addQuickTimer(minutes) {
@@ -2136,7 +2190,8 @@ Règles de formatage ABSOLUES :
         }
 
         function enrichirTexteChrono(contenu) {
-            return contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, function(match, minutes, unite, offset, string) {
+            let detected = [];
+            let result = contenu.replace(/(\d+)\s*(min|minute|minutes)/gi, function(match, minutes, unite, offset, string) {
                 let beforeStr = string.substring(0, offset);
                 let lastPunc = Math.max(beforeStr.lastIndexOf('.'), beforeStr.lastIndexOf('\n'), beforeStr.lastIndexOf(':'));
                 let start = lastPunc === -1 ? 0 : lastPunc + 1;
@@ -2155,10 +2210,81 @@ Règles de formatage ABSOLUES :
                 if (nomTache.length < 3) {
                     nomTache = `Chrono ${minutes}m`;
                 }
+
+                detected.push({ minutes: parseFloat(minutes), nom: nomTache });
                 
                 let escapedNom = nomTache.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-                return `<span class="timer-tag" onclick="startTimer(${minutes}, '${escapedNom}')">⏱️ ${match}</span>`;
+                return `<span class="timer-tag" onclick="startTimer(${minutes}, '${escapedNom}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startTimer(${minutes}, '${escapedNom}');}" role="button" tabindex="0" aria-label="Lancer un minuteur de ${match}">⏱️ ${match}</span>`;
             });
+
+            if (detected.length >= 2) {
+                let regId = 'dt_' + (++detectedTimersRegistryCounter);
+                detectedTimersRegistry[regId] = detected;
+                let banner = `<div class="timers-detected-banner"><span>⏱️ ${detected.length} minuteurs détectés dans cette recette</span><button type="button" onclick="lancerMinuteursDetectes('${regId}')">Tout lancer</button></div>`;
+                result = banner + result;
+            }
+
+            return result;
+        }
+
+        function lancerMinuteursDetectes(regId) {
+            let list = detectedTimersRegistry[regId];
+            if (!list) return;
+            list.forEach(t => startTimer(t.minutes, t.nom));
+            delete detectedTimersRegistry[regId];
+        }
+
+        // --- Boucle de tick unique basée sur horodatage absolu ---
+        // (fiable même si l'onglet est mis en arrière-plan / throttlé par le navigateur)
+        function ensureGlobalTicker() {
+            if (globalTimerInterval) return;
+            globalTimerInterval = setInterval(tickAllTimers, 1000);
+        }
+
+        function stopGlobalTickerIfIdle() {
+            if (Object.keys(activeTimers).length === 0 && globalTimerInterval) {
+                clearInterval(globalTimerInterval);
+                globalTimerInterval = null;
+            }
+        }
+
+        function tickAllTimers() {
+            let now = Date.now();
+            let anyChange = false;
+            let justFinished = false;
+
+            for (let id in activeTimers) {
+                let timer = activeTimers[id];
+                if (timer.paused || timer.finished) continue;
+
+                let remaining = Math.max(0, Math.round((timer.endTime - now) / 1000));
+                if (remaining !== timer.remaining) {
+                    timer.remaining = remaining;
+                    updateTimerDisplay(id);
+                    anyChange = true;
+                }
+
+                if (remaining <= 0) {
+                    timer.finished = true;
+                    let el = document.getElementById(`timerItem_${id}`);
+                    if (el) el.classList.add("timer-finished");
+                    declencherAlerteFinMinuteur(id, timer.name);
+                    justFinished = true;
+                    anyChange = true;
+                }
+            }
+
+            if (anyChange) saveTimersToStorage();
+            if (justFinished) renderTimersList();
+        }
+
+        function updateTimerDisplay(id) {
+            let timer = activeTimers[id];
+            let el = document.getElementById(`timeDisplay_${id}`);
+            if (!el || !timer) return;
+            let m = Math.floor(timer.remaining / 60);
+            let s = timer.remaining % 60;
+            el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
         }
 
         function startTimer(minutes, nom = null) {
@@ -2168,65 +2294,137 @@ Règles de formatage ABSOLUES :
             
             if (!nom) nom = `Chrono ${Math.floor(minutes)}m`;
 
+            let isFirstTimer = Object.keys(activeTimers).length === 0;
             let id = "timer_" + (++timerIdCounter);
+            let now = Date.now();
             
             let timerObj = {
                 id: id,
                 name: nom,
+                durationSeconds: timeInSeconds,
+                endTime: now + timeInSeconds * 1000,
                 remaining: timeInSeconds,
                 paused: false,
-                interval: setInterval(() => tickTimer(id), 1000)
+                finished: false
             };
             
             activeTimers[id] = timerObj;
             
             const widget = document.getElementById('multiTimerWidget');
             widget.style.display = 'flex';
-            if (widget.classList.contains("collapsed")) {
+            if (isFirstTimer && widget.classList.contains("collapsed")) {
                 toggleTimerWidget();
             }
             
+            ensureGlobalTicker();
+            requestWakeLock();
             renderTimersList();
             updateTimersCount();
-        }
-
-        function tickTimer(id) {
-            let timer = activeTimers[id];
-            if (!timer || timer.paused) return;
-            
-            timer.remaining--;
-            
-            let el = document.getElementById(`timeDisplay_${id}`);
-            if (el) {
-                let m = Math.floor(timer.remaining / 60);
-                let s = timer.remaining % 60;
-                el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-            }
-
-            if (timer.remaining <= 0) {
-                clearInterval(timer.interval);
-                if (el) {
-                    el.innerText = "0:00";
-                    document.getElementById(`timerItem_${id}`).classList.add("timer-finished");
-                }
-                declencherAlerteFinMinuteur(timer.name);
-            }
+            saveTimersToStorage();
+            updateAppBadge();
         }
 
         function removeTimer(id) {
-            if (activeTimers[id]) {
-                clearInterval(activeTimers[id].interval);
-                delete activeTimers[id];
-                renderTimersList();
-                updateTimersCount();
+            let timer = activeTimers[id];
+            if (!timer) return;
+
+            let canUndo = !timer.finished;
+            delete activeTimers[id];
+
+            renderTimersList();
+            updateTimersCount();
+            saveTimersToStorage();
+            updateAppBadge();
+            stopGlobalTickerIfIdle();
+            releaseWakeLockIfIdle();
+
+            if (!hasUnacknowledgedFinishedTimers()) {
+                stopTitleFlicker();
+                if (alertLoopInterval) { clearInterval(alertLoopInterval); alertLoopInterval = null; }
+            }
+
+            if (canUndo) {
+                showUndoToast(timer);
             }
         }
 
+        function showUndoToast(timerSnapshot) {
+            let toast = document.getElementById('timerUndoToast');
+            if (!toast) return;
+
+            if (window._timerUndoTimeoutId) { clearTimeout(window._timerUndoTimeoutId); }
+            window._lastRemovedTimer = timerSnapshot;
+
+            toast.innerHTML = `<span>⏱️ Minuteur "${escapeHtml(timerSnapshot.name)}" supprimé</span><button type="button" onclick="undoRemoveTimer()">Annuler</button>`;
+            toast.classList.add('visible');
+
+            window._timerUndoTimeoutId = setTimeout(() => {
+                toast.classList.remove('visible');
+                window._lastRemovedTimer = null;
+            }, 6000);
+        }
+
+        function undoRemoveTimer() {
+            let snap = window._lastRemovedTimer;
+            if (!snap) return;
+
+            activeTimers[snap.id] = snap;
+            window._lastRemovedTimer = null;
+
+            let toast = document.getElementById('timerUndoToast');
+            if (toast) toast.classList.remove('visible');
+            if (window._timerUndoTimeoutId) { clearTimeout(window._timerUndoTimeoutId); }
+
+            const widget = document.getElementById('multiTimerWidget');
+            widget.style.display = 'flex';
+
+            ensureGlobalTicker();
+            requestWakeLock();
+            renderTimersList();
+            updateTimersCount();
+            saveTimersToStorage();
+            updateAppBadge();
+        }
+
         function togglePauseTimer(id) {
-            if (activeTimers[id]) {
-                activeTimers[id].paused = !activeTimers[id].paused;
-                renderTimersList();
+            let timer = activeTimers[id];
+            if (!timer || timer.finished) return;
+
+            if (timer.paused) {
+                timer.endTime = Date.now() + timer.remaining * 1000;
+                timer.paused = false;
+            } else {
+                timer.remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+                timer.paused = true;
             }
+
+            renderTimersList();
+            saveTimersToStorage();
+        }
+
+        function addMinuteToTimer(id) {
+            let timer = activeTimers[id];
+            if (!timer || timer.finished) return;
+
+            timer.durationSeconds = (timer.durationSeconds || 0) + 60;
+            if (timer.paused) {
+                timer.remaining += 60;
+            } else {
+                timer.endTime += 60000;
+                timer.remaining = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+            }
+
+            renderTimersList();
+            saveTimersToStorage();
+        }
+
+        function restartTimer(id) {
+            let timer = activeTimers[id];
+            if (!timer) return;
+            let durationMinutes = (timer.durationSeconds || 60) / 60;
+            let name = timer.name;
+            delete activeTimers[id];
+            startTimer(durationMinutes, name);
         }
 
         function renderTimersList() {
@@ -2234,22 +2432,39 @@ Règles de formatage ABSOLUES :
             listEl.innerHTML = "";
             for (let id in activeTimers) {
                 let timer = activeTimers[id];
-                let m = Math.floor(timer.remaining / 60);
-                let s = timer.remaining % 60;
-                let timeStr = timer.remaining > 0 ? `${m}:${s < 10 ? '0' : ''}${s}` : "0:00";
+                let remaining = timer.finished ? 0 : (timer.paused ? timer.remaining : Math.max(0, Math.round((timer.endTime - Date.now()) / 1000)));
+                let m = Math.floor(remaining / 60);
+                let s = remaining % 60;
+                let timeStr = `${m}:${s < 10 ? '0' : ''}${s}`;
                 
                 let item = document.createElement("div");
-                item.className = "timer-item" + (timer.remaining <= 0 ? " timer-finished" : "");
+                let stateClass = timer.finished ? "timer-finished" : (timer.paused ? "timer-paused" : "timer-running");
+                item.className = "timer-item " + stateClass;
                 item.id = `timerItem_${id}`;
+                item.setAttribute("role", "status");
+
+                let nomEchappe = escapeHtml(timer.name);
+                let controlsHtml;
+
+                if (timer.finished) {
+                    controlsHtml = `
+                        <button class="btn-restart" onclick="restartTimer('${id}')" aria-label="Relancer ${nomEchappe}" title="Relancer">🔁</button>
+                        <button class="btn-stop" onclick="removeTimer('${id}')" aria-label="Fermer l'alerte de ${nomEchappe}" title="OK">X</button>
+                    `;
+                } else {
+                    controlsHtml = `
+                        <button class="btn-add-min" onclick="addMinuteToTimer('${id}')" aria-label="Ajouter une minute à ${nomEchappe}" title="+1 min">+1m</button>
+                        <button class="btn-pause" onclick="togglePauseTimer('${id}')" aria-label="${timer.paused ? 'Reprendre' : 'Mettre en pause'} ${nomEchappe}" title="${timer.paused ? 'Reprendre' : 'Pause'}">${timer.paused ? '▶' : '⏸'}</button>
+                        <button class="btn-stop" onclick="removeTimer('${id}')" aria-label="Supprimer ${nomEchappe}" title="Supprimer">X</button>
+                    `;
+                }
+
                 item.innerHTML = `
                     <div class="timer-info">
-                        <span class="timer-name">${timer.name}</span>
+                        <span class="timer-name">${nomEchappe}</span>
                         <span class="timer-time" id="timeDisplay_${id}">${timeStr}${timer.paused ? ' (Pause)' : ''}</span>
                     </div>
-                    <div class="timer-controls">
-                        ${timer.remaining > 0 ? `<button class="btn-pause" onclick="togglePauseTimer('${id}')">${timer.paused ? '▶' : '⏸'}</button>` : ''}
-                        <button class="btn-stop" onclick="removeTimer('${id}')">X</button>
-                    </div>
+                    <div class="timer-controls">${controlsHtml}</div>
                 `;
                 listEl.appendChild(item);
             }
@@ -2263,23 +2478,163 @@ Règles de formatage ABSOLUES :
             document.getElementById("activeTimersCount").innerText = Object.keys(activeTimers).length;
         }
 
-        function declencherAlerteFinMinuteur(nom) {
+        // --- Persistance (survit à un rechargement de page ou une fermeture d'onglet) ---
+        function saveTimersToStorage() {
+            try {
+                let data = {};
+                for (let id in activeTimers) {
+                    let t = activeTimers[id];
+                    data[id] = {
+                        name: t.name,
+                        durationSeconds: t.durationSeconds,
+                        endTime: t.endTime,
+                        remaining: t.remaining,
+                        paused: t.paused,
+                        finished: t.finished
+                    };
+                }
+                localStorage.setItem(TIMERS_STORAGE_KEY, JSON.stringify({ timers: data, counter: timerIdCounter }));
+            } catch (e) {}
+        }
+
+        function restoreTimersFromStorage() {
+            try {
+                let raw = localStorage.getItem(TIMERS_STORAGE_KEY);
+                if (!raw) return;
+                let saved = JSON.parse(raw);
+                timerIdCounter = saved.counter || 0;
+
+                for (let id in saved.timers) {
+                    let t = saved.timers[id];
+                    activeTimers[id] = {
+                        id: id,
+                        name: t.name,
+                        durationSeconds: t.durationSeconds,
+                        endTime: t.endTime,
+                        remaining: t.remaining,
+                        paused: !!t.paused,
+                        finished: !!t.finished
+                    };
+                }
+
+                if (Object.keys(activeTimers).length === 0) return;
+
+                let collapsedPref = localStorage.getItem(WIDGET_COLLAPSE_KEY);
+                const widget = document.getElementById('multiTimerWidget');
+                widget.style.display = 'flex';
+                if (collapsedPref === "0") {
+                    widget.classList.remove("collapsed");
+                    document.getElementById("btnToggleTimerWidget").innerText = "▼";
+                } else {
+                    widget.classList.add("collapsed");
+                    document.getElementById("btnToggleTimerWidget").innerText = "▲";
+                }
+
+                ensureGlobalTicker();
+                requestWakeLock();
+                tickAllTimers();
+                renderTimersList();
+                updateTimersCount();
+                updateAppBadge();
+            } catch (e) {}
+        }
+
+        // --- Verrou d'écran (empêche l'écran de s'éteindre pendant qu'un minuteur tourne) ---
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator && !wakeLockSentinel) {
+                    wakeLockSentinel = await navigator.wakeLock.request('screen');
+                    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+                }
+            } catch (e) { /* refusé ou non supporté : pas bloquant */ }
+        }
+
+        function releaseWakeLockIfIdle() {
+            if (Object.keys(activeTimers).length === 0 && wakeLockSentinel) {
+                wakeLockSentinel.release().catch(() => {});
+                wakeLockSentinel = null;
+            }
+        }
+
+        // --- Badge PWA (nombre de minuteurs actifs visible sur l'icône de l'app) ---
+        function updateAppBadge() {
+            if (!('setAppBadge' in navigator)) return;
+            try {
+                let count = Object.keys(activeTimers).length;
+                if (count > 0) navigator.setAppBadge(count).catch(() => {});
+                else navigator.clearAppBadge().catch(() => {});
+            } catch (e) {}
+        }
+
+        // --- Alerte sonore avec AudioContext partagé (évite la fuite de ressources) ---
+        function getSharedAudioCtx() {
+            if (!sharedAudioCtx) {
+                try { sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+            }
+            if (sharedAudioCtx.state === 'suspended') { sharedAudioCtx.resume().catch(() => {}); }
+            return sharedAudioCtx;
+        }
+
+        function playAlertSound() {
+            if (isTimerMuted) return;
+            try { 
+                const audioCtx = getSharedAudioCtx();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator(); 
+                const gain = audioCtx.createGain(); 
+                osc.type = 'sine'; 
+                osc.frequency.value = 587.33; 
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
+                osc.connect(gain); 
+                gain.connect(audioCtx.destination); 
+                osc.start(); 
+                osc.stop(audioCtx.currentTime + 0.8); 
+            } catch(e) {}
+        }
+
+        function hasUnacknowledgedFinishedTimers() {
+            for (let id in activeTimers) {
+                if (activeTimers[id].finished) return true;
+            }
+            return false;
+        }
+
+        function ensureAlertLoop() {
+            if (alertLoopInterval) return;
+            alertLoopInterval = setInterval(() => {
+                if (!hasUnacknowledgedFinishedTimers()) {
+                    clearInterval(alertLoopInterval);
+                    alertLoopInterval = null;
+                    return;
+                }
+                playAlertSound();
+                if (navigator.vibrate) navigator.vibrate(300);
+            }, 6000);
+        }
+
+        function startTitleFlicker() {
+            if (titleFlickerInterval) return;
+            titleFlickerInterval = setInterval(() => {
+                if (!hasUnacknowledgedFinishedTimers()) {
+                    stopTitleFlicker();
+                    return;
+                }
+                titleFlickerState = !titleFlickerState;
+                document.title = titleFlickerState ? "⏰ C'est prêt !" : originalDocTitle;
+            }, 1000);
+        }
+
+        function stopTitleFlicker() {
+            if (titleFlickerInterval) { clearInterval(titleFlickerInterval); titleFlickerInterval = null; }
+            document.title = originalDocTitle;
+        }
+
+        function declencherAlerteFinMinuteur(id, nom) {
             if (typeof confetti === "function") { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 9999 }); }
             
-            if (!isTimerMuted) {
-                try { 
-                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
-                    const osc = audioCtx.createOscillator(); 
-                    const gain = audioCtx.createGain(); 
-                    osc.type = 'sine'; 
-                    osc.frequency.value = 587.33; 
-                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
-                    osc.connect(gain); 
-                    gain.connect(audioCtx.destination); 
-                    osc.start(); 
-                    osc.stop(audioCtx.currentTime + 0.8); 
-                } catch(e) {}
-            }
+            playAlertSound();
+
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
             
             if ("Notification" in window && Notification.permission === "granted") {
                 new Notification("⏳ C'est prêt !", {
@@ -2293,8 +2648,21 @@ Règles de formatage ABSOLUES :
                 utterance.lang = 'fr-FR'; 
                 window.speechSynthesis.speak(utterance); 
             }
+
+            let liveEl = document.getElementById('timerAriaLive');
+            if (liveEl) liveEl.textContent = `Le minuteur ${nom} est terminé.`;
+
+            ensureAlertLoop();
+            startTitleFlicker();
+            updateAppBadge();
         }
 
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                tickAllTimers();
+                if (Object.keys(activeTimers).length > 0) requestWakeLock();
+            }
+        });
         // --- NAVIGATION MOBILE (BOTTOM NAV) ---
         window.addEventListener('popstate', function(event) {
             if (event.state && event.state.view) {
@@ -2446,7 +2814,11 @@ window.modePlanningContext = false;
 window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas = 'diner') {
     window.modePlanningContext = modePlanning;
     document.getElementById('modalCuisson').style.display = 'flex';
-    
+
+    document.getElementById('humeur').value = prefsCuisineDefaut.humeur;
+    document.getElementById('temps').value = prefsCuisineDefaut.temps;
+    document.getElementById('personnes').value = prefsCuisineDefaut.personnes;
+
     const btnGenerer = document.getElementById('btnGenererRecettes');
     const btnRapide = document.getElementById('btnRecetteRapide');
     const planningOptions = document.getElementById('planningOptions');

@@ -276,12 +276,14 @@
         </nav>
     </main>
 
+    <div id="timerAriaLive" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+    <div id="timerUndoToast" class="timer-undo-toast" role="status"></div>
     <div id="multiTimerWidget" class="multi-timer-widget collapsed">
         <div class="multi-timer-header" onclick="if(event.target.tagName !== 'BUTTON') toggleTimerWidget()" role="button" tabindex="0" onkeydown="if((event.key==='Enter'||event.key===' ') && event.target===this){event.preventDefault(); toggleTimerWidget();}">
             <span>⏱️ Chronos (<span id="activeTimersCount">0</span>)</span>
             <div style="display:flex; gap: 8px;">
-                <button id="btnMuteTimers" onclick="toggleMuteTimers()" title="Son activé/désactivé">🔊</button>
-                <button class="btn-toggle-timer" id="btnToggleTimerWidget" onclick="toggleTimerWidget()">▲</button>
+                <button id="btnMuteTimers" onclick="toggleMuteTimers()" title="Son activé/désactivé" aria-label="Couper le son des minuteurs">🔊</button>
+                <button class="btn-toggle-timer" id="btnToggleTimerWidget" onclick="toggleTimerWidget()" aria-label="Afficher les minuteurs">▲</button>
             </div>
         </div>
         <div class="multi-timer-body">
@@ -351,6 +353,7 @@
                     <button class="tab-btn" id="tabThemeBtn" onclick="switchTab('theme')">🎨 Apparence</button>
                     <button class="tab-btn" id="tabAllergeneBtn" onclick="switchTab('allergene')">⚠️ Allergènes</button>
                     <button class="tab-btn" id="tabEquipementBtn" onclick="switchTab('equipement')">🍳 Équipement</button>
+                    <button class="tab-btn" id="tabPrefsBtn" onclick="switchTab('prefs')">🍽️ Recettes</button>
                     <button class="tab-btn" id="tabOptionsBtn" onclick="switchTab('options')">⚙️ Options</button>
                     <button class="tab-btn" id="tabAdminBtn" onclick="switchTab('admin')" style="display:none; color:var(--primary);">👥 Admin</button>
                 </div>
@@ -421,6 +424,40 @@
                             <div class="color-dot" style="background:#f4ecd8"></div>
                         </div>
                     </button>
+                </div>
+
+                <div id="tabPrefs" style="display: none;">
+                    <label>🍽️ Valeurs par défaut de "En cuisine !"</label>
+                    <p style="font-size: var(--text-xs); color: var(--text-muted); margin-bottom: 15px;">Ces réglages sont utilisés par défaut à chaque ouverture de la fenêtre de génération de recettes.</p>
+
+                    <div class="row" style="margin-bottom: 15px;">
+                        <div>
+                            <label>Humeur / Style</label>
+                            <select id="paramHumeurDefaut" aria-label="Style de cuisine par défaut" onchange="sauvegarderPrefsCuisine()">
+                                <option value="classique">👨‍🍳 Classique</option>
+                                <option value="flemme absolue, le moins de vaisselle et d'effort possible, ultra rapide">🛋️ Mode Flemme (Zéro effort)</option>
+                                <option value="healthy, sain, équilibré, diététique">🥗 Mode Healthy</option>
+                                <option value="anti-gaspi, utilise en priorité les produits périssables">♻️ Mode Anti-Gaspi</option>
+                                <option value="gastronomique, original, digne d'un chef">🌟 Mode Gastronomique</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row" style="margin-bottom: 15px;">
+                        <div>
+                            <label>Temps dispo.</label>
+                            <select id="paramTempsDefaut" aria-label="Temps disponible par défaut" onchange="sauvegarderPrefsCuisine()">
+                                <option value="15 minutes max">⚡ - 15 min</option>
+                                <option value="30 minutes environ" selected>⏱️ ~ 30 min</option>
+                                <option value="1 heure max">⏳ Jusqu'à 1h</option>
+                                <option value="plat mijoté">🍲 + d'une heure</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Personnes</label>
+                            <input type="number" id="paramPersonnesDefaut" value="2" min="1" aria-label="Nombre de personnes par défaut" onchange="sauvegarderPrefsCuisine()">
+                        </div>
+                    </div>
                 </div>
 
                 <div id="tabOptions" style="display: none;">
@@ -713,7 +750,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=9'></script>
+    <script src='app.js?v=11'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
