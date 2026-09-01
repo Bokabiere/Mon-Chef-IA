@@ -300,6 +300,18 @@
         .list-item-manage { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
         .list-item-manage:last-child { border-bottom: none; }
         .badge-cat { font-size: var(--text-2xs); background: var(--bg-color); padding: 3px 6px; border-radius: 4px; margin-right: 10px; border: 1px solid var(--border);}
+
+        /* Pastille "nouveau" sur le bouton Nouveautés (accueil) */
+        .update-badge-dot {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 11px;
+            height: 11px;
+            background: #FF4757;
+            border-radius: 50%;
+            border: 2px solid var(--bg-color);
+        }
         
         .tab-buttons { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; overflow-x: auto; white-space: nowrap;}
         .tab-btn { background: none; border: none; font-size: var(--text-sm); font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 5px 10px; }

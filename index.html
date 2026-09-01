@@ -22,7 +22,7 @@
     <!-- Script pour les Confettis -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <link rel='stylesheet' href='style.css?v=2'>
+    <link rel='stylesheet' href='style.css?v=3'>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
 <body>
@@ -128,7 +128,11 @@
                         <!-- VUE ACCUEIL (DASHBOARD) -->
             <div id="view-home" class="view-container view active">
                 <div class="view-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center;">
-                    <div style="position: absolute; top: 15px; right: 15px;">
+                    <div style="position: absolute; top: 15px; right: 15px; display: flex; align-items: center; gap: 10px;">
+                        <button onclick="ouvrirNouveautes()" id="btnNouveautes" style="position: relative; background: none; border: none; font-size: var(--text-3xl); cursor: pointer; color: var(--primary);" aria-label="Voir les dernières mises à jour">
+                            🆕
+                            <span id="badgeNouveautes" class="update-badge-dot" style="display: none;" aria-hidden="true"></span>
+                        </button>
                         <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: var(--text-3xl); cursor: pointer; color: var(--primary);" aria-label="Aide et informations">ℹ️</button>
                     </div>
                     
@@ -730,6 +734,19 @@
         </div>
     </div>
 
+    <div id="modalNouveautes" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalNouveautesTitle">
+        <div class="modal-content" style="max-width: 500px; text-align: left;">
+            <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
+                <h3 id="modalNouveautesTitle" class="gradient-text">🆕 Dernières mises à jour</h3>
+                <button class="btn-secondary" onclick="fermerNouveautes()" aria-label="Fermer">✖</button>
+            </div>
+            <div class="modal-body" id="nouveautesContent" style="line-height: 1.6; font-size: var(--text-base);">
+                <p style="text-align:center;">Chargement...</p>
+            </div>
+        </div>
+    </div>
+
     <div id="modalApiKeys" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalApiKeysTitle">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -761,7 +778,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=15'></script>
+    <script src='app.js?v=16'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>

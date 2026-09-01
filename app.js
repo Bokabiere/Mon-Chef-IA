@@ -511,7 +511,76 @@ const firebaseConfig = {
             localStorage.setItem('onboardingShown', 'true');
         }
 
+        // --- NOUVEAUTÉS (dernières mises à jour de l'application) ---
+        // Pour ajouter une nouvelle entrée : l'insérer en tête de tableau avec un
+        // "version" unique (ex. date du jour). C'est ce qui déclenche le badge
+        // "nouveau" tant que l'utilisateur n'a pas ouvert la fenêtre au moins une fois.
+        const NOUVEAUTES = [
+            {
+                version: "2026-09-01",
+                titre: "1er septembre 2026",
+                items: [
+                    "🆕 Nouveau bouton \"Nouveautés\" sur l'accueil : retrouvez ici l'historique des dernières améliorations de l'application."
+                ]
+            },
+            {
+                version: "2026-08-31-c",
+                titre: "31 août 2026",
+                items: [
+                    "🛒 Liste de courses : possibilité d'annuler la suppression d'un article, bouton de dictée vocale, prix affichés plus clairement comme indicatifs.",
+                    "♿ Accessibilité : navigation au clavier, contrastes et lecture d'écran améliorés sur toute l'application."
+                ]
+            },
+            {
+                version: "2026-08-31-b",
+                titre: "31 août 2026",
+                items: [
+                    "⏱️ Minuteurs de cuisine fiabilisés : ne dérivent plus quand l'écran est en veille, survivent à un rechargement de la page, bouton \"+1 min\", relance en un clic, et annulation possible après suppression d'un minuteur actif.",
+                    "📳 Vibration et alerte répétée tant qu'un minuteur terminé n'est pas fermé ou relancé.",
+                    "📱 L'écran ne s'éteint plus tant qu'un minuteur tourne, et le nombre de minuteurs actifs s'affiche sur l'icône de l'application (PWA installée)."
+                ]
+            },
+            {
+                version: "2026-08-31-a",
+                titre: "31 août 2026",
+                items: [
+                    "⚙️ Nouvel onglet \"Recettes\" dans Paramètres : définissez une bonne fois pour toutes votre humeur/style, temps disponible et nombre de personnes par défaut pour la fenêtre \"En cuisine !\".",
+                    "✨ Mises à jour de l'application plus discrètes : une petite bannière propose d'actualiser dès qu'une nouvelle version est disponible, sans jamais recharger la page de force."
+                ]
+            }
+        ];
+
+        window.ouvrirNouveautes = function() {
+            const cont = document.getElementById('nouveautesContent');
+            if (cont) {
+                cont.innerHTML = NOUVEAUTES.map(entree => `
+                    <div style="margin-bottom: 20px;">
+                        <div style="font-weight: bold; color: var(--primary); margin-bottom: 8px;">${entree.titre}</div>
+                        <ul style="padding-left: 20px; margin: 0;">
+                            ${entree.items.map(i => `<li style="margin-bottom: 8px;">${i}</li>`).join('')}
+                        </ul>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('modalNouveautes').style.display = 'flex';
+            localStorage.setItem('nouveautesVues', NOUVEAUTES[0].version);
+            const badge = document.getElementById('badgeNouveautes');
+            if (badge) badge.style.display = 'none';
+        }
+
+        window.fermerNouveautes = function() {
+            document.getElementById('modalNouveautes').style.display = 'none';
+        }
+
+        function verifierBadgeNouveautes() {
+            const badge = document.getElementById('badgeNouveautes');
+            if (!badge) return;
+            const derniereVue = localStorage.getItem('nouveautesVues');
+            badge.style.display = (derniereVue !== NOUVEAUTES[0].version) ? 'block' : 'none';
+        }
+
         async function chargerInterfaceBase() {
+            verifierBadgeNouveautes();
             await loadPrices();
             try {
                 const user = firebase.auth().currentUser;
