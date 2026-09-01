@@ -14,7 +14,20 @@ const ASSETS = [
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) =>
+      // cache.addAll() est tout-ou-rien : si UN SEUL fichier de la liste
+      // echoue (404, typo, fichier pas encore commite...), toute l'installation
+      // du service worker echoue et il n'est jamais active. On met chaque
+      // fichier en cache independamment pour qu'un fichier manquant ne bloque
+      // plus jamais les mises a jour pour tout le monde.
+      Promise.all(
+        ASSETS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('[SW] precache impossible pour', url, err);
+          })
+        )
+      )
+    )
   );
 });
 
@@ -28,9 +41,7 @@ self.addEventListener('activate', (e) => {
 
 // Strategie "reseau d'abord" : on tente toujours de recuperer la version la plus
 // recente sur le reseau et on met le cache a jour au passage. Le cache ne sert
-// que si le reseau echoue (mode hors-ligne). Cela evite qu'une page mise en cache
-// une fois reste figee indefiniment si CACHE_NAME n'est pas change a chaque
-// deploiement (ex: onglet Recettes reste invisible pour les utilisateurs deja passes).
+// que si le reseau echoue (mode hors-ligne).
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
