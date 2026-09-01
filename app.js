@@ -1049,9 +1049,19 @@ const firebaseConfig = {
         window.navigerCourseAutocomplete = function(e) {
             const resDiv = document.getElementById('courseAutocompleteResults');
             const input = document.getElementById('courseInput');
-            if (!resDiv || resDiv.style.display === 'none') return;
-            const its = resDiv.querySelectorAll('.autocomplete-item');
-            if (!its.length) return;
+            const dropdownOuvert = resDiv && resDiv.style.display !== 'none';
+            const its = dropdownOuvert ? resDiv.querySelectorAll('.autocomplete-item') : [];
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (dropdownOuvert && courseAutocompleteIndex >= 0 && its[courseAutocompleteIndex]) {
+                    its[courseAutocompleteIndex].dispatchEvent(new MouseEvent('mousedown'));
+                } else {
+                    ajouterCourseManuelle();
+                }
+                return;
+            }
+            if (!dropdownOuvert || !its.length) return;
             if (e.key === 'ArrowDown') { e.preventDefault(); courseAutocompleteIndex = Math.min(courseAutocompleteIndex + 1, its.length - 1); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); courseAutocompleteIndex = Math.max(courseAutocompleteIndex - 1, -1); }
             else if (e.key === 'Escape') { fermerCourseAutocomplete(); return; }
@@ -1081,14 +1091,47 @@ const firebaseConfig = {
         });
         // ────────────────────────────────────────────────────────────────────
 
-        window.supprimerCourseDoc = function(event, docId) {
+        window.supprimerCourseDoc = function(event, docId, ingredient, wasChecked) {
             event.stopPropagation();
             userDb.collection("courses").doc(docId).delete().then(() => {
-                showToast("Article supprimé", "success");
+                showUndoToastCourse(ingredient, wasChecked);
             }).catch(function(err) {
                 console.error("Erreur suppression course:", err);
                 showToast("Erreur lors de la suppression.", "error");
             });
+        };
+
+        function showUndoToastCourse(ingredient, wasChecked) {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const safeJs = String(ingredient).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            const toast = document.createElement('div');
+            toast.className = 'toast success';
+            toast.innerHTML = `<span>"${escapeHtml(ingredient)}" supprimé</span> <button type="button" style="margin-left:10px; background:none; border:none; color:var(--primary); font-weight:700; cursor:pointer; text-decoration:underline; font-size:inherit;" onclick="restaurerCourse(this, '${safeJs}', ${wasChecked})">Annuler</button>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            const hideTimeoutId = setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 6000);
+            toast._hideTimeoutId = hideTimeoutId;
+        }
+
+        window.restaurerCourse = async function(btn, ingredient, wasChecked) {
+            const toast = btn.closest('.toast');
+            if (toast) { clearTimeout(toast._hideTimeoutId); toast.remove(); }
+            try {
+                const items = document.querySelectorAll('.course-item');
+                let maxOrder = 0;
+                items.forEach(el => { const order = parseInt(el.dataset.order || '0'); if (order > maxOrder) maxOrder = order; });
+                await userDb.collection("courses").add({
+                    ingredient: ingredient,
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    checked: wasChecked,
+                    order: maxOrder + 1
+                });
+                showToast(`"${ingredient}" restauré`, "success");
+            } catch (e) {
+                console.error("Erreur restauration course:", e);
+                showToast("Erreur lors de la restauration.", "error");
+            }
         };
 
         let isVocalCourses = false;
@@ -1164,7 +1207,7 @@ const firebaseConfig = {
             coursesRecognition.onend = function() {
                 isVocalCourses = false;
                 if(btn) {
-                    btn.style.backgroundColor = "var(--card-bg)";
+                    btn.style.backgroundColor = "";
                     btn.style.animation = "none";
                 }
                 const inp = document.getElementById('courseInput');
@@ -1264,6 +1307,7 @@ const firebaseConfig = {
                         ? `<div style="font-size:12px; color:var(--text-muted); margin-top:2px;" title="Réf Leclerc: ${(priceData.produit_ref||'').substring(0,60)}">${price.toFixed(2)}€</div>`
                         : '';
                     
+                    const safeIngredientJs = String(item.ingredient).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
                     let itemHtml = `<div class="course-item ${isChecked ? 'checked' : ''}" draggable="true" data-id="${item.id}" data-order="${item.order || 0}" onclick="checkerCourse('${item.id}', ${isChecked})">
                                         <div class="course-content">
                                             <div class="circle-check"></div>
@@ -1272,7 +1316,7 @@ const firebaseConfig = {
                                                 ${priceHtml}
                                             </div>
                                         </div>
-                                        <button class="btn-delete-course" onclick="supprimerCourseDoc(event, '${item.id}')">🗑️</button>
+                                        <button class="btn-delete-course" aria-label="Supprimer ${escapeHtml(item.ingredient)} de la liste" onclick="supprimerCourseDoc(event, '${item.id}', '${safeIngredientJs}', ${isChecked})">🗑️</button>
                                     </div>`;
                     
                     if (isChecked) { 
@@ -1305,6 +1349,7 @@ const firebaseConfig = {
                     <div style="background: linear-gradient(135deg, rgba(16,172,132,0.06), rgba(76,175,80,0.04)); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center;">
                         <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">COÛT TOTAL</div>
                         <div style="font-size: 24px; font-weight: 700; color: #1e8e5a;">${totalPrice.toFixed(2)}€</div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px; opacity: 0.8;">Prix indicatifs (Open Prices), hors promotions</div>
                     </div>
                 `;
 

@@ -233,12 +233,11 @@
                                 style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: var(--text-base); background: var(--bg-color); color: var(--text-main); box-sizing: border-box;"
                                 aria-label="Ajouter un article à la liste de courses"
                                 oninput="filtrerCourseAutocomplete(this.value)"
-                                onkeydown="navigerCourseAutocomplete(event)"
-                                onkeypress="if(event.key==='Enter') ajouterCourseManuelle()">
+                                onkeydown="navigerCourseAutocomplete(event)">
                             <div id="courseAutocompleteResults" class="autocomplete-results"></div>
                         </div>
-                        <button class="btn-primary" style="padding: 10px 15px; border-radius: 8px; margin: 0; width: auto; flex: none;" onclick="ajouterCourseManuelle()">➕</button>
-                        <button class="btn-vocal" id="btnMicCourses" style="padding: 10px 15px; border-radius: 8px; margin: 0; flex: none;" onclick="toggleVocalCourses()">🎙️</button>
+                        <button class="btn-primary" style="padding: 10px 15px; border-radius: 8px; margin: 0; width: auto; flex: none;" aria-label="Ajouter l'article à la liste" onclick="ajouterCourseManuelle()">➕</button>
+                        <button class="btn-vocal" id="btnMicCourses" style="padding: 10px 15px; border-radius: 8px; margin: 0; flex: none;" aria-label="Dicter un article à ajouter" onclick="toggleVocalCourses()">🎙️</button>
                     </div>
 
                     <div id="listeCoursesContent"></div>
