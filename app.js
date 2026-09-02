@@ -79,29 +79,152 @@ const firebaseConfig = {
             }
         }
 
+        let emailAuthMode = 'login'; // 'login' | 'signup' | 'reset'
+        let nomEnAttenteInscription = null;
+
+        function traduireErreurFirebase(code) {
+            const messages = {
+                'auth/email-already-in-use': "Cet email est déjà utilisé par un autre compte.",
+                'auth/invalid-email': "Adresse email invalide.",
+                'auth/weak-password': "Le mot de passe doit contenir au moins 6 caractères.",
+                'auth/user-not-found': "Email ou mot de passe incorrect.",
+                'auth/wrong-password': "Email ou mot de passe incorrect.",
+                'auth/invalid-credential': "Email ou mot de passe incorrect.",
+                'auth/missing-password': "Veuillez saisir un mot de passe.",
+                'auth/too-many-requests': "Trop de tentatives. Réessayez dans quelques minutes.",
+                'auth/network-request-failed': "Problème de connexion réseau. Réessayez."
+            };
+            return messages[code] || "Une erreur est survenue. Réessayez.";
+        }
+
+        function afficherMessageAuthEmail(texte, type) {
+            const el = document.getElementById('emailAuthMessage');
+            el.innerText = texte;
+            el.style.color = (type === 'success') ? "#27ae60" : "#e74c3c";
+            el.style.display = 'block';
+        }
+
+        window.afficherAuthEmail = function(mode) {
+            emailAuthMode = mode;
+            document.getElementById('loginMainOptions').style.display = 'none';
+            document.getElementById('loginEmailSection').style.display = 'block';
+            document.getElementById('emailAuthMessage').style.display = 'none';
+            document.getElementById('emailAuthNom').value = '';
+            document.getElementById('emailAuthEmail').value = '';
+            document.getElementById('emailAuthPassword').value = '';
+            document.getElementById('emailAuthPasswordConfirm').value = '';
+
+            const titre = document.getElementById('emailAuthTitle');
+            const btn = document.getElementById('emailAuthSubmitBtn');
+            const groupeNom = document.getElementById('emailAuthNomGroup');
+            const groupePassword = document.getElementById('emailAuthPasswordGroup');
+            const groupeConfirm = document.getElementById('emailAuthPasswordConfirmGroup');
+            const lienInscription = document.getElementById('linkVersInscription');
+            const lienConnexion = document.getElementById('linkVersConnexion');
+            const lienOublie = document.getElementById('linkMotDePasseOublie');
+
+            groupeNom.style.display = (mode === 'signup') ? 'block' : 'none';
+            groupePassword.style.display = (mode === 'reset') ? 'none' : 'block';
+            groupeConfirm.style.display = (mode === 'signup') ? 'block' : 'none';
+            lienOublie.style.display = (mode === 'login') ? 'block' : 'none';
+
+            if (mode === 'login') {
+                titre.innerText = "Se connecter";
+                btn.innerText = "Se connecter";
+                lienInscription.style.display = 'block';
+                lienConnexion.style.display = 'none';
+            } else if (mode === 'signup') {
+                titre.innerText = "Créer un compte";
+                btn.innerText = "Créer mon compte";
+                lienInscription.style.display = 'none';
+                lienConnexion.style.display = 'block';
+            } else if (mode === 'reset') {
+                titre.innerText = "Mot de passe oublié";
+                btn.innerText = "Envoyer le lien de réinitialisation";
+                lienInscription.style.display = 'block';
+                lienConnexion.style.display = 'block';
+            }
+        }
+
+        window.retourLoginPrincipal = function() {
+            document.getElementById('loginEmailSection').style.display = 'none';
+            document.getElementById('loginMainOptions').style.display = 'flex';
+        }
+
+        window.soumettreFormulaireEmail = async function() {
+            const email = document.getElementById('emailAuthEmail').value.trim();
+            const password = document.getElementById('emailAuthPassword').value;
+            document.getElementById('emailAuthMessage').style.display = 'none';
+
+            if (!email) {
+                afficherMessageAuthEmail("Veuillez saisir votre email.", "error");
+                return;
+            }
+
+            try {
+                if (emailAuthMode === 'login') {
+                    if (!password) { afficherMessageAuthEmail("Veuillez saisir votre mot de passe.", "error"); return; }
+                    await firebase.auth().signInWithEmailAndPassword(email, password);
+                } else if (emailAuthMode === 'signup') {
+                    const nom = document.getElementById('emailAuthNom').value.trim();
+                    const confirmation = document.getElementById('emailAuthPasswordConfirm').value;
+                    if (!nom) { afficherMessageAuthEmail("Merci de renseigner votre prénom.", "error"); return; }
+                    if (!password || password.length < 6) { afficherMessageAuthEmail("Le mot de passe doit contenir au moins 6 caractères.", "error"); return; }
+                    if (password !== confirmation) { afficherMessageAuthEmail("Les mots de passe ne correspondent pas.", "error"); return; }
+                    nomEnAttenteInscription = nom;
+                    const credentiel = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                    if (credentiel && credentiel.user) {
+                        try { await credentiel.user.updateProfile({ displayName: nom }); } catch(e) { console.error(e); }
+                    }
+                    setTimeout(() => { nomEnAttenteInscription = null; }, 5000);
+                } else if (emailAuthMode === 'reset') {
+                    await firebase.auth().sendPasswordResetEmail(email);
+                    afficherMessageAuthEmail("Email envoyé ! Vérifiez votre boîte de réception pour réinitialiser votre mot de passe.", "success");
+                }
+            } catch (e) {
+                console.error(e);
+                afficherMessageAuthEmail(traduireErreurFirebase(e.code), "error");
+            }
+        }
+
+        let messageDeconnexionPersonnalise = null;
+
         firebase.auth().onAuthStateChanged(async function(user) {
             if (user) {
+                try {
+                    const banniSnap = await db.collection("comptesBannis").doc(user.uid).get();
+                    if (banniSnap.exists) {
+                        messageDeconnexionPersonnalise = "🚫 Ce compte a été supprimé par l'administrateur.";
+                        await firebase.auth().signOut();
+                        return;
+                    }
+                } catch(e) {
+                    console.error("Erreur vérification du bannissement:", e);
+                }
+
                 const userRef = db.collection("utilisateurs").doc(user.uid);
                 try {
                     const docSnap = await userRef.get();
                     let userData = {};
                     isAdminUser = (user.email === "bokabiere@gmail.com");
 
+                    const estCompteEmailMotDePasse = !!(user.providerData && user.providerData[0] && user.providerData[0].providerId === 'password');
+
                     if (!docSnap.exists) {
                         userData = {
                             email: user.email || "demo@anonymous.local",
-                            nom: user.displayName || (user.isAnonymous ? "Visiteur Démo" : "Utilisateur"),
-                            statut: (isAdminUser || user.isAnonymous) ? "valide" : "en_attente",
+                            nom: nomEnAttenteInscription || user.displayName || (user.isAnonymous ? "Visiteur Démo" : (user.email ? user.email.split('@')[0] : "Utilisateur")),
+                            statut: (isAdminUser || user.isAnonymous || estCompteEmailMotDePasse) ? "valide" : "en_attente",
                             role: isAdminUser ? "admin" : (user.isAnonymous ? "demo" : "membre"),
                             dateInscription: firebase.firestore.FieldValue.serverTimestamp()
                         };
                         await userRef.set(userData);
                     } else {
                         userData = docSnap.data();
-                        // Validation forcée pour l'admin et pour l'anonyme
-                        if ((isAdminUser || user.isAnonymous) && userData.statut !== "valide") {
+                        // Validation forcée pour l'admin, l'anonyme et les comptes email/mot de passe (accès immédiat)
+                        if ((isAdminUser || user.isAnonymous || estCompteEmailMotDePasse) && userData.statut !== "valide") {
                             userData.statut = "valide";
-                            userData.role = isAdminUser ? "admin" : "demo";
+                            userData.role = isAdminUser ? "admin" : (user.isAnonymous ? "demo" : "membre");
                             await userRef.update({ statut: "valide", role: userData.role });
                         }
                     }
@@ -136,10 +259,18 @@ const firebaseConfig = {
                 }
             } else {
                 document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('loginMessage').innerText = "Veuillez vous identifier pour accéder à l'application.";
+                document.getElementById('loginMainOptions').style.display = 'flex';
+                document.getElementById('loginEmailSection').style.display = 'none';
+                document.getElementById('loginMessage').innerText = messageDeconnexionPersonnalise || "Veuillez vous identifier pour accéder à l'application.";
                 document.getElementById('appContent').style.display = 'none';
-                document.getElementById('loginError').style.display = 'none';
+                if (messageDeconnexionPersonnalise) {
+                    document.getElementById('loginError').innerText = messageDeconnexionPersonnalise;
+                    document.getElementById('loginError').style.display = 'block';
+                } else {
+                    document.getElementById('loginError').style.display = 'none';
+                }
                 document.getElementById('btnLogoutPending').style.display = 'none';
+                messageDeconnexionPersonnalise = null;
             }
         });
 
@@ -608,6 +739,8 @@ const firebaseConfig = {
                         
                         const selectGlobal = document.getElementById('selecteurIaGlobal');
                         if(selectGlobal) selectGlobal.value = moteurIAActif;
+
+                        mettreAJourAccueil(userDoc.data().nom);
                     }
                 }
                 
@@ -639,6 +772,16 @@ const firebaseConfig = {
                 console.error("Détail de l'erreur :", e);
                 document.getElementById('categoriesContainer').innerHTML = `<span style='color:red;'>Erreur : ${e.message}</span>`; 
             }
+        }
+
+        function mettreAJourAccueil(nom) {
+            const heure = new Date().getHours();
+            const salutation = (heure >= 18 || heure < 5) ? "Bonsoir" : "Bonjour";
+            const elGreeting = document.getElementById('accueilGreeting');
+            const elSousTitre = document.getElementById('accueilSousTitre');
+            const prenom = (nom || "").trim();
+            if (elGreeting) elGreeting.innerText = prenom ? `${salutation} ${prenom} 👋` : `${salutation} 👋`;
+            if (elSousTitre) elSousTitre.innerText = "Que cuisinons-nous aujourd'hui ?";
         }
 
         
@@ -858,7 +1001,7 @@ const firebaseConfig = {
         function ouvrirParametres() { 
              
             chargerListeManageIng(); 
-            if (isAdminUser) chargerDemandesAcces();
+            if (isAdminUser) { chargerDemandesAcces(); chargerTousLesComptes(); chargerClesApiPartageesUI(); }
         }
         
         function fermerParametres() { document.getElementById('modalParametres').style.display = 'none'; }
@@ -877,7 +1020,7 @@ const firebaseConfig = {
             if(tab === 'carnet') chargerListeManageCarnet(); 
             if(tab === 'allergene') { chargerAllergenesUI(); chargerRegimesUI(); }
             if(tab === 'prefs') chargerPrefsCuisineUI();
-            if(tab === 'admin' && isAdminUser) chargerDemandesAcces();
+            if(tab === 'admin' && isAdminUser) { chargerDemandesAcces(); chargerTousLesComptes(); chargerClesApiPartageesUI(); }
         }
 
         async function chargerDemandesAcces() {
@@ -911,6 +1054,109 @@ const firebaseConfig = {
                 showToast("Demande refusée et supprimée.", "info");
             }
             chargerDemandesAcces();
+        }
+
+        async function chargerTousLesComptes() {
+            const container = document.getElementById('listeTousComptes');
+            if (!container) return;
+            container.innerHTML = "<p style='text-align:center; padding:20px;'>Chargement...</p>";
+            try {
+                const snapshot = await db.collection("utilisateurs").get();
+                if (snapshot.empty) return container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-muted);'>Aucun compte.</p>";
+
+                const badgesStatut = { valide: "✅ Validé", en_attente: "⏳ En attente" };
+
+                const docs = snapshot.docs.slice().sort((a, b) => {
+                    const ta = (a.data().dateInscription && a.data().dateInscription.toMillis) ? a.data().dateInscription.toMillis() : 0;
+                    const tb = (b.data().dateInscription && b.data().dateInscription.toMillis) ? b.data().dateInscription.toMillis() : 0;
+                    return tb - ta;
+                });
+
+                let html = "";
+                docs.forEach(doc => {
+                    const u = doc.data();
+                    const estMoi = (u.email === "bokabiere@gmail.com");
+                    const dateStr = (u.dateInscription && u.dateInscription.toDate) ? u.dateInscription.toDate().toLocaleDateString('fr-FR') : "—";
+                    const badgeStatut = badgesStatut[u.statut] || u.statut || "—";
+                    const emailSecurise = (u.email || 'sans email').replace(/'/g, "\\'");
+                    html += `<div class="list-item-manage">
+                                <div>
+                                    <b>${u.email || 'Sans email'}</b><br>
+                                    <span style="font-size:11px; color:var(--text-muted);">${u.nom || 'Sans nom'} · ${u.role || 'membre'} · ${badgeStatut} · inscrit le ${dateStr}</span>
+                                </div>
+                                ${estMoi
+                                    ? `<span style="font-size:11px; color:var(--text-muted); font-style:italic;">Votre compte</span>`
+                                    : `<button class="btn-danger" style="padding:6px 12px; font-size:12px;" onclick="supprimerCompteUtilisateur('${doc.id}', '${emailSecurise}')">🗑️ Supprimer</button>`
+                                }
+                             </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) {
+                console.error(e);
+                container.innerHTML = "<p style='color:red;'>Erreur de chargement.</p>";
+            }
+        }
+
+        async function supprimerCompteUtilisateur(userId, email) {
+            const ok = await showConfirm(`Supprimer définitivement le compte "${email}" et toutes ses données (frigo, carnet, courses, planning) ?`, { danger: true, texteOk: 'Supprimer' });
+            if (!ok) return;
+            try {
+                const userRef = db.collection("utilisateurs").doc(userId);
+
+                // Supprime les sous-collections connues de ce compte
+                const sousCollections = ['carnet', 'courses', 'planning', 'historique', 'userData'];
+                for (const nomSousCollection of sousCollections) {
+                    const sousSnapshot = await userRef.collection(nomSousCollection).get();
+                    await Promise.all(sousSnapshot.docs.map(d => d.ref.delete()));
+                }
+
+                // Bloque l'accès immédiatement, même si ce compte est encore connecté ailleurs
+                await db.collection("comptesBannis").doc(userId).set({
+                    email: email,
+                    dateBanni: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Supprime la fiche du compte
+                await userRef.delete();
+
+                showToast("Compte supprimé.", "success");
+                chargerTousLesComptes();
+                chargerDemandesAcces();
+            } catch(e) {
+                console.error(e);
+                showToast("Erreur lors de la suppression du compte.", "error");
+            }
+        }
+
+        async function chargerClesApiPartageesUI() {
+            const inputMistral = document.getElementById('adminCleMistral');
+            const inputGemini = document.getElementById('adminCleGemini');
+            if (!inputMistral || !inputGemini) return;
+            try {
+                const snap = await db.collection("config").doc("api_keys").get();
+                const data = snap.exists ? snap.data() : {};
+                inputMistral.value = data.mistral || "";
+                inputGemini.value = data.gemini || "";
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        async function sauvegarderClesApiPartagees() {
+            const mistral = document.getElementById('adminCleMistral').value.trim();
+            const gemini = document.getElementById('adminCleGemini').value.trim();
+            try {
+                await db.collection("config").doc("api_keys").set({
+                    mistral: mistral || null,
+                    gemini: gemini || null
+                }, { merge: true });
+                clesApiPubliques.mistral = mistral || null;
+                clesApiPubliques.gemini = gemini || null;
+                showToast("Clés API partagées enregistrées ✅", "success");
+            } catch(e) {
+                console.error(e);
+                showToast("Erreur lors de l'enregistrement des clés.", "error");
+            }
         }
 
         async function ajouterIngredientDB() {

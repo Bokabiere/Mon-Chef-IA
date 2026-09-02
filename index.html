@@ -110,13 +110,55 @@
         <h1 class="gradient-text" style="font-size: var(--text-4xl); margin-bottom: 5px;">Mon Chef IA</h1>
         <p id="loginMessage" style="color: var(--text-muted); margin-bottom: 20px;">Veuillez vous identifier pour accéder à l'application.</p>
         
-        <div id="g_id_onload"
-             data-client_id="536331491333-6t6sdotnumbbq0ms8l9ukhvk8g01718q.apps.googleusercontent.com"
-             data-callback="handleCredentialResponse"
-             data-auto_prompt="false">
+        <div id="loginMainOptions" style="width:100%; max-width:320px; display:flex; flex-direction:column; align-items:center;">
+            <div id="g_id_onload"
+                 data-client_id="536331491333-6t6sdotnumbbq0ms8l9ukhvk8g01718q.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
+            <button class="btn-secondary" style="margin-top: 15px; width: 100%; border: 2px dashed var(--border);" onclick="connexionDemo()">Essayer sans compte (Mode Démo)</button>
+
+            <div style="display:flex; align-items:center; width:100%; margin: 20px 0 10px; color: var(--text-muted); font-size: var(--text-xs);">
+                <div style="flex:1; height:1px; background: var(--border);"></div>
+                <span style="padding: 0 10px;">OU</span>
+                <div style="flex:1; height:1px; background: var(--border);"></div>
+            </div>
+            <button type="button" class="btn-secondary" style="width:100%;" onclick="afficherAuthEmail('login')">✉️ Continuer avec un email</button>
         </div>
-        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
-        <button class="btn-secondary" style="margin-top: 15px; width: 100%; border: 2px dashed var(--border);" onclick="connexionDemo()">Essayer sans compte (Mode Démo)</button>
+
+        <div id="loginEmailSection" style="display:none; width:100%; max-width:320px; text-align:left;">
+            <h3 id="emailAuthTitle" style="text-align:center; color: var(--text-main); margin-bottom: 15px;">Se connecter</h3>
+
+            <div id="emailAuthNomGroup" style="display:none;">
+                <label for="emailAuthNom">Votre prénom</label>
+                <input type="text" id="emailAuthNom" placeholder="Ex : Yoann" autocomplete="given-name" style="margin-bottom: 12px;">
+            </div>
+
+            <label for="emailAuthEmail">Email</label>
+            <input type="email" id="emailAuthEmail" placeholder="vous@exemple.com" autocomplete="email" style="margin-bottom: 12px;">
+
+            <div id="emailAuthPasswordGroup">
+                <label for="emailAuthPassword">Mot de passe</label>
+                <input type="password" id="emailAuthPassword" placeholder="••••••••" autocomplete="current-password" style="margin-bottom: 12px;">
+            </div>
+
+            <div id="emailAuthPasswordConfirmGroup" style="display:none;">
+                <label for="emailAuthPasswordConfirm">Confirmer le mot de passe</label>
+                <input type="password" id="emailAuthPasswordConfirm" placeholder="••••••••" autocomplete="new-password" style="margin-bottom: 12px;">
+            </div>
+
+            <button type="button" class="btn-primary" id="emailAuthSubmitBtn" style="margin-top: 5px;" onclick="soumettreFormulaireEmail()">Se connecter</button>
+
+            <div id="emailAuthMessage" style="margin-top: 12px; font-size: var(--text-sm); font-weight: 600; display: none; text-align:center;"></div>
+
+            <div style="text-align:center; margin-top: 18px; display:flex; flex-direction:column; gap: 8px;">
+                <a href="#" id="linkVersInscription" onclick="afficherAuthEmail('signup'); return false;" style="color: var(--primary); font-weight:600; text-decoration:none;">Créer un compte</a>
+                <a href="#" id="linkVersConnexion" onclick="afficherAuthEmail('login'); return false;" style="color: var(--primary); font-weight:600; text-decoration:none; display:none;">Déjà un compte ? Se connecter</a>
+                <a href="#" id="linkMotDePasseOublie" onclick="afficherAuthEmail('reset'); return false;" style="color: var(--text-muted); text-decoration:none;">Mot de passe oublié ?</a>
+                <a href="#" onclick="retourLoginPrincipal(); return false;" style="color: var(--text-muted); text-decoration:none;">← Retour</a>
+            </div>
+        </div>
 
         <div id="loginError" style="color: red; margin-top: 15px; font-weight: bold; display: none;">Accès refusé. Compte en attente de validation.</div>
         <button id="btnLogoutPending" class="btn-secondary" style="margin-top: 20px; display: none;" onclick="seDeconnecter()">Se déconnecter</button>
@@ -140,7 +182,8 @@
                     <div class="mascot-bubble" style="margin-top: 10px;">
                         <video src="Img/mascotte.webm" autoplay loop muted playsinline style="width: 120px; height: 120px;"></video>
                     </div>
-                    <h1 class="gradient-text" style="font-size: var(--text-4xl); margin-bottom: 25px;">Chef IA</h1>
+                    <h1 id="accueilGreeting" class="gradient-text" style="font-size: var(--text-3xl); margin-bottom: 6px;">Bonjour 👋</h1>
+                    <p id="accueilSousTitre" style="color: var(--text-muted); font-size: var(--text-lg); margin-top: 0; margin-bottom: 25px;">Que cuisinons-nous aujourd'hui ?</p>
                     
                     <!-- GROS BOUTON CENTRAL -->
                     <button class="btn-primary" style="font-size: var(--text-2xl); padding: 20px 40px; border-radius: 30px; margin-bottom: 30px; width: 100%; max-width: 300px; box-shadow: 0 8px 20px rgba(255,107,107,0.4);" onclick="ouvrirModalCuisson()">
@@ -622,6 +665,17 @@
                     <div id="listeDemandesAcces" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px;">
                         <p style="text-align:center; padding: 20px;">Chargement...</p>
                     </div>
+
+                    <label style="margin-top: 25px;">🗂️ Tous les comptes utilisateurs</label>
+                    <div id="listeTousComptes" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px;">
+                        <p style="text-align:center; padding: 20px;">Chargement...</p>
+                    </div>
+
+                    <label style="margin-top: 25px;">🔑 Clés API partagées (par défaut pour les nouveaux comptes)</label>
+                    <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top:-5px; margin-bottom: 10px;">Utilisées automatiquement quand un utilisateur n'a pas renseigné sa propre clé. Le moteur par défaut des nouveaux comptes est Mistral.</p>
+                    <input type="text" id="adminCleMistral" placeholder="Clé API Mistral" style="margin-bottom: 10px;">
+                    <input type="text" id="adminCleGemini" placeholder="Clé API Gemini (optionnel)" style="margin-bottom: 10px;">
+                    <button class="btn-secondary" style="width:100%;" onclick="sauvegarderClesApiPartagees()">💾 Enregistrer les clés partagées</button>
                 </div>
             </div>
         </div>

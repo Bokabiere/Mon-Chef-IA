@@ -29,6 +29,14 @@ service cloud.firestore {
       }
     }
 
+    match /comptesBannis/{userId} {
+      // Un utilisateur connecté peut vérifier si SON PROPRE compte a été
+      // supprimé/banni par l'admin, pour être déconnecté immédiatement.
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Seul l'admin peut bannir (ou lever un bannissement).
+      allow read, write: if estAdmin();
+    }
+
     match /config/{document=**} {
       // Tout utilisateur authentifié (même démo) doit pouvoir lire les ingrédients et clés API
       allow read: if request.auth != null;
