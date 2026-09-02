@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chef-ia-v12';
+const CACHE_NAME = 'chef-ia-v13';
 const ASSETS = [
   './',
   './index.html',

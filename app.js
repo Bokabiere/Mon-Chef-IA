@@ -648,6 +648,13 @@ const firebaseConfig = {
         // "nouveau" tant que l'utilisateur n'a pas ouvert la fenêtre au moins une fois.
         const NOUVEAUTES = [
             {
+                version: "2026-09-02-b",
+                titre: "2 septembre 2026",
+                items: [
+                    "🍳 Onglet Recettes : quand aucune recette n'est encore affichée, un bouton \"✨ CUISINER ✨\" permet de lancer directement la fenêtre En cuisine !, comme sur l'accueil."
+                ]
+            },
+            {
                 version: "2026-09-02",
                 titre: "2 septembre 2026",
                 items: [
