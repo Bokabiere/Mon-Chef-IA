@@ -22,7 +22,7 @@
     <!-- Script pour les Confettis -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <link rel='stylesheet' href='style.css?v=3'>
+    <link rel='stylesheet' href='style.css?v=4'>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 </head>
 <body>
@@ -95,6 +95,7 @@
             </div>
             <div style="padding: 20px; border-top: 1px solid var(--border);">
                 <button class="btn-secondary" id="btnRecetteRapide" style="width:100%; margin-bottom:10px; padding: 10px;" onclick="lancerRecetteRapide(); fermerModalCuisson();">⚡ Soir de flemme (15 min max)</button>
+            <button class="btn-secondary" id="btnResteAFinir" style="width:100%; margin-bottom:10px; padding: 10px;" onclick="genererRecetteRestesFrigo(); fermerModalCuisson();">🧹 Finir le frigo (anti-gaspi max)</button>
             <button class="btn-primary" id="btnGenererRecettes" style="width:100%;" onclick="fermerModalCuisson(); chercherRecettesIA();">✨ Inventer mes recettes</button>
             </div>
         </div>
@@ -128,12 +129,12 @@
                         <!-- VUE ACCUEIL (DASHBOARD) -->
             <div id="view-home" class="view-container view active">
                 <div class="view-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; height: 100%; justify-content: center;">
-                    <div style="position: absolute; top: 15px; right: 15px; display: flex; align-items: center; gap: 10px;">
-                        <button onclick="ouvrirNouveautes()" id="btnNouveautes" style="position: relative; background: none; border: none; font-size: var(--text-3xl); cursor: pointer; color: var(--primary);" aria-label="Voir les dernières mises à jour">
+                    <div class="app-topbar">
+                        <button onclick="ouvrirNouveautes()" id="btnNouveautes" class="icon-btn" aria-label="Voir les dernières mises à jour">
                             🆕
                             <span id="badgeNouveautes" class="update-badge-dot" style="display: none;" aria-hidden="true"></span>
                         </button>
-                        <button onclick="ouvrirOnboarding()" style="background: none; border: none; font-size: var(--text-3xl); cursor: pointer; color: var(--primary);" aria-label="Aide et informations">ℹ️</button>
+                        <button onclick="ouvrirOnboarding()" class="icon-btn" aria-label="Aide et informations">ℹ️</button>
                     </div>
                     
                     <div class="mascot-bubble" style="margin-top: 10px;">
@@ -147,7 +148,7 @@
                     </button>
                     
                     <!-- GRILLE DE RACCOURCIS -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; width: 100%;">
                         <button class="shortcut-card" onclick="switchView('ingredients')">
                             <i style="font-size: var(--text-4xl);">🍅</i>
                             <span>Mes Ingrédients</span>
@@ -168,6 +169,10 @@
                             <i style="font-size: var(--text-4xl);">⏱️</i>
                             <span>Minuteur</span>
                         </button>
+                        <button class="shortcut-card" onclick="ouvrirHistorique()">
+                            <i style="font-size: var(--text-4xl);">📊</i>
+                            <span>Historique</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -179,8 +184,8 @@
                     
                     <div class="action-buttons-group">
                         <button class="btn-vocal" id="btnMic" onclick="toggleVocal()" style="flex:1;">🎙️ Dicter</button>
-                        <button class="btn-vocal" style="flex:1; background-color:#2e86de;" onclick="document.getElementById('iaScannerInput').click()">📸 Scanner IA</button>
-                        <button class="btn-vocal" style="flex:1; background-color:#ff9f43;" onclick="ouvrirBarcodeScanner()">🛒 Code-barres</button>
+                        <button class="btn-vocal" style="flex:1; background-color:var(--action-info);" onclick="document.getElementById('iaScannerInput').click()">📸 Scanner IA</button>
+                        <button class="btn-vocal" style="flex:1; background-color:var(--accent);" onclick="ouvrirBarcodeScanner()">🛒 Code-barres</button>
                         <input type="file" id="iaScannerInput" accept="image/*" capture="environment" style="display:none;" onchange="analyserImageIA(event)">
                     </div>
 
@@ -747,6 +752,19 @@
         </div>
     </div>
 
+    <div id="modalHistorique" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalHistoriqueTitle">
+        <div class="modal-content" style="max-width: 560px; text-align: left;">
+            <div class="modal-header">
+                <div class="bottom-sheet-handle"></div>
+                <h3 id="modalHistoriqueTitle" class="gradient-text">📊 Historique &amp; Stats</h3>
+                <button class="btn-secondary" onclick="fermerHistorique()" aria-label="Fermer">✖</button>
+            </div>
+            <div class="modal-body" id="historiqueContent" style="line-height: 1.6; font-size: var(--text-base);">
+                <p style="text-align:center;">Chargement...</p>
+            </div>
+        </div>
+    </div>
+
     <div id="modalApiKeys" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalApiKeysTitle">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -778,7 +796,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=16'></script>
+    <script src='app.js?v=17'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>

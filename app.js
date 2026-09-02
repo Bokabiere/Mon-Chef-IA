@@ -517,6 +517,15 @@ const firebaseConfig = {
         // "nouveau" tant que l'utilisateur n'a pas ouvert la fenêtre au moins une fois.
         const NOUVEAUTES = [
             {
+                version: "2026-09-02",
+                titre: "2 septembre 2026",
+                items: [
+                    "🎨 Refonte visuelle : les boutons et badges suivent maintenant vraiment les 4 thèmes (Classique, Bistrot, Sombre, Zelda), grille de raccourcis plus fluide, mise en page mieux adaptée aux tablettes.",
+                    "🧹 Nouveau mode \"Finir le frigo\" dans En cuisine ! : génère une recette qui utilise un maximum de vos ingrédients disponibles pour lutter contre le gaspillage.",
+                    "📊 Nouvel Historique & Stats sur l'accueil : nombre de recettes générées, ingrédients les plus utilisés, suivi de vos générations anti-gaspi."
+                ]
+            },
+            {
                 version: "2026-09-01",
                 titre: "1er septembre 2026",
                 items: [
@@ -884,7 +893,7 @@ const firebaseConfig = {
                     html += `<div class="list-item-manage">
                                 <div><b>${u.email}</b><br><span style="font-size:11px; color:var(--text-muted);">${u.nom || 'Sans nom'}</span></div>
                                 <div style="display:flex; gap:5px;">
-                                    <button class="btn-primary" style="margin-top:0; padding:6px 12px; font-size:12px; background:#27ae60;" onclick="validerCompte('${doc.id}', true)">✅ Valider</button>
+                                    <button class="btn-primary" style="margin-top:0; padding:6px 12px; font-size:12px; background:var(--action-success);" onclick="validerCompte('${doc.id}', true)">✅ Valider</button>
                                     <button class="btn-danger" style="padding:6px 12px; font-size:12px;" onclick="validerCompte('${doc.id}', false)">❌ Refuser</button>
                                 </div>
                              </div>`;
@@ -996,7 +1005,7 @@ const firebaseConfig = {
                     if (btn) {
                         btn.innerText = "✓ Déjà";
                         btn.disabled = true;
-                        btn.style.background = "#636e72";
+                        btn.style.background = "var(--text-muted)";
                     }
                     showToast(`"${ingredientNom}" est déjà dans la liste de courses.`, "info");
                     return;
@@ -1010,7 +1019,7 @@ const firebaseConfig = {
                     order: Date.now()
                 });
 
-                if (btn) { btn.innerText = "✅"; btn.style.background = "#27ae60"; }
+                if (btn) { btn.innerText = "✅"; btn.style.background = "var(--action-success)"; }
                 showToast(`"${ingredientNom}" ajouté à la liste de courses ✅`, "success");
                 const navBtn = document.getElementById('btnNavCourses');
                 if (navBtn) {
@@ -1502,7 +1511,7 @@ const firebaseConfig = {
                         <div class="meal-name" style="text-decoration: ${textDecoration}; margin: 8px 0;">${mealData.plat}</div>
                         <div class="meal-actions">
                             <button class="btn-action" style="background:#ff7675; padding: 4px; font-size: 11px; flex:0.3;" onclick="retirerRepas('${jour}', '${repas}')" title="Retirer">🗑️</button>
-                            <button class="btn-action" style="background:#6c5ce7; padding: 4px; font-size: 11px; flex:0.3;" onclick="relancerRepasPlanning('${jour}', '${repas}', '${safePlat}')" title="Autre plat">🎲</button>
+                            <button class="btn-action" style="background:var(--action-accent-2); padding: 4px; font-size: 11px; flex:0.3;" onclick="relancerRepasPlanning('${jour}', '${repas}', '${safePlat}')" title="Autre plat">🎲</button>
                             <button class="btn-action btn-expand" style="padding: 4px 8px; font-size: 11px; flex:1;" onclick="cuisinerCePlat('${safePlat}', '${jour}', '${repas}')">🍳 Cuisiner</button>
                         </div>
                     </div>`;
@@ -1830,6 +1839,22 @@ const firebaseConfig = {
             }
         };
 
+        window.genererRecetteRestesFrigo = function() {
+            const checked = memoireIngredients;
+            if (checked.length === 0) return showToast("Cochez au moins un ingrédient de votre frigo pour ce mode.", "error");
+            const personnesEl = document.getElementById('personnes');
+            const tempsEl = document.getElementById('temps');
+            const personnes = personnesEl ? personnesEl.value : prefsCuisineDefaut.personnes;
+            const temps = tempsEl ? tempsEl.value : prefsCuisineDefaut.temps;
+            showToast("🧹 Le Chef cherche comment finir votre frigo !", "info");
+            chercherRecettesIA({
+                humeur: "reste-à-finir : utilise le PLUS GRAND NOMBRE POSSIBLE des ingrédients disponibles listés, dans une seule recette cohérente et savoureuse, quitte à sortir des sentiers battus. L'objectif est d'écouler un maximum de produits du frigo pour éviter le gaspillage, sans ajouter d'ingrédients non listés en dehors des assaisonnements de base",
+                temps: temps,
+                personnes: personnes,
+                mode: "restes"
+            });
+        };
+
         function lancerRecetteRapide() {
             const checked = memoireIngredients;
             if (checked.length === 0) return showToast("Sélectionnez au moins un ingrédient !", "error");
@@ -1850,7 +1875,12 @@ const firebaseConfig = {
             const personnes = optionsForcees ? optionsForcees.personnes : document.getElementById('personnes').value;
             const temps = optionsForcees ? optionsForcees.temps : document.getElementById('temps').value;
             const moteur = moteurIAActif;
-            
+
+            const modeHistorique = (optionsForcees && optionsForcees.mode) ? optionsForcees.mode
+                : (String(humeur).indexOf('anti-gaspi') !== -1 ? 'anti-gaspi'
+                : (String(humeur).indexOf('flemme absolue') !== -1 ? 'rapide' : 'standard'));
+            enregistrerHistorique({ humeur: humeur, personnes: personnes, ingredients: checked.slice(), mode: modeHistorique });
+
             const cacheKey = `recettes_v2_${humeur}_${temps}_${personnes}_${moteur}_${checked.sort().join('_')}`.toLowerCase();
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
             switchView('results');
@@ -2196,6 +2226,93 @@ Règles de formatage ABSOLUES :
             } catch (e) { return ""; }
         }
 
+        // ============================================================
+        // HISTORIQUE & STATS SIMPLES
+        // ============================================================
+        function enregistrerHistorique(entry) {
+            try {
+                if (!userDb) return;
+                userDb.collection("historique").add({
+                    date: firebase.firestore.FieldValue.serverTimestamp(),
+                    humeur: entry.humeur || '',
+                    mode: entry.mode || 'standard',
+                    personnes: entry.personnes || null,
+                    ingredients: Array.isArray(entry.ingredients) ? entry.ingredients.slice(0, 40) : []
+                }).catch(e => console.error("Erreur enregistrement historique:", e));
+            } catch (e) { console.error("Erreur enregistrement historique:", e); }
+        }
+
+        const MODE_HISTORIQUE_LABELS = {
+            standard: "👨‍🍳 Classique",
+            "anti-gaspi": "♻️ Anti-Gaspi",
+            restes: "🧹 Finir le frigo",
+            rapide: "⚡ Soir de flemme"
+        };
+
+        window.ouvrirHistorique = async function() {
+            document.getElementById('modalHistorique').style.display = 'flex';
+            const cont = document.getElementById('historiqueContent');
+            cont.innerHTML = "<p style='text-align:center;'>Chargement...</p>";
+            try {
+                const snapshot = await userDb.collection("historique").orderBy("date", "desc").limit(200).get();
+                if (snapshot.empty) {
+                    cont.innerHTML = `<h3 style="text-align:center; margin-top:10vh; color:var(--text-muted); font-weight:400; opacity:0.8;">Pas encore d'historique !<br>Générez votre première recette pour commencer à suivre vos stats. ✨</h3>`;
+                    return;
+                }
+
+                let total = 0, antiGaspiTotal = 0;
+                const freq = {};
+                const entries = [];
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    total++;
+                    if (d.mode === 'anti-gaspi' || d.mode === 'restes') antiGaspiTotal++;
+                    (d.ingredients || []).forEach(ing => { freq[ing] = (freq[ing] || 0) + 1; });
+                    entries.push(d);
+                });
+                const topIngredients = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+                let html = `
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; margin-bottom:22px;">
+                        <div style="background:var(--bg-color); border-radius:12px; padding:14px; text-align:center;">
+                            <div style="font-size:var(--text-2xl); font-weight:700; color:var(--primary);">${total}</div>
+                            <div style="font-size:var(--text-xs); color:var(--text-muted);">Recettes générées</div>
+                        </div>
+                        <div style="background:var(--bg-color); border-radius:12px; padding:14px; text-align:center;">
+                            <div style="font-size:var(--text-2xl); font-weight:700; color:var(--action-success);">${antiGaspiTotal}</div>
+                            <div style="font-size:var(--text-xs); color:var(--text-muted);">Générations anti-gaspi</div>
+                        </div>
+                    </div>`;
+
+                if (topIngredients.length) {
+                    html += `<div style="font-weight:bold; margin-bottom:8px;">🥇 Vos ingrédients les plus utilisés</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;">
+                            ${topIngredients.map(([nom, n]) => `<span class="ingredient-tag" style="cursor:default;">${nom} <b style="margin-left:6px; color:var(--primary);">${n}×</b></span>`).join('')}
+                        </div>`;
+                }
+
+                html += `<div style="font-weight:bold; margin-bottom:8px;">🕐 Dernières générations</div>`;
+                html += entries.slice(0, 25).map(d => {
+                    const dateStr = d.date ? d.date.toDate().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+                    const label = MODE_HISTORIQUE_LABELS[d.mode] || MODE_HISTORIQUE_LABELS.standard;
+                    const nbIngr = (d.ingredients || []).length;
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); font-size:var(--text-sm);">
+                        <span>${label}</span>
+                        <span style="color:var(--text-muted);">${nbIngr} ingr. · ${dateStr}</span>
+                    </div>`;
+                }).join('');
+
+                cont.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                cont.innerHTML = "<p style='color:red; text-align:center;'>Erreur de chargement de l'historique.</p>";
+            }
+        };
+
+        window.fermerHistorique = function() {
+            document.getElementById('modalHistorique').style.display = 'none';
+        };
+
                 async function analyserImageIA(event) {
             const file = event.target.files[0]; if (!file) return;
             const resDiv = document.getElementById('resultatDiv'); const loader = document.getElementById('loader');
@@ -2312,7 +2429,7 @@ Règles de formatage ABSOLUES :
 
         async function sauvegarder(btn, titre, contentId) {
             btn.innerText = "⏳..."; btn.disabled = true; let texte = titre + "\n\n" + document.getElementById(contentId).innerText;
-            try { await userDb.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "#27ae60"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
+            try { await userDb.collection("carnet").add({ recette: texte, date: firebase.firestore.FieldValue.serverTimestamp() }); btn.innerText = "✅ Sauvegardé"; btn.style.background = "var(--action-success)"; } catch (e) { btn.innerText = "Erreur"; btn.disabled = false; }
         }
 
         // ============================================================
@@ -3033,6 +3150,7 @@ window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas
 
     const btnGenerer = document.getElementById('btnGenererRecettes');
     const btnRapide = document.getElementById('btnRecetteRapide');
+    const btnRestes = document.getElementById('btnResteAFinir');
     const planningOptions = document.getElementById('planningOptions');
     
     if(modePlanning) {
@@ -3043,11 +3161,13 @@ window.ouvrirModalCuisson = function(modePlanning = false, jour = 'Lundi', repas
         btnGenerer.innerText = "✨ Générer pour ce repas";
         btnGenerer.onclick = function() { fermerModalCuisson(); genererRepasPlanning(); };
         btnRapide.style.display = 'none';
+        btnRestes.style.display = 'none';
     } else {
         planningOptions.style.display = 'none';
         btnGenerer.innerText = "✨ Inventer mes recettes";
         btnGenerer.onclick = function() { fermerModalCuisson(); chercherRecettesIA(); };
         btnRapide.style.display = 'block';
+        btnRestes.style.display = 'block';
     }
 };
 function fermerModalCuissonReel() {
