@@ -3021,14 +3021,25 @@ Règles de formatage ABSOLUES :
                 `;
                 listEl.appendChild(item);
             }
-            
-            if (Object.keys(activeTimers).length === 0) {
-                document.getElementById('multiTimerWidget').style.display = 'none';
-            }
         }
-        
+
+        // Affiche/masque le bouton "✖ Fermer" du header : uniquement utilisable
+        // quand aucun minuteur n'est en cours (sinon on risquerait de perdre
+        // le seul moyen de reprendre un minuteur en pause).
+        function updateCloseButtonVisibility() {
+            let btn = document.getElementById('btnCloseTimerWidget');
+            if (!btn) return;
+            btn.style.display = (Object.keys(activeTimers).length === 0) ? 'inline-block' : 'none';
+        }
+
+        function closeTimerWidget() {
+            if (Object.keys(activeTimers).length > 0) return; // sécurité : jamais de fermeture avec un minuteur en cours
+            document.getElementById('multiTimerWidget').style.display = 'none';
+        }
+
         function updateTimersCount() {
             document.getElementById("activeTimersCount").innerText = Object.keys(activeTimers).length;
+            updateCloseButtonVisibility();
         }
 
         // --- Persistance (survit à un rechargement de page ou une fermeture d'onglet) ---

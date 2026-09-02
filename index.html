@@ -336,6 +336,7 @@
             <div style="display:flex; gap: 8px;">
                 <button id="btnMuteTimers" onclick="toggleMuteTimers()" title="Son activé/désactivé" aria-label="Couper le son des minuteurs">🔊</button>
                 <button class="btn-toggle-timer" id="btnToggleTimerWidget" onclick="toggleTimerWidget()" aria-label="Afficher les minuteurs">▲</button>
+                <button id="btnCloseTimerWidget" onclick="closeTimerWidget()" style="display:none;" title="Fermer" aria-label="Fermer Chronos">✖</button>
             </div>
         </div>
         <div class="multi-timer-body">
@@ -850,7 +851,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
-    <script src='app.js?v=17'></script>
+    <script src='app.js?v=18'></script>
     
     <!-- Google Identity Services (Chargé après app.js pour éviter l'erreur callback is not a function) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
