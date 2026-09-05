@@ -446,13 +446,15 @@ const firebaseConfig = {
                 });
             } else if (moteur === 'mistral' || moteur === 'groq') {
                 const url = moteur === 'mistral' ? 'https://api.mistral.ai/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
-                const model = moteur === 'mistral' ? 'mistral-small-latest' : 'llama-3.1-8b-instant';
+                const model = moteur === 'mistral' ? 'mistral-small-latest' : 'openai/gpt-oss-20b';
                 const messages = systemContent
                     ? [{ role: 'system', content: systemContent }, { role: 'user', content: prompt }]
                     : [{ role: 'user', content: prompt }];
+                const corpsRequete = { model, messages };
+                if (moteur === 'groq') corpsRequete.include_reasoning = false; // reponse finale uniquement, pas de trace de raisonnement (modeles gpt-oss)
                 rep = await fetch(url, {
                     method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                    body: JSON.stringify({ model, messages })
+                    body: JSON.stringify(corpsRequete)
                 });
             } else {
                 throw new Error("Moteur IA inconnu : " + moteur);
