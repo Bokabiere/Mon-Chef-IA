@@ -23,6 +23,7 @@ const firebaseConfig = {
         let isAdminUser = false;
         let ingredientPrices = {}; // Dictionnaire des prix des ingrédients
         let clesApiPubliques = { gemini: null, mistral: null, groq: null };
+        let clesApiPubliquesChargees = false; // passe a true une fois la lecture Firestore de config/api_keys terminee (ou en echec)
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -418,6 +419,13 @@ const firebaseConfig = {
             return moteur === 'mistral' ? 'Mistral AI' : (moteur === 'groq' ? 'Groq' : 'Gemini');
         }
 
+        async function attendreClesApiPubliques(timeoutMs = 4000) {
+            const debut = Date.now();
+            while (!clesApiPubliquesChargees && (Date.now() - debut) < timeoutMs) {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+        }
+
         function getApiKeySansPrompt(moteur) {
             const stored = localStorage.getItem(moteur + '_api_key');
             if (stored) return stored;
@@ -472,6 +480,7 @@ const firebaseConfig = {
         // re-tester en boucle un moteur dont la cle est invalide).
         // options.onEchec(moteur, erreur) : callback appele a chaque echec d'un moteur.
         async function executerAppelIA(prompt, options = {}) {
+            await attendreClesApiPubliques();
             const systemContent = options.systemContent || null;
             const exclure = options.exclure || null;
             const onEchec = options.onEchec || null;
@@ -890,6 +899,7 @@ const firebaseConfig = {
                     clesApiPubliques.mistral = data.mistral || null;
                     clesApiPubliques.groq = data.groq || null;
                 }
+                clesApiPubliquesChargees = true;
                 
                 afficherIngredientsGauche();
                 chargerAllergenesUI();
@@ -906,6 +916,7 @@ const firebaseConfig = {
             } catch (e) { 
                 console.error("Détail de l'erreur :", e);
                 document.getElementById('categoriesContainer').innerHTML = `<span style='color:red;'>Erreur : ${e.message}</span>`; 
+                clesApiPubliquesChargees = true;
             }
         }
 
