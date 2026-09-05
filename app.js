@@ -293,6 +293,9 @@ const firebaseConfig = {
             } else if (lower.includes("clé api") || lower.includes("cle api") || lower.includes("aucune ia disponible")) {
                 titre = "🔑 Aucune clé API disponible.";
                 detail = "Ajoutez au moins une clé API (Gemini, Mistral ou Groq) dans ⚙️ Config pour utiliser le Chef IA.";
+            } else if (lower.includes("denied access") || lower.includes("contact support") || lower.includes("project has been denied")) {
+                titre = "🚫 Accès Gemini refusé par Google.";
+                detail = "Le projet Google Cloud lié à cette clé Gemini est bloqué (API non activée, projet suspendu...). Générez une nouvelle clé sur aistudio.google.com, ou changez d'IA dans ⚙️ Config.";
             } else if (lower.includes("quota") || lower.includes("429") || lower.includes("rate limit") || lower.includes("resource_exhausted")) {
                 titre = "⏳ Trop de demandes en peu de temps.";
                 detail = `Le quota de l'IA ${moteur.toUpperCase()} est atteint. Réessayez dans quelques minutes, ou changez d'IA dans ⚙️ Config.`;
@@ -462,31 +465,36 @@ const firebaseConfig = {
 
         // Appelle l'IA selectionnee par defaut ; si son quota est atteint, bascule automatiquement
         // sur une autre IA deja configuree (cle personnelle ou cle partagee), sans redemander de cle.
+        // Essaie le moteur choisi par defaut ; en cas d'echec QUELCONQUE (quota, cle
+        // refusee, projet bloque, service indisponible...), bascule automatiquement
+        // sur la prochaine IA deja configuree (cle personnelle ou partagee), sans
+        // jamais redemander de cle a l'utilisateur pour les moteurs de secours.
         async function executerAppelIA(prompt, options = {}) {
             const systemContent = options.systemContent || null;
             const moteurDepart = options.moteurPrefere || moteurIAActif;
             const ordre = [moteurDepart, ...ORDRE_MOTEURS_IA.filter(m => m !== moteurDepart)];
             let lastError = null;
+            let auMoinsUneCleTrouvee = false;
 
             for (let i = 0; i < ordre.length; i++) {
                 const moteur = ordre[i];
                 const estPrincipal = i === 0;
                 const apiKey = estPrincipal ? await getApiKey(moteur) : getApiKeySansPrompt(moteur);
-                if (!apiKey) {
-                    if (estPrincipal) throw new Error(`Clé API ${nomAffichageIA(moteur)} requise.`);
-                    continue;
-                }
+                if (!apiKey) continue;
+                auMoinsUneCleTrouvee = true;
                 try {
                     const texte = await appelBrutIA(moteur, apiKey, prompt, systemContent);
                     return { texte, moteurUtilise: moteur };
                 } catch (e) {
                     lastError = e;
-                    if (!e.isQuota) throw e;
                     const suivant = ordre.slice(i + 1).find(m => getApiKeySansPrompt(m));
                     if (suivant) {
-                        showToast(`⏳ Quota ${nomAffichageIA(moteur)} atteint, bascule automatiquement sur ${nomAffichageIA(suivant)}...`, "info", 3500);
+                        showToast(`⚠️ ${nomAffichageIA(moteur)} indisponible, bascule automatiquement sur ${nomAffichageIA(suivant)}...`, "info", 3500);
                     }
                 }
+            }
+            if (!auMoinsUneCleTrouvee) {
+                throw new Error("Aucune IA disponible : configurez au moins une clé API dans ⚙️ Config.");
             }
             throw lastError || new Error("Aucune IA disponible : configurez au moins une clé API dans ⚙️ Config.");
         }
