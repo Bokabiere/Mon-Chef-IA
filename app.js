@@ -381,6 +381,30 @@ const firebaseConfig = {
             return key;
         }
 
+        function extraireTexteIA(data, moteur) {
+            if (data && data.error) {
+                throw new Error(data.error.message || "Erreur de l'API IA.");
+            }
+            if (moteur === 'gemini') {
+                const candidate = data && data.candidates && data.candidates[0];
+                const texte = candidate && candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text;
+                if (!texte) {
+                    const raison = (candidate && candidate.finishReason) || (data && data.promptFeedback && data.promptFeedback.blockReason);
+                    throw new Error(raison ? `Reponse IA vide ou bloquee (raison : ${raison}).` : "Reponse IA vide ou invalide (verifiez votre cle API Gemini et vos quotas).");
+                }
+                return texte;
+            }
+            if (moteur === 'mistral') {
+                const choice = data && data.choices && data.choices[0];
+                const texte = choice && choice.message && choice.message.content;
+                if (!texte) {
+                    throw new Error("Reponse IA vide ou invalide (verifiez votre cle API Mistral et vos quotas).");
+                }
+                return texte;
+            }
+            throw new Error("Moteur IA inconnu : " + moteur);
+        }
+
         function voirModifierClesAPI() {
             document.getElementById('inputKeyGemini').value = localStorage.getItem('gemini_api_key') || "";
             document.getElementById('inputKeyMistral').value = localStorage.getItem('mistral_api_key') || "";
@@ -1866,10 +1890,10 @@ const firebaseConfig = {
                 let texte = "";
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
                 }
 
                 let lignes = texte.split('\n').filter(l => l.includes(':')); 
@@ -1933,10 +1957,10 @@ const firebaseConfig = {
                 let texte = "";
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
                 }
 
                 let nouveauPlat = texte.trim().replace(/[*#]/g, '');
@@ -1970,10 +1994,10 @@ const firebaseConfig = {
                 let texte = "";
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
                 }
 
                 let nouveauPlat = texte.trim().replace(/[*#]/g, '');
@@ -2035,10 +2059,10 @@ const firebaseConfig = {
                 let texte = "";
                 if (moteur === 'gemini') {
                     const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = data.candidates[0].content.parts[0].text;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
                 } else if (moteur === 'mistral') {
                     const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = data.choices[0].message.content;
+                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
                 }
 
                 loader.style.display = "none";
@@ -2320,7 +2344,7 @@ Règles de formatage ABSOLUES :
                         });
                         const data = await rep.json();
                         if(data.error) throw new Error(data.error.message);
-                        texteReponse = data.candidates[0].content.parts[0].text;
+                        texteReponse = extraireTexteIA(data, 'gemini');
                     } 
                     else if (moteur === 'mistral') {
                         const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
@@ -2329,7 +2353,7 @@ Règles de formatage ABSOLUES :
                         });
                         const data = await rep.json();
                         if(data.error) throw new Error(data.error.message);
-                        texteReponse = data.choices[0].message.content;
+                        texteReponse = extraireTexteIA(data, 'mistral');
                     }
 
                     const blocsBruts = splitRecipeBlocks(texteReponse);
@@ -2583,7 +2607,7 @@ Règles de formatage ABSOLUES :
                     });
                     const data = await rep.json(); loader.style.display = "none";
                     if(data.error) throw new Error(data.error.message);
-                    const text = data.candidates[0].content.parts[0].text;
+                    const text = extraireTexteIA(data, 'gemini');
                     const itemsTrouves = text.split(',').map(i => i.trim()).filter(i => i.length > 1);
                     if (itemsTrouves.length === 0) return resDiv.innerHTML = "<h3 style='text-align:center;'>Aucun ingrédient détecté.</h3>";
                     
@@ -3363,7 +3387,7 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
             });
             const data = await rep.json();
             if(data.error) throw new Error(data.error.message);
-            texteReponse = data.candidates[0].content.parts[0].text;
+            texteReponse = extraireTexteIA(data, 'gemini');
         } else if (moteur === 'mistral') {
             const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
                 method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
@@ -3371,7 +3395,7 @@ Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gar
             });
             const data = await rep.json();
             if(data.error) throw new Error(data.error.message);
-            texteReponse = data.choices[0].message.content;
+            texteReponse = extraireTexteIA(data, 'mistral');
         }
         
         // Formater le nouveau contenu
