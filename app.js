@@ -463,22 +463,27 @@ const firebaseConfig = {
             }
         }
 
-        // Appelle l'IA selectionnee par defaut ; si son quota est atteint, bascule automatiquement
-        // sur une autre IA deja configuree (cle personnelle ou cle partagee), sans redemander de cle.
         // Essaie le moteur choisi par defaut ; en cas d'echec QUELCONQUE (quota, cle
         // refusee, projet bloque, service indisponible...), bascule automatiquement
         // sur la prochaine IA deja configuree (cle personnelle ou partagee), sans
         // jamais redemander de cle a l'utilisateur pour les moteurs de secours.
+        // options.exclure : Set de moteurs a ignorer completement (deja en echec
+        // lors d'une tentative precedente du meme appel "Cuisiner", pour eviter de
+        // re-tester en boucle un moteur dont la cle est invalide).
+        // options.onEchec(moteur, erreur) : callback appele a chaque echec d'un moteur.
         async function executerAppelIA(prompt, options = {}) {
             const systemContent = options.systemContent || null;
+            const exclure = options.exclure || null;
+            const onEchec = options.onEchec || null;
             const moteurDepart = options.moteurPrefere || moteurIAActif;
-            const ordre = [moteurDepart, ...ORDRE_MOTEURS_IA.filter(m => m !== moteurDepart)];
+            let ordre = [moteurDepart, ...ORDRE_MOTEURS_IA.filter(m => m !== moteurDepart)];
+            if (exclure && exclure.size) ordre = ordre.filter(m => !exclure.has(m));
             let lastError = null;
             let auMoinsUneCleTrouvee = false;
 
             for (let i = 0; i < ordre.length; i++) {
                 const moteur = ordre[i];
-                const estPrincipal = i === 0;
+                const estPrincipal = moteur === moteurDepart;
                 const apiKey = estPrincipal ? await getApiKey(moteur) : getApiKeySansPrompt(moteur);
                 if (!apiKey) continue;
                 auMoinsUneCleTrouvee = true;
@@ -487,6 +492,7 @@ const firebaseConfig = {
                     return { texte, moteurUtilise: moteur };
                 } catch (e) {
                     lastError = e;
+                    if (onEchec) onEchec(moteur, e);
                     const suivant = ordre.slice(i + 1).find(m => getApiKeySansPrompt(m));
                     if (suivant) {
                         showToast(`⚠️ ${nomAffichageIA(moteur)} indisponible, bascule automatiquement sur ${nomAffichageIA(suivant)}...`, "info", 3500);
@@ -2395,17 +2401,21 @@ Règles de formatage ABSOLUES :
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             let lastError = null;
+            const moteursEnPanne = new Set();
 
             for (let attempt = 0; attempt <= retries; attempt++) {
                 try {
-                    const { texte: texteReponse } = await executerAppelIA(prompt, {
-                        systemContent: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'."
+                    const { texte: texteReponse, moteurUtilise } = await executerAppelIA(prompt, {
+                        systemContent: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'.",
+                        exclure: moteursEnPanne,
+                        onEchec: (m) => moteursEnPanne.add(m)
                     });
 
                     const blocsBruts = splitRecipeBlocks(texteReponse);
                     const blocs = filterValidRecipeBlocks(blocsBruts);
 
                     if (blocs.length === 0) {
+                        console.warn(`[Chef IA] Reponse de ${moteurUtilise} rejetee par la validation (extrait) :`, (texteReponse || "").slice(0, 800));
                         throw new Error("La réponse de l'IA est incomplète, incohérente ou incompatible avec vos restrictions.");
                     }
 
