@@ -446,7 +446,7 @@ const firebaseConfig = {
                 });
             } else if (moteur === 'mistral' || moteur === 'groq') {
                 const url = moteur === 'mistral' ? 'https://api.mistral.ai/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
-                const model = moteur === 'mistral' ? 'mistral-small-latest' : 'llama-3.3-70b-versatile';
+                const model = moteur === 'mistral' ? 'mistral-small-latest' : 'llama-3.1-8b-instant';
                 const messages = systemContent
                     ? [{ role: 'system', content: systemContent }, { role: 'user', content: prompt }]
                     : [{ role: 'user', content: prompt }];
@@ -2412,14 +2412,22 @@ Règles de formatage ABSOLUES :
             window._lastRecipeRequest = requestContext; localStorage.setItem('chef_ia_last_request', JSON.stringify(requestContext));
 
             let lastError = null;
+            let derniereErreurMoteur = null; // derniere vraie erreur d'appel IA (429, 404, cle invalide...), conservee meme une fois tous les moteurs epuises
             const moteursEnPanne = new Set();
 
             for (let attempt = 0; attempt <= retries; attempt++) {
+                if (moteursEnPanne.size >= ORDRE_MOTEURS_IA.length) {
+                    // Plus aucun moteur disponible (tous ont deja echoue) : inutile de rappeler
+                    // executerAppelIA, on affiche directement la derniere vraie erreur rencontree.
+                    loader.style.display = "none";
+                    afficherErreurIA(resDiv, derniereErreurMoteur || lastError || new Error("Aucune IA disponible : configurez au moins une clé API dans ⚙️ Config."), moteur);
+                    return;
+                }
                 try {
                     const { texte: texteReponse, moteurUtilise } = await executerAppelIA(prompt, {
                         systemContent: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'.",
                         exclure: moteursEnPanne,
-                        onEchec: (m) => moteursEnPanne.add(m)
+                        onEchec: (m, e) => { moteursEnPanne.add(m); derniereErreurMoteur = e; }
                     });
 
                     const blocsBruts = splitRecipeBlocks(texteReponse);
