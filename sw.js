@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chef-ia-v13';
+const CACHE_NAME = 'chef-ia-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -45,7 +45,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then((response) => {
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone)).catch(() => {});
