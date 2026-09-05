@@ -22,7 +22,7 @@ const firebaseConfig = {
         let unsubscribeCourses = null;
         let isAdminUser = false;
         let ingredientPrices = {}; // Dictionnaire des prix des ingrédients
-        let clesApiPubliques = { gemini: null, mistral: null };
+        let clesApiPubliques = { gemini: null, mistral: null, groq: null };
 
         function syncCloud(champ, data) {
             const user = firebase.auth().currentUser;
@@ -290,6 +290,9 @@ const firebaseConfig = {
             } else if (lower.includes("api key not valid") || lower.includes("invalid api key") || lower.includes("unauthorized") || lower.includes("401") || lower.includes("403") || lower.includes("permission_denied")) {
                 titre = "🔑 Clé API invalide ou refusée.";
                 detail = `Vérifiez votre clé ${moteur.toUpperCase()} dans ⚙️ Config, ou réinitialisez-la.`;
+            } else if (lower.includes("clé api") || lower.includes("cle api") || lower.includes("aucune ia disponible")) {
+                titre = "🔑 Aucune clé API disponible.";
+                detail = "Ajoutez au moins une clé API (Gemini, Mistral ou Groq) dans ⚙️ Config pour utiliser le Chef IA.";
             } else if (lower.includes("quota") || lower.includes("429") || lower.includes("rate limit") || lower.includes("resource_exhausted")) {
                 titre = "⏳ Trop de demandes en peu de temps.";
                 detail = `Le quota de l'IA ${moteur.toUpperCase()} est atteint. Réessayez dans quelques minutes, ou changez d'IA dans ⚙️ Config.`;
@@ -374,7 +377,7 @@ const firebaseConfig = {
             }
             
             if (!key) {
-                let nomF = provider === 'mistral' ? 'Mistral AI' : 'Gemini';
+                let nomF = provider === 'mistral' ? 'Mistral AI' : (provider === 'groq' ? 'Groq' : 'Gemini');
                 key = await showPrompt(`🔒 Sécurité : Veuillez coller votre clé API ${nomF}.`, "Collez votre clé ici...");
                 if (key) localStorage.setItem(keyName, key);
             }
@@ -394,26 +397,111 @@ const firebaseConfig = {
                 }
                 return texte;
             }
-            if (moteur === 'mistral') {
+            if (moteur === 'mistral' || moteur === 'groq') {
                 const choice = data && data.choices && data.choices[0];
                 const texte = choice && choice.message && choice.message.content;
                 if (!texte) {
-                    throw new Error("Reponse IA vide ou invalide (verifiez votre cle API Mistral et vos quotas).");
+                    const nomFournisseur = moteur === 'groq' ? 'Groq' : 'Mistral';
+                    throw new Error(`Reponse IA vide ou invalide (verifiez votre cle API ${nomFournisseur} et vos quotas).`);
                 }
                 return texte;
             }
             throw new Error("Moteur IA inconnu : " + moteur);
         }
 
+        const ORDRE_MOTEURS_IA = ['gemini', 'mistral', 'groq'];
+
+        function nomAffichageIA(moteur) {
+            return moteur === 'mistral' ? 'Mistral AI' : (moteur === 'groq' ? 'Groq' : 'Gemini');
+        }
+
+        function getApiKeySansPrompt(moteur) {
+            const stored = localStorage.getItem(moteur + '_api_key');
+            if (stored) return stored;
+            return clesApiPubliques[moteur] || null;
+        }
+
+        function estErreurQuotaIA(e) {
+            const msg = String((e && e.message) || e || '').toLowerCase();
+            return msg.includes('quota') || msg.includes('429') || msg.includes('rate limit') || msg.includes('resource_exhausted') || msg.includes('too many requests');
+        }
+
+        async function appelBrutIA(moteur, apiKey, prompt, systemContent) {
+            let rep;
+            if (moteur === 'gemini') {
+                rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+            } else if (moteur === 'mistral' || moteur === 'groq') {
+                const url = moteur === 'mistral' ? 'https://api.mistral.ai/v1/chat/completions' : 'https://api.groq.com/openai/v1/chat/completions';
+                const model = moteur === 'mistral' ? 'mistral-small-latest' : 'llama-3.3-70b-versatile';
+                const messages = systemContent
+                    ? [{ role: 'system', content: systemContent }, { role: 'user', content: prompt }]
+                    : [{ role: 'user', content: prompt }];
+                rep = await fetch(url, {
+                    method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                    body: JSON.stringify({ model, messages })
+                });
+            } else {
+                throw new Error("Moteur IA inconnu : " + moteur);
+            }
+            const data = await rep.json();
+            if (rep.status === 429) {
+                const e429 = new Error((data && data.error && data.error.message) || `Quota ${nomAffichageIA(moteur)} depasse (429).`);
+                e429.isQuota = true;
+                throw e429;
+            }
+            try {
+                return extraireTexteIA(data, moteur);
+            } catch (err) {
+                if (estErreurQuotaIA(err)) err.isQuota = true;
+                throw err;
+            }
+        }
+
+        // Appelle l'IA selectionnee par defaut ; si son quota est atteint, bascule automatiquement
+        // sur une autre IA deja configuree (cle personnelle ou cle partagee), sans redemander de cle.
+        async function executerAppelIA(prompt, options = {}) {
+            const systemContent = options.systemContent || null;
+            const moteurDepart = options.moteurPrefere || moteurIAActif;
+            const ordre = [moteurDepart, ...ORDRE_MOTEURS_IA.filter(m => m !== moteurDepart)];
+            let lastError = null;
+
+            for (let i = 0; i < ordre.length; i++) {
+                const moteur = ordre[i];
+                const estPrincipal = i === 0;
+                const apiKey = estPrincipal ? await getApiKey(moteur) : getApiKeySansPrompt(moteur);
+                if (!apiKey) {
+                    if (estPrincipal) throw new Error(`Clé API ${nomAffichageIA(moteur)} requise.`);
+                    continue;
+                }
+                try {
+                    const texte = await appelBrutIA(moteur, apiKey, prompt, systemContent);
+                    return { texte, moteurUtilise: moteur };
+                } catch (e) {
+                    lastError = e;
+                    if (!e.isQuota) throw e;
+                    const suivant = ordre.slice(i + 1).find(m => getApiKeySansPrompt(m));
+                    if (suivant) {
+                        showToast(`⏳ Quota ${nomAffichageIA(moteur)} atteint, bascule automatiquement sur ${nomAffichageIA(suivant)}...`, "info", 3500);
+                    }
+                }
+            }
+            throw lastError || new Error("Aucune IA disponible : configurez au moins une clé API dans ⚙️ Config.");
+        }
+
         function voirModifierClesAPI() {
             document.getElementById('inputKeyGemini').value = localStorage.getItem('gemini_api_key') || "";
             document.getElementById('inputKeyMistral').value = localStorage.getItem('mistral_api_key') || "";
+            const inputGroq = document.getElementById('inputKeyGroq');
+            if (inputGroq) inputGroq.value = localStorage.getItem('groq_api_key') || "";
             document.getElementById('modalApiKeys').style.display = 'flex';
         }
 
         function sauvegarderCleAPI(provider) {
-            const inputId = provider === 'mistral' ? 'inputKeyMistral' : 'inputKeyGemini';
-            const nomF = provider === 'mistral' ? 'Mistral AI' : 'Gemini';
+            const inputId = provider === 'mistral' ? 'inputKeyMistral' : (provider === 'groq' ? 'inputKeyGroq' : 'inputKeyGemini');
+            const nomF = provider === 'mistral' ? 'Mistral AI' : (provider === 'groq' ? 'Groq' : 'Gemini');
             const val = document.getElementById(inputId).value.trim();
             const keyName = provider + '_api_key';
             if (val) {
@@ -428,6 +516,7 @@ const firebaseConfig = {
         function reinitialiserClesAPI() {
             localStorage.removeItem('gemini_api_key');
             localStorage.removeItem('mistral_api_key');
+            localStorage.removeItem('groq_api_key');
             showToast("Toutes les clés API ont été effacées !", "success");
         }
 
@@ -785,6 +874,7 @@ const firebaseConfig = {
                     const data = apiKeysSnap.data();
                     clesApiPubliques.gemini = data.gemini || null;
                     clesApiPubliques.mistral = data.mistral || null;
+                    clesApiPubliques.groq = data.groq || null;
                 }
                 
                 afficherIngredientsGauche();
@@ -1162,12 +1252,14 @@ const firebaseConfig = {
         async function chargerClesApiPartageesUI() {
             const inputMistral = document.getElementById('adminCleMistral');
             const inputGemini = document.getElementById('adminCleGemini');
+            const inputGroq = document.getElementById('adminCleGroq');
             if (!inputMistral || !inputGemini) return;
             try {
                 const snap = await db.collection("config").doc("api_keys").get();
                 const data = snap.exists ? snap.data() : {};
                 inputMistral.value = data.mistral || "";
                 inputGemini.value = data.gemini || "";
+                if (inputGroq) inputGroq.value = data.groq || "";
             } catch(e) {
                 console.error(e);
             }
@@ -1176,13 +1268,17 @@ const firebaseConfig = {
         async function sauvegarderClesApiPartagees() {
             const mistral = document.getElementById('adminCleMistral').value.trim();
             const gemini = document.getElementById('adminCleGemini').value.trim();
+            const groqEl = document.getElementById('adminCleGroq');
+            const groq = groqEl ? groqEl.value.trim() : '';
             try {
                 await db.collection("config").doc("api_keys").set({
                     mistral: mistral || null,
-                    gemini: gemini || null
+                    gemini: gemini || null,
+                    groq: groq || null
                 }, { merge: true });
                 clesApiPubliques.mistral = mistral || null;
                 clesApiPubliques.gemini = gemini || null;
+                clesApiPubliques.groq = groq || null;
                 showToast("Clés API partagées enregistrées ✅", "success");
             } catch(e) {
                 console.error(e);
@@ -1884,17 +1980,7 @@ const firebaseConfig = {
             Lundi diner: Poulet rôti`;
 
             try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { showToast(`Clé API requise.`, "error"); chargerPlanning(); return; }
-                
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
-                }
+                const { texte } = await executerAppelIA(prompt);
 
                 let lignes = texte.split('\n').filter(l => l.includes(':')); 
                 
@@ -1952,16 +2038,7 @@ const firebaseConfig = {
             Réponds UNIQUEMENT avec le nom du plat (pas de recette, pas d'intro).`;
 
             try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
-                }
+                const { texte } = await executerAppelIA(prompt);
 
                 let nouveauPlat = texte.trim().replace(/[*#]/g, '');
                 
@@ -1989,16 +2066,7 @@ const firebaseConfig = {
             const prompt = `L'utilisateur ne veut pas de "${platActuel}" pour son ${repas}. Propose UN SEUL nouveau plat différent en utilisant les ingrédients possédés : ${checked.join(", ")} (hors épices/condiments). ${getAllergenesPrompt()} ${getRegimesPrompt()} ${getEquipementsPrompt()} ${historique} Réponds UNIQUEMENT avec le nom du plat.`;
 
             try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { showToast(`Clé API requise pour ${moteur}.`, "error"); chargerPlanning(); return; }
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
-                }
+                const { texte } = await executerAppelIA(prompt);
 
                 let nouveauPlat = texte.trim().replace(/[*#]/g, '');
                 
@@ -2053,17 +2121,7 @@ const firebaseConfig = {
             loader.style.display = "block"; 
             
             try {
-                const apiKey = await getApiKey(moteur);
-                if (!apiKey) { loader.style.display = "none"; showToast(`Clé API requise.`, "error"); return; }
-                
-                let texte = "";
-                if (moteur === 'gemini') {
-                    const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'gemini');
-                } else if (moteur === 'mistral') {
-                    const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] }) });
-                    const data = await rep.json(); texte = extraireTexteIA(data, 'mistral');
-                }
+                const { texte } = await executerAppelIA(prompt);
 
                 loader.style.display = "none";
                 let safeTitre = nomDuPlat.replace(/'/g, "\\'");
@@ -2332,29 +2390,9 @@ Règles de formatage ABSOLUES :
 
             for (let attempt = 0; attempt <= retries; attempt++) {
                 try {
-                    const apiKey = await getApiKey(moteur);
-                    if (!apiKey) { loader.style.display = "none"; showToast(`Clé API ${moteur} requise.`, "error"); return; }
-                    
-                    let texteReponse = "";
-
-                    if (moteur === 'gemini') {
-                        const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
-                            method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                        });
-                        const data = await rep.json();
-                        if(data.error) throw new Error(data.error.message);
-                        texteReponse = extraireTexteIA(data, 'gemini');
-                    } 
-                    else if (moteur === 'mistral') {
-                        const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
-                            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                            body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'." }, { role: "user", content: prompt }] })
-                        });
-                        const data = await rep.json();
-                        if(data.error) throw new Error(data.error.message);
-                        texteReponse = extraireTexteIA(data, 'mistral');
-                    }
+                    const { texte: texteReponse } = await executerAppelIA(prompt, {
+                        systemContent: "Tu es un parseur automatique. Tu DOIS OBLIGATOIREMENT séparer les 3 recettes par la chaîne de caractères exacte '---RECETTE---'."
+                    });
 
                     const blocsBruts = splitRecipeBlocks(texteReponse);
                     const blocs = filterValidRecipeBlocks(blocsBruts);
@@ -3376,28 +3414,8 @@ La demande de modification est : "${consigne}".
 Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gardant le même format de liste et d'étapes.`;
 
     try {
-        const apiKey = await getApiKey(moteur);
-        if (!apiKey) throw new Error("Clé API manquante");
-        
-        let texteReponse = "";
-        if (moteur === 'gemini') {
-            const rep = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            const data = await rep.json();
-            if(data.error) throw new Error(data.error.message);
-            texteReponse = extraireTexteIA(data, 'gemini');
-        } else if (moteur === 'mistral') {
-            const rep = await fetch(`https://api.mistral.ai/v1/chat/completions`, {
-                method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "user", content: prompt }] })
-            });
-            const data = await rep.json();
-            if(data.error) throw new Error(data.error.message);
-            texteReponse = extraireTexteIA(data, 'mistral');
-        }
-        
+        const { texte: texteReponse } = await executerAppelIA(prompt);
+
         // Formater le nouveau contenu
         let contenuFormate = texteReponse.replace(/[*#]/g, '').trim();
         contenuFormate = enrichirTexteChrono(contenuFormate);

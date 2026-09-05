@@ -525,13 +525,14 @@
                     <select id="selecteurIaGlobal" aria-label="Moteur IA" onchange="changerIaParDefaut(this.value)" style="margin-bottom: 20px;">
                         <option value="gemini">✨ Gemini (Google)</option>
                         <option value="mistral">🥐 Mistral AI (France)</option>
+                        <option value="groq">⚡ Groq (Llama, rapide)</option>
                     </select>
 
                     <button class="btn-secondary" style="width: 100%;" onclick="voirModifierClesAPI();">
                         👁️ Voir / modifier ma clé API
                     </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px; border-color: red; color: red;" onclick="reinitialiserClesAPI();">
-                        🔑 Réinitialiser mes clés API (Gemini, Mistral)
+                        🔑 Réinitialiser mes clés API (Gemini, Mistral, Groq)
                     </button>
                     <button class="btn-secondary" style="width: 100%; margin-top: 10px;" onclick="viderCacheApp()">
                         🧹 Vider le cache des recettes
@@ -683,6 +684,7 @@
                     <p style="font-size: var(--text-xs); color: var(--text-muted); margin-top:-5px; margin-bottom: 10px;">Utilisées automatiquement quand un utilisateur n'a pas renseigné sa propre clé. Le moteur par défaut des nouveaux comptes est Mistral.</p>
                     <input type="text" id="adminCleMistral" placeholder="Clé API Mistral" style="margin-bottom: 10px;">
                     <input type="text" id="adminCleGemini" placeholder="Clé API Gemini (optionnel)" style="margin-bottom: 10px;">
+                    <input type="text" id="adminCleGroq" placeholder="Clé API Groq (optionnel)" style="margin-bottom: 10px;">
                     <button class="btn-secondary" style="width:100%;" onclick="sauvegarderClesApiPartagees()">💾 Enregistrer les clés partagées</button>
                 </div>
             </div>
@@ -849,6 +851,12 @@
                 <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <input type="text" id="inputKeyMistral" placeholder="Collez votre clé Mistral ici..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
                     <button class="btn-primary" style="margin-top: 0; padding: 10px 20px; width: auto;" onclick="sauvegarderCleAPI('mistral')">Sauver</button>
+                </div>
+
+                <label>⚡ Clé API Groq (Llama)</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" id="inputKeyGroq" placeholder="Collez votre clé Groq ici..." style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button class="btn-primary" style="margin-top: 0; padding: 10px 20px; width: auto;" onclick="sauvegarderCleAPI('groq')">Sauver</button>
                 </div>
             </div>
         </div>
