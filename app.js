@@ -2148,7 +2148,7 @@ const firebaseConfig = {
             loader.style.display = "block"; 
             
             try {
-                const { texte } = await executerAppelIA(prompt);
+                const { texte, moteurUtilise } = await executerAppelIA(prompt);
 
                 loader.style.display = "none";
                 let safeTitre = nomDuPlat.replace(/'/g, "\\'");
@@ -2163,7 +2163,7 @@ const firebaseConfig = {
                 <div class="planning-validation-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
                     <button class="btn-primary" style="flex: 1;" onclick="validerRecettePlanning(this, '${safeTitre}', '${jour}', '${repas}')">✅ Valider et sauvegarder</button>
                     <button class="btn-secondary" style="flex: 1;" onclick="cuisinerCePlat('${safeTitre}', '${jour}', '${repas}')">🔄 Régénérer</button>
-                </div></div></details>`;
+                </div><div class="recipe-ia-badge" style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); font-size:11px; color:var(--text-muted); text-align:right;">🧠 Généré par ${nomAffichageIA(moteurUtilise)}</div></div></details>`;
                 
                 resDiv.innerHTML = contenuHtml;
 
@@ -2490,7 +2490,7 @@ Règles de formatage ABSOLUES :
                         if (rawSteps.length === 0) rawSteps = [contenu.replace(/<br>/g, ' ').replace(/<[^>]*>/g, '').trim()];
                         let stepsArrayString = `['${rawSteps.join("','")}']`;
 
-                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})" aria-pressed="false">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)" aria-label="Étape précédente">⬅️ Précédent</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)" aria-label="Étape suivante">➡️ Suivant</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div></div></details>`;
+                        html += `<details class="recipe-card" id="card-${index}" ${index === 0 ? 'open' : ''}><summary><div><span>${titre}</span>${recipeMeta}</div>${missingBadge}</summary><div class="recipe-content"><div style="display:flex; justify-content:flex-end; margin-bottom:15px;"><button class="toggle-view" onclick="togglePasAPas(this, 'text-view-${index}', 'step-view-${index}', ${stepsArrayString})" aria-pressed="false">👀 Mode Pas-à-pas</button></div><div id="text-view-${index}" class="text-view">${contenu.replace(/\n/g, '<br>')}</div><div id="step-view-${index}" class="pas-a-pas-container"><div style="color:var(--primary); font-weight:bold;" class="step-counter">Étape 1</div><div class="step-text">Contenu</div><div class="step-controls"><button class="btn-step" onclick="changeStep('step-view-${index}', -1)" aria-label="Étape précédente">⬅️ Précédent</button><button class="btn-step" onclick="changeStep('step-view-${index}', 1)" aria-label="Étape suivante">➡️ Suivant</button></div></div><div class="recipe-actions"><button class="btn-action btn-save" onclick="sauvegarder(this, '${safeTitre}', 'text-view-${index}')">💾 Sauvegarder</button><button class="btn-action btn-expand" onclick="toggleExpand('card-${index}', this)">⛶ Agrandir</button><div style="width:100%; margin-top:10px; display:flex; gap:10px;"><input type="text" id="refine-input-${index}" placeholder="Ex: Version vegan, sans four..." style="flex:1; padding:8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-size:13px;"><button class="btn-action" style="background:var(--accent);" onclick="affinerRecette('${index}', '${safeTitre}')">✨ Affiner</button></div></div><div class="recipe-ia-badge" id="ia-badge-${index}" style="margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); font-size:11px; color:var(--text-muted); text-align:right;">🧠 Généré par ${nomAffichageIA(moteurUtilise)}</div></div></details>`;
                     });
                     
                     resDiv.innerHTML = html;
@@ -3453,13 +3453,16 @@ La demande de modification est : "${consigne}".
 Renvoie UNIQUEMENT la recette modifiée, sans introduction ni conclusion, en gardant le même format de liste et d'étapes.`;
 
     try {
-        const { texte: texteReponse } = await executerAppelIA(prompt);
+        const { texte: texteReponse, moteurUtilise } = await executerAppelIA(prompt);
 
         // Formater le nouveau contenu
         let contenuFormate = texteReponse.replace(/[*#]/g, '').trim();
         contenuFormate = enrichirTexteChrono(contenuFormate);
         
         textDiv.innerHTML = contenuFormate.replace(/\n/g, '<br>');
+
+        const badgeIA = document.getElementById('ia-badge-' + index);
+        if (badgeIA) badgeIA.textContent = `🧠 Généré par ${nomAffichageIA(moteurUtilise)} (affiné)`;
         
         showToast("Recette affinée avec succès ! ✨", "success");
         input.value = "";
